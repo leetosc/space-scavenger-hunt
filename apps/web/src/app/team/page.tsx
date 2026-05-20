@@ -1,17 +1,24 @@
 "use client";
 
+import { Button } from "@space-scavenger-hunt/ui/components/button";
 import { Card } from "@space-scavenger-hunt/ui/components/card";
+import { Input } from "@space-scavenger-hunt/ui/components/input";
 import { useQuery } from "@tanstack/react-query";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { authClient } from "@/lib/auth-client";
 import { trpc } from "@/utils/trpc";
 
+function filterAstronautCode(value: string): string {
+  return value.replace(/[^A-Za-z]/g, "").toUpperCase().slice(0, 4);
+}
+
 export default function TeamPage() {
   const router = useRouter();
+  const [manualCode, setManualCode] = useState("");
   const { data: session, isPending } = authClient.useSession();
   const activity = useQuery({
     ...trpc.activity.getState.queryOptions(),
@@ -63,6 +70,43 @@ export default function TeamPage() {
           />
         </div>
       </header>
+
+      <Card className="p-6 border-cyan-500/20 bg-slate-950/40">
+        <h2 className="font-mono text-xs tracking-widest text-cyan-400 uppercase mb-1">
+          Manual Telemetry Uplink
+        </h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Enter the 4-letter code from an astronaut tag if NFC scanning is unavailable.
+        </p>
+        <form
+          className="flex flex-col items-center gap-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (manualCode.length !== 4) return;
+            router.push(`/scan/${manualCode}` as Route);
+          }}
+        >
+          <Input
+            value={manualCode}
+            onChange={(e) => setManualCode(filterAstronautCode(e.target.value))}
+            inputMode="text"
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            maxLength={4}
+            placeholder="----"
+            aria-label="Astronaut scan code"
+            className="h-16 w-48 text-center text-3xl font-mono tracking-[0.5em] uppercase border-cyan-500/30 bg-slate-900/80 text-cyan-100 placeholder:text-slate-600 focus-visible:border-cyan-400 focus-visible:ring-cyan-400/30"
+          />
+          <Button
+            type="submit"
+            disabled={manualCode.length !== 4}
+            className="font-mono tracking-widest uppercase"
+          >
+            Establish Uplink
+          </Button>
+        </form>
+      </Card>
 
       <Card className="p-4">
         <h2 className="font-bold mb-2">Roster</h2>

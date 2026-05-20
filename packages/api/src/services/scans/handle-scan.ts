@@ -39,7 +39,14 @@ function result(status: ScanStatus, attemptId?: string): HandleScanResult {
   return { status, attemptId, message: SCAN_MESSAGES[status] };
 }
 
+function normalizeScanCode(code: string): string {
+  const trimmed = code.trim();
+  if (trimmed.length === 4) return trimmed.toUpperCase();
+  return trimmed;
+}
+
 export async function handleScan(input: HandleScanInput): Promise<HandleScanResult> {
+  const code = normalizeScanCode(input.code);
   const activity = await prisma.activity.findFirst({ orderBy: { createdAt: "asc" } });
   if (!activity || activity.status !== "ACTIVE") {
     return result("NOT_ACTIVE");
@@ -52,7 +59,7 @@ export async function handleScan(input: HandleScanInput): Promise<HandleScanResu
   if (!player) return result("NO_PLAYER");
   if (!player.teamId) return result("NO_TEAM");
 
-  const astronaut = await prisma.astronaut.findUnique({ where: { code: input.code } });
+  const astronaut = await prisma.astronaut.findUnique({ where: { code } });
   if (!astronaut || !astronaut.active) return result("INVALID");
 
   const assignment = await prisma.teamAstronautAssignment.findUnique({

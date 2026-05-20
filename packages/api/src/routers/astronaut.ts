@@ -1,11 +1,24 @@
 import { env } from "@space-scavenger-hunt/env/server";
-import { nanoid } from "nanoid";
+import { customAlphabet } from "nanoid";
 import { z } from "zod";
 
+import type { Context } from "../context";
 import { adminProcedure, router } from "../index";
 
-function generateCode() {
-  return `ast_${nanoid(21)}`;
+const CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const generateFourLetterCode = customAlphabet(CODE_ALPHABET, 4);
+
+async function generateUniqueCode(prisma: Context["prisma"]) {
+  const maxAttempts = 50;
+  for (let i = 0; i < maxAttempts; i++) {
+    const code = generateFourLetterCode();
+    const existing = await prisma.astronaut.findUnique({
+      where: { code },
+      select: { id: true },
+    });
+    if (!existing) return code;
+  }
+  throw new Error("Failed to generate unique astronaut code");
 }
 
 export const astronautRouter = router({
@@ -33,7 +46,7 @@ export const astronautRouter = router({
           name: input.name,
           description: input.description,
           hint: input.hint,
-          code: generateCode(),
+          code: await generateUniqueCode(ctx.prisma),
           active: true,
         },
       });
@@ -67,10 +80,10 @@ export const astronautRouter = router({
 
   generateCode: adminProcedure
     .input(z.object({ id: z.string().min(1) }))
-    .mutation(({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       return ctx.prisma.astronaut.update({
         where: { id: input.id },
-        data: { code: generateCode() },
+        data: { code: await generateUniqueCode(ctx.prisma) },
       });
     }),
 
