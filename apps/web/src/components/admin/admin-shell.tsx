@@ -52,27 +52,31 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <div className="grid grid-cols-[200px_1fr] min-h-0">
-      <aside className="border-r p-4">
-        <h2 className="font-bold text-sm uppercase tracking-wide text-muted-foreground mb-3">
-          Admin
+    <div className="grid grid-cols-[220px_1fr] min-h-0 h-full flex-1">
+      <aside className="border-r border-border/40 bg-background/15 backdrop-blur-sm p-5 space-y-4 flex flex-col z-10">
+        <h2 className="font-mono text-xs tracking-widest text-cyan-400 font-bold uppercase mb-2">
+          Admin Console
         </h2>
-        <nav className="flex flex-col gap-1 text-sm">
+        <nav className="flex flex-col gap-1.5">
           {NAV.map((item) => {
             const active = pathname === item.to;
             return (
               <Link
                 key={item.to}
                 href={item.to}
-                className={`rounded px-2 py-1 ${active ? "bg-muted font-medium" : "hover:bg-muted"}`}
+                className={`px-3 py-1.5 text-xs font-mono tracking-wide border-l-2 transition-all ${
+                  active 
+                    ? "bg-cyan-500/10 border-cyan-400 font-bold text-cyan-300" 
+                    : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/30"
+                }`}
               >
-                {item.label}
+                {item.label.toUpperCase()}
               </Link>
             );
           })}
         </nav>
       </aside>
-      <main className="p-6 overflow-auto">{children}</main>
+      <main className="p-8 overflow-y-auto bg-background/5 flex flex-col">{children}</main>
     </div>
   );
 }

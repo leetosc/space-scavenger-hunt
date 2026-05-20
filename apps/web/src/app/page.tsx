@@ -8,7 +8,7 @@ import { AlertCircle, Compass, Orbit, Rocket, Shield, Sparkles, Star, Terminal, 
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
+
 
 import Loader from "@/components/loader";
 import { authClient } from "@/lib/auth-client";
@@ -33,17 +33,7 @@ export default function Home() {
     refetchInterval: 10000,
   });
 
-  // Memoize random star field coordinates to prevent layout shifts or re-generation on render
-  const stars = useMemo(() => {
-    return Array.from({ length: 80 }).map((_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 2 + 1,
-      twinkleDuration: Math.random() * 3 + 2,
-      twinkleDelay: Math.random() * 5,
-    }));
-  }, []);
+
 
   const handleEnterMission = () => {
     if (!session) {
@@ -97,43 +87,7 @@ export default function Home() {
   }
 
   return (
-    <div className="relative min-h-full w-full bg-slate-950 text-slate-100 overflow-y-auto overflow-x-hidden flex flex-col justify-between">
-      
-      {/* Background Starfield and Nebulae */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        {/* Twinkling Stars */}
-        {stars.map((star) => (
-          <motion.div
-            key={star.id}
-            className="absolute bg-white rounded-full"
-            style={{
-              left: `${star.x}%`,
-              top: `${star.y}%`,
-              width: star.size,
-              height: star.size,
-            }}
-            animate={{
-              opacity: [0.1, 1, 0.1],
-            }}
-            transition={{
-              duration: star.twinkleDuration,
-              repeat: Infinity,
-              delay: star.twinkleDelay,
-              ease: "easeInOut",
-            }}
-          />
-        ))}
-
-        {/* Orbit Rings */}
-        <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[800px] h-[800px] border border-cyan-500/5 rounded-full z-0 pointer-events-none" />
-        <div className="absolute top-[10%] left-1/2 -translate-x-1/2 w-[1200px] h-[1200px] border border-indigo-500/5 rounded-full z-0 pointer-events-none" style={{ transform: "translate(-50%, 0) rotate(15deg)" }} />
-
-        {/* Glowing Nebulae */}
-        <div className="absolute top-[-10%] left-[-15%] w-[60%] h-[60%] rounded-full bg-indigo-500/10 blur-[130px] z-0" />
-        <div className="absolute bottom-[-10%] right-[-15%] w-[60%] h-[60%] rounded-full bg-cyan-500/10 blur-[150px] z-0" />
-        <div className="absolute top-[30%] left-[60%] w-[40%] h-[40%] rounded-full bg-purple-500/5 blur-[120px] z-0" />
-      </div>
-
+    <div className="relative min-h-full w-full overflow-x-hidden flex flex-col justify-between">
       {/* Main Content Area */}
       <div className="relative z-10 flex-1 flex flex-col max-w-6xl mx-auto w-full px-6 py-12 md:py-20 justify-center items-center gap-16">
         

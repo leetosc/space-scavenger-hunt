@@ -35,21 +35,20 @@ export default function Header() {
   ];
 
   return (
-    <div>
-      <div className="flex flex-row items-center justify-between px-4 py-2">
-        <nav className="flex gap-4 text-sm">
+    <div className="backdrop-blur-md bg-background/25 border-b border-border/40 relative z-20">
+      <div className="flex flex-row items-center justify-between px-6 py-2.5">
+        <nav className="flex gap-6 text-xs font-mono tracking-wider uppercase">
           {links.map(({ to, label }) => (
-            <Link key={to} href={to} className="hover:underline">
+            <Link key={to} href={to} className="transition-colors text-muted-foreground hover:text-cyan-400">
               {label}
             </Link>
           ))}
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <ModeToggle />
           <UserMenu />
         </div>
       </div>
-      <hr />
     </div>
   );
 }
