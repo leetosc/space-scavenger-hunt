@@ -1,0 +1,3 @@
+{
+  "extends": "@space-scavenger-hunt/config/tsconfig.base.json"
+}

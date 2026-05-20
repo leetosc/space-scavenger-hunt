@@ -1,0 +1,24 @@
+{
+  "name": "@space-scavenger-hunt/auth",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@space-scavenger-hunt/db": "workspace:*",
+    "@space-scavenger-hunt/env": "workspace:*",
+    "better-auth": "catalog:",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@space-scavenger-hunt/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}
