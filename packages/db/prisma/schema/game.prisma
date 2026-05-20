@@ -1,0 +1,124 @@
+model Activity {
+  id        String    @id @default(cuid())
+  name      String
+  status    String    @default("SETUP")
+  startedAt DateTime?
+  endedAt   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("activity")
+}
+
+model Player {
+  id              String         @id @default(cuid())
+  name            String
+  authUserId      String?        @unique
+  authUser        User?          @relation(fields: [authUserId], references: [id], onDelete: SetNull)
+  teamId          String?
+  team            Team?          @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  isCheckedIn    Boolean        @default(false)
+  scannedAttempts ClaimAttempt[] @relation("ScannedByPlayer")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([teamId])
+  @@index([authUserId])
+  @@map("player")
+}
+
+model Team {
+  id          String                    @id @default(cuid())
+  name        String                    @unique
+  joinCode    String                    @unique
+  color       String?
+  icon        String?
+  players     Player[]
+  assignments TeamAstronautAssignment[]
+  attempts    ClaimAttempt[]
+  claims      TeamClaim[]
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+
+  @@map("team")
+}
+
+model Astronaut {
+  id          String                    @id @default(cuid())
+  name        String
+  code        String                    @unique
+  description String?
+  hint        String?
+  active      Boolean                   @default(true)
+  assignments TeamAstronautAssignment[]
+  attempts    ClaimAttempt[]
+  claims      TeamClaim[]
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+
+  @@index([code])
+  @@index([active])
+  @@map("astronaut")
+}
+
+model TeamAstronautAssignment {
+  id          String    @id @default(cuid())
+  teamId      String
+  team        Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  astronautId String
+  astronaut   Astronaut @relation(fields: [astronautId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@unique([teamId, astronautId])
+  @@index([teamId])
+  @@index([astronautId])
+  @@map("team_astronaut_assignment")
+}
+
+model ClaimAttempt {
+  id                String     @id @default(cuid())
+  teamId            String
+  team              Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  astronautId       String
+  astronaut         Astronaut  @relation(fields: [astronautId], references: [id], onDelete: Cascade)
+  scannedByPlayerId String
+  scannedByPlayer   Player     @relation("ScannedByPlayer", fields: [scannedByPlayerId], references: [id])
+  status            String     @default("PENDING_PHOTO")
+  taskPrompt        String
+  imageUrl          String?
+  imageBlobName     String?
+  imageMimeType     String?
+  imageSizeBytes    Int?
+  aiPassed          Boolean?
+  aiConfidence      Float?
+  aiFeedback        String?
+  aiRawResponse     String?
+  createdAt         DateTime   @default(now())
+  submittedAt       DateTime?
+  reviewedAt        DateTime?
+  expiresAt         DateTime?
+  claim             TeamClaim?
+
+  @@index([teamId])
+  @@index([astronautId])
+  @@index([scannedByPlayerId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("claim_attempt")
+}
+
+model TeamClaim {
+  id             String       @id @default(cuid())
+  teamId         String
+  team           Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  astronautId    String
+  astronaut      Astronaut    @relation(fields: [astronautId], references: [id], onDelete: Cascade)
+  claimAttemptId String       @unique
+  claimAttempt   ClaimAttempt @relation(fields: [claimAttemptId], references: [id], onDelete: Cascade)
+  claimedAt      DateTime     @default(now())
+
+  @@unique([teamId, astronautId])
+  @@index([teamId])
+  @@index([astronautId])
+  @@map("team_claim")
+}

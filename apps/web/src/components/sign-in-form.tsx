@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@space-scavenger-hunt/ui/components/button";
 import { Input } from "@space-scavenger-hunt/ui/components/input";
 import { Label } from "@space-scavenger-hunt/ui/components/label";
@@ -10,25 +12,26 @@ import { authClient } from "@/lib/auth-client";
 
 import Loader from "./loader";
 
-export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () => void }) {
+export default function SignInForm() {
   const router = useRouter();
   const { isPending } = authClient.useSession();
 
   const form = useForm({
     defaultValues: {
-      email: "",
+      username: "",
       password: "",
     },
     onSubmit: async ({ value }) => {
-      await authClient.signIn.email(
+      await authClient.signIn.username(
         {
-          email: value.email,
+          username: value.username,
           password: value.password,
         },
         {
           onSuccess: () => {
-            router.push("/dashboard");
-            toast.success("Sign in successful");
+            router.push("/");
+            router.refresh();
+            toast.success("Signed in");
           },
           onError: (error) => {
             toast.error(error.error.message || error.error.statusText);
@@ -38,7 +41,7 @@ export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () 
     },
     validators: {
       onSubmit: z.object({
-        email: z.email("Invalid email address"),
+        username: z.string().min(3, "Username must be at least 3 characters"),
         password: z.string().min(8, "Password must be at least 8 characters"),
       }),
     },
@@ -50,7 +53,10 @@ export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () 
 
   return (
     <div className="mx-auto w-full mt-10 max-w-md p-6">
-      <h1 className="mb-6 text-center text-3xl font-bold">Welcome Back</h1>
+      <h1 className="mb-2 text-center text-3xl font-bold">Mission Control</h1>
+      <p className="mb-6 text-center text-sm text-muted-foreground">
+        Sign in to join the scavenger hunt.
+      </p>
 
       <form
         onSubmit={(e) => {
@@ -61,14 +67,14 @@ export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () 
         className="space-y-4"
       >
         <div>
-          <form.Field name="email">
+          <form.Field name="username">
             {(field) => (
               <div className="space-y-2">
-                <Label htmlFor={field.name}>Email</Label>
+                <Label htmlFor={field.name}>Username</Label>
                 <Input
                   id={field.name}
                   name={field.name}
-                  type="email"
+                  autoComplete="username"
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
@@ -92,6 +98,7 @@ export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () 
                   id={field.name}
                   name={field.name}
                   type="password"
+                  autoComplete="current-password"
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
@@ -111,21 +118,15 @@ export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () 
         >
           {({ canSubmit, isSubmitting }) => (
             <Button type="submit" className="w-full" disabled={!canSubmit || isSubmitting}>
-              {isSubmitting ? "Submitting..." : "Sign In"}
+              {isSubmitting ? "Signing in..." : "Sign In"}
             </Button>
           )}
         </form.Subscribe>
       </form>
 
-      <div className="mt-4 text-center">
-        <Button
-          variant="link"
-          onClick={onSwitchToSignUp}
-          className="text-indigo-600 hover:text-indigo-800"
-        >
-          Need an account? Sign Up
-        </Button>
-      </div>
+      <p className="mt-6 text-center text-xs text-muted-foreground">
+        Don't have an account? Ask your event admin to create one for you.
+      </p>
     </div>
   );
 }

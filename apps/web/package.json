@@ -18,7 +18,9 @@
     "@trpc/tanstack-react-query": "^11.16.0",
     "babel-plugin-react-compiler": "^1.0.0",
     "better-auth": "catalog:",
+    "canvas-confetti": "^1.9.4",
     "dotenv": "catalog:",
+    "framer-motion": "^12.39.0",
     "lucide-react": "catalog:",
     "next": "^16.2.0",
     "next-themes": "catalog:",
@@ -30,7 +32,7 @@
   "devDependencies": {
     "@space-scavenger-hunt/config": "workspace:*",
     "@tailwindcss/postcss": "^4.1.18",
-    "@tanstack/react-query-devtools": "^5.91.1",
+    "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",

@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import {
   CircleCheckIcon,
   InfoIcon,
@@ -12,6 +13,16 @@ import { Toaster as Sonner, type ToasterProps } from "sonner";
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme();
+
+  // Avoid rendering until mounted so next-themes and Sonner agree on theme (SSR-safe).
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <Sonner

@@ -1,6 +1,24 @@
-# space-scavenger-hunt
+# Astronaut NFC Scavenger Hunt
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines Next.js, Express, TRPC, and more.
+Team-based office scavenger hunt where players find hidden astronauts by scanning NFC tags. The app generates AI photo challenges, judges submissions with vision AI, and ranks teams on a live leaderboard.
+
+Built with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack): Next.js + Express + tRPC + Better Auth + Prisma (SQLite/libsql) + Bun + Turborepo.
+
+## Quick start
+
+```bash
+bun install
+cp apps/server/.env.example apps/server/.env   # fill in admin + Azure secrets
+echo 'NEXT_PUBLIC_SERVER_URL=http://localhost:3000' > apps/web/.env
+bun run db:push                                # create SQLite tables
+bun run dev                                    # starts server (:3000) + web (:3001)
+```
+
+On first server boot, an admin user is auto-created from `ADMIN_USERNAME` /
+`ADMIN_PASSWORD`. Sign in at <http://localhost:3001/login> with those
+credentials, then create teams, players, astronauts, and run the kickoff.
+
+For production deployment, see [DEPLOYMENT.md](./DEPLOYMENT.md).
 
 ## Features
 

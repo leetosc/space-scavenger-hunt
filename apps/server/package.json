@@ -6,7 +6,7 @@
     "build": "tsdown",
     "check-types": "tsc -b",
     "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
-    "dev": "bun run --hot src/index.ts",
+    "dev": "bun --watch src/index.ts ../../packages/api/src ../../packages/auth/src ../../packages/db/src",
     "start": "bun run dist/index.mjs"
   },
   "dependencies": {
@@ -20,6 +20,7 @@
     "cors": "^2.8.5",
     "dotenv": "catalog:",
     "express": "^5.1.0",
+    "multer": "^2.1.1",
     "zod": "catalog:"
   },
   "devDependencies": {
@@ -27,6 +28,7 @@
     "@types/bun": "catalog:",
     "@types/cors": "^2.8.17",
     "@types/express": "catalog:",
+    "@types/multer": "^2.1.0",
     "tsdown": "^0.21.9",
     "typescript": "catalog:"
   }

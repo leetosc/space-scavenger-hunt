@@ -1,0 +1,100 @@
+import {
+  BlobSASPermissions,
+  BlobServiceClient,
+  generateBlobSASQueryParameters,
+  StorageSharedKeyCredential,
+} from "@azure/storage-blob";
+import { env } from "@space-scavenger-hunt/env/server";
+
+let cachedClient: BlobServiceClient | undefined;
+let cachedSharedKey: StorageSharedKeyCredential | undefined;
+
+function parseConnectionString(connectionString: string) {
+  const parts = connectionString.split(";").filter(Boolean);
+  const map = new Map<string, string>();
+  for (const part of parts) {
+    const eq = part.indexOf("=");
+    if (eq === -1) continue;
+    const key = part.slice(0, eq);
+    const value = part.slice(eq + 1);
+    map.set(key, value);
+  }
+  return {
+    accountName: map.get("AccountName"),
+    accountKey: map.get("AccountKey"),
+  };
+}
+
+function getBlobServiceClient() {
+  if (cachedClient) return cachedClient;
+  cachedClient = BlobServiceClient.fromConnectionString(env.AZURE_STORAGE_CONNECTION_STRING);
+  return cachedClient;
+}
+
+function getSharedKeyCredential() {
+  if (cachedSharedKey) return cachedSharedKey;
+  const { accountName, accountKey } = parseConnectionString(env.AZURE_STORAGE_CONNECTION_STRING);
+  if (!accountName || !accountKey) {
+    throw new Error("AZURE_STORAGE_CONNECTION_STRING must contain AccountName and AccountKey.");
+  }
+  cachedSharedKey = new StorageSharedKeyCredential(accountName, accountKey);
+  return cachedSharedKey;
+}
+
+function getContainerClient() {
+  return getBlobServiceClient().getContainerClient(env.AZURE_STORAGE_CONTAINER_NAME);
+}
+
+export async function ensureContainer() {
+  const containerClient = getContainerClient();
+  await containerClient.createIfNotExists();
+}
+
+export type UploadImageInput = {
+  blobName: string;
+  buffer: Buffer;
+  contentType: string;
+};
+
+export async function uploadImage(input: UploadImageInput): Promise<{ url: string }> {
+  await ensureContainer();
+  const blobClient = getContainerClient().getBlockBlobClient(input.blobName);
+  await blobClient.uploadData(input.buffer, {
+    blobHTTPHeaders: { blobContentType: input.contentType },
+  });
+  return { url: blobClient.url };
+}
+
+export function getReadSasUrl(blobName: string, ttlMinutes = 15): string {
+  const credential = getSharedKeyCredential();
+  const containerClient = getContainerClient();
+  const blobClient = containerClient.getBlobClient(blobName);
+  const now = new Date();
+  const expiresOn = new Date(now.getTime() + ttlMinutes * 60 * 1000);
+  const sas = generateBlobSASQueryParameters(
+    {
+      containerName: env.AZURE_STORAGE_CONTAINER_NAME,
+      blobName,
+      permissions: BlobSASPermissions.parse("r"),
+      startsOn: new Date(now.getTime() - 5 * 60 * 1000),
+      expiresOn,
+      protocol: undefined,
+    },
+    credential,
+  ).toString();
+  return `${blobClient.url}?${sas}`;
+}
+
+export function buildBlobName({
+  teamId,
+  attemptId,
+  extension,
+}: {
+  teamId: string;
+  attemptId: string;
+  extension: string;
+}) {
+  const ts = new Date().toISOString().replace(/[:.]/g, "-");
+  const safeExt = extension.replace(/[^a-z0-9]/gi, "").toLowerCase() || "bin";
+  return `claims/${teamId}/${attemptId}/${ts}.${safeExt}`;
+}

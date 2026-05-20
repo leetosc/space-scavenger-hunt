@@ -11,13 +11,17 @@
   },
   "scripts": {},
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.0",
+    "@azure/storage-blob": "^12.30.0",
     "@space-scavenger-hunt/auth": "workspace:*",
     "@space-scavenger-hunt/db": "workspace:*",
     "@space-scavenger-hunt/env": "workspace:*",
     "@trpc/client": "catalog:",
     "@trpc/server": "catalog:",
+    "ai": "^5.0.0",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
+    "nanoid": "^5.1.0",
     "zod": "catalog:"
   },
   "devDependencies": {
