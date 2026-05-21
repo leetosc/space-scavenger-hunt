@@ -3,7 +3,7 @@ import { generateText } from "ai";
 
 import { foundryModel } from "./client";
 
-const SYSTEM_PROMPT = `You generate office-appropriate team photo challenges for an astronaut-themed scavenger hunt. Output exactly one sentence describing the challenge.`;
+const SYSTEM_PROMPT = `You generate office-appropriate team photo challenges for an office scavenger hunt. Output exactly one sentence describing the challenge.`;
 
 const FALLBACK_TASKS = [
   "Have at least two teammates pose as if you have just touched down on the Moon, with one planting an imaginary flag.",
@@ -33,35 +33,44 @@ function buildUserPrompt(existingTaskPrompts: string[]): string {
 Rules:
 - It must be verifiable from a single uploaded image.
 - It should involve at least 2 people.
-- It should be fun and space-themed.
+- It should be fun and maybe slightly silly.
 - It must be completable in under 3 minutes.
 - It must not require dangerous behavior.
 - It must not ask for sensitive information.
 - It must not require leaving the office.
-- It should not require props other than normal office surroundings.
+- It should not require props.
 - Return only the task sentence.`;
 
   if (existingTaskPrompts.length === 0) {
     return basePrompt;
   }
 
-  const taskList = existingTaskPrompts.map((task, i) => `${i + 1}. "${task}"`).join("\n");
+  const taskList = existingTaskPrompts
+    .map((task, i) => `${i + 1}. "${task}"`)
+    .join("\n");
 
   return `${basePrompt}
 
 These tasks have already been used in this hunt. Your new task must be clearly different from every one of them:
 ${taskList}
 
-Avoid repeating the same action, scene, or setup as any listed task. Vary the theme, pose, props, and group interaction — change the activity in a noticeable way, not just the wording.`;
+Avoid repeating the same action, scene, or setup as any listed task. Vary the theme, pose, props, and group interaction — change the activity in a noticeable way, not just the wording.
+
+
+Do not mention the number of people required to complete the task.`;
 }
 
 function isDuplicateTask(text: string, existingTaskPrompts: string[]): boolean {
   const normalized = normalizeTaskPrompt(text);
-  return existingTaskPrompts.some((task) => normalizeTaskPrompt(task) === normalized);
+  return existingTaskPrompts.some(
+    (task) => normalizeTaskPrompt(task) === normalized,
+  );
 }
 
 function pickFallbackTask(existingTaskPrompts: string[]): string {
-  const normalizedExisting = new Set(existingTaskPrompts.map(normalizeTaskPrompt));
+  const normalizedExisting = new Set(
+    existingTaskPrompts.map(normalizeTaskPrompt),
+  );
   const available = FALLBACK_TASKS.filter(
     (task) => !normalizedExisting.has(normalizeTaskPrompt(task)),
   );
@@ -71,7 +80,9 @@ function pickFallbackTask(existingTaskPrompts: string[]): string {
   return pool[idx]!;
 }
 
-export async function generateTaskPrompt(options?: GenerateTaskPromptOptions): Promise<string> {
+export async function generateTaskPrompt(
+  options?: GenerateTaskPromptOptions,
+): Promise<string> {
   const existingTaskPrompts =
     options?.existingTaskPrompts ?? (await getExistingAttemptTaskPrompts());
 
