@@ -23,9 +23,10 @@ import { trpc } from "@/utils/trpc";
 import { IconPicker } from "./icon-picker";
 import Loader from "./loader";
 
-export default function SignUpForm() {
+export default function SignUpForm({ nextPath = "/" }: { nextPath?: string }) {
   const router = useRouter();
   const { isPending: sessionPending } = authClient.useSession();
+  const loginHref = nextPath === "/" ? "/login" : `/login?next=${encodeURIComponent(nextPath)}`;
 
   const signUpMutation = useMutation(trpc.player.signUp.mutationOptions());
 
@@ -54,13 +55,13 @@ export default function SignUpForm() {
           },
           {
             onSuccess: () => {
-              router.push("/");
+              router.push(nextPath);
               router.refresh();
               toast.success("Welcome aboard, astronaut!");
             },
             onError: () => {
               toast.error("Account created. Please sign in manually.");
-              router.push("/login");
+              router.push(loginHref);
             },
           },
         );
@@ -286,7 +287,7 @@ export default function SignUpForm() {
         transition={{ delay: 0.5 }}
       >
         Already have an account?{" "}
-        <Link href="/login" className="text-cyan-400 hover:underline">
+        <Link href={loginHref} className="text-cyan-400 hover:underline">
           Sign in
         </Link>
       </motion.p>

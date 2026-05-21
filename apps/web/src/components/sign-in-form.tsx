@@ -20,9 +20,10 @@ import {
 
 import Loader from "./loader";
 
-export default function SignInForm() {
+export default function SignInForm({ nextPath = "/" }: { nextPath?: string }) {
   const router = useRouter();
   const { isPending } = authClient.useSession();
+  const signUpHref = nextPath === "/" ? "/signup" : `/signup?next=${encodeURIComponent(nextPath)}`;
 
   const form = useForm({
     defaultValues: {
@@ -37,7 +38,7 @@ export default function SignInForm() {
         },
         {
           onSuccess: () => {
-            router.push("/");
+            router.push(nextPath);
             router.refresh();
             toast.success("Signed in");
           },
@@ -175,7 +176,7 @@ export default function SignInForm() {
         transition={{ delay: 0.4 }}
       >
         Don&apos;t have an account?{" "}
-        <Link href="/signup" className="text-cyan-400 hover:underline">
+        <Link href={signUpHref} className="text-cyan-400 hover:underline">
           Sign up
         </Link>
       </motion.p>
