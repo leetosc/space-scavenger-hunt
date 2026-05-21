@@ -109,3 +109,15 @@ export function buildBlobName({
   const safeExt = extension.replace(/[^a-z0-9]/gi, "").toLowerCase() || "bin";
   return `claims/${teamId}/${attemptId}/${ts}.${safeExt}`;
 }
+
+export async function openBlobReadStream(blobName: string) {
+  const blobClient = getContainerClient().getBlobClient(blobName);
+  const download = await blobClient.download(0);
+  if (!download.readableStreamBody) {
+    throw new Error(`Blob stream unavailable for ${blobName}`);
+  }
+  return {
+    stream: download.readableStreamBody,
+    contentType: download.contentType,
+  };
+}

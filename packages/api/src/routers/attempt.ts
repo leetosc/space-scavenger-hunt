@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import { adminProcedure, playerProcedure, router } from "../index";
-import { getReadSasUrl } from "../services/azure-blob";
+import { getAttemptPhotoPreviewPath } from "../services/attempt-photo-url";
 import { approveClaim } from "../services/claims/approve-claim";
 import { rejectClaim } from "../services/claims/reject-claim";
 
@@ -28,11 +28,7 @@ export const attemptRouter = router({
       }
       let previewUrl: string | undefined;
       if (attempt.imageBlobName) {
-        try {
-          previewUrl = getReadSasUrl(attempt.imageBlobName);
-        } catch {
-          previewUrl = undefined;
-        }
+        previewUrl = getAttemptPhotoPreviewPath(attempt.id);
       }
       return { attempt, previewUrl };
     }),
@@ -57,11 +53,7 @@ export const attemptRouter = router({
       return attempts.map((a) => {
         let previewUrl: string | undefined;
         if (a.imageBlobName) {
-          try {
-            previewUrl = getReadSasUrl(a.imageBlobName);
-          } catch {
-            previewUrl = undefined;
-          }
+          previewUrl = getAttemptPhotoPreviewPath(a.id);
         }
         return { ...a, previewUrl };
       });
@@ -77,6 +69,15 @@ export const attemptRouter = router({
     .input(z.object({ attemptId: z.string().min(1), feedback: z.string().max(500).optional() }))
     .mutation(async ({ input }) => {
       return rejectClaim(input.attemptId, input.feedback);
+    }),
+
+  adminDelete: adminProcedure
+    .input(z.object({ attemptIds: z.array(z.string().min(1)).min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await ctx.prisma.claimAttempt.deleteMany({
+        where: { id: { in: input.attemptIds } },
+      });
+      return { deleted: result.count };
     }),
 
   adminSetStatus: adminProcedure

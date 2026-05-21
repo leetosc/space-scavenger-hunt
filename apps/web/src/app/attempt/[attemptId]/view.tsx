@@ -495,8 +495,6 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
                   className="object-contain"
                   referrerPolicy="no-referrer"
                   priority
-                  loading="eager"
-                  unoptimized
                 />
               </motion.div>
               {/* scan line overlay when judging */}
@@ -580,11 +578,13 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
               ) : localPreviewUrl && pendingFile ? (
                 <div className="space-y-3">
                   <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border bg-muted/20">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src={localPreviewUrl}
                       alt="Photo preview"
-                      className="h-full w-full object-contain"
+                      fill
+                      sizes="(min-width: 768px) 672px, calc(100vw - 48px)"
+                      className="object-contain"
+                      unoptimized
                     />
                   </div>
                   <p className="text-sm text-muted-foreground truncate">

@@ -1,5 +1,15 @@
 "use client";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@space-scavenger-hunt/ui/components/alert-dialog";
 import { Button } from "@space-scavenger-hunt/ui/components/button";
 import { Card } from "@space-scavenger-hunt/ui/components/card";
 import {
@@ -148,8 +158,10 @@ function EditTeamDialog({
   const [name, setName] = useState(team.name);
   const [icon, setIcon] = useState(team.icon ?? "Rocket");
   const [color, setColor] = useState(team.color ?? "#888888");
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -189,12 +201,7 @@ function EditTeamDialog({
               variant="destructive"
               size="sm"
               disabled={isDeleting}
-              onClick={() => {
-                if (confirm(`Delete team "${team.name}"? Players assigned to it will be unassigned.`)) {
-                  onDelete(team.id);
-                  onOpenChange(false);
-                }
-              }}
+              onClick={() => setDeleteOpen(true)}
             >
               Delete
             </Button>
@@ -214,6 +221,31 @@ function EditTeamDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete team?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Delete team &ldquo;{team.name}&rdquo;? Players assigned to it will be unassigned.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+            disabled={isDeleting}
+            onClick={() => {
+              onDelete(team.id);
+              onOpenChange(false);
+            }}
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
 

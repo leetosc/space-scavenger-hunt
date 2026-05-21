@@ -2,11 +2,20 @@
 
 import { Button } from "@space-scavenger-hunt/ui/components/button";
 import { Card } from "@space-scavenger-hunt/ui/components/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@space-scavenger-hunt/ui/components/dialog";
 import { Label } from "@space-scavenger-hunt/ui/components/label";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
-import { useState } from "react";
+import { Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -41,6 +50,8 @@ export default function AdminAttemptsPage() {
   const [statusDrafts, setStatusDrafts] = useState<
     Record<string, (typeof ATTEMPT_STATUSES)[number]>
   >({});
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [deleteTarget, setDeleteTarget] = useState<string[] | null>(null);
 
   const attemptsQuery = useQuery({
     ...trpc.attempt.adminList.queryOptions(
@@ -84,6 +95,60 @@ export default function AdminAttemptsPage() {
     onError: (err) => toast.error(err.message),
   });
 
+  const deleteMutation = useMutation({
+    ...trpc.attempt.adminDelete.mutationOptions(),
+    onSuccess: (result) => {
+      toast.success(
+        result.deleted === 1 ? "Attempt deleted" : `${result.deleted} attempts deleted`,
+      );
+      setSelectedIds(new Set());
+      setDeleteTarget(null);
+      invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const deleteCount = deleteTarget?.length ?? 0;
+
+  const attempts = attemptsQuery.data ?? [];
+  const attemptIds = useMemo(() => attempts.map((attempt) => attempt.id), [attempts]);
+  const allSelected =
+    attemptIds.length > 0 && attemptIds.every((id) => selectedIds.has(id));
+  const someSelected = attemptIds.some((id) => selectedIds.has(id));
+
+  useEffect(() => {
+    setSelectedIds((current) => {
+      const visible = new Set(attemptIds);
+      const next = new Set([...current].filter((id) => visible.has(id)));
+      return next.size === current.size ? current : next;
+    });
+  }, [attemptIds]);
+
+  const toggleSelected = (attemptId: string, checked: boolean) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (checked) {
+        next.add(attemptId);
+      } else {
+        next.delete(attemptId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = (checked: boolean) => {
+    setSelectedIds(checked ? new Set(attemptIds) : new Set());
+  };
+
+  const openDeleteDialog = (attemptIdsToDelete: string[]) => {
+    setDeleteTarget(attemptIdsToDelete);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deleteTarget?.length) return;
+    deleteMutation.mutate({ attemptIds: deleteTarget });
+  };
+
   return (
     <motion.div
       className="space-y-6 max-w-4xl"
@@ -126,7 +191,7 @@ export default function AdminAttemptsPage() {
         >
           Loading...
         </motion.p>
-      ) : attemptsQuery.data.length === 0 ? (
+      ) : attempts.length === 0 ? (
         <motion.div variants={fadeInUp}>
           <Card className="p-6 text-center text-sm text-muted-foreground">No attempts match.</Card>
         </motion.div>
@@ -137,8 +202,42 @@ export default function AdminAttemptsPage() {
           initial="hidden"
           animate="visible"
         >
+          <motion.div
+            className="flex flex-wrap items-center justify-between gap-3 rounded border bg-muted/20 px-4 py-3"
+            variants={fadeInUp}
+          >
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                ref={(input) => {
+                  if (input) {
+                    input.indeterminate = someSelected && !allSelected;
+                  }
+                }}
+                onChange={(event) => toggleSelectAll(event.target.checked)}
+                className="accent-cyan-400"
+              />
+              Select all ({attempts.length})
+            </label>
+            {selectedIds.size > 0 ? (
+              <motion.div {...buttonInteraction}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="destructive"
+                  disabled={deleteMutation.isPending}
+                  onClick={() => openDeleteDialog([...selectedIds])}
+                >
+                  <Trash2 className="size-3.5" />
+                  Delete selected ({selectedIds.size})
+                </Button>
+              </motion.div>
+            ) : null}
+          </motion.div>
+
           <AnimatePresence>
-            {attemptsQuery.data.map((a) => {
+            {attempts.map((a) => {
               const draftStatus =
                 statusDrafts[a.id] ?? (a.status as (typeof ATTEMPT_STATUSES)[number]);
 
@@ -149,7 +248,16 @@ export default function AdminAttemptsPage() {
                   exit={{ opacity: 0, y: -10 }}
                   layout
                 >
-                  <Card className="p-4 grid grid-cols-1 md:grid-cols-[180px_1fr] gap-4">
+                  <Card className="p-4 grid grid-cols-1 md:grid-cols-[auto_180px_1fr] gap-4">
+                    <div className="flex items-start pt-1">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(a.id)}
+                        onChange={(event) => toggleSelected(a.id, event.target.checked)}
+                        aria-label={`Select attempt for ${a.astronaut.name}`}
+                        className="accent-cyan-400"
+                      />
+                    </div>
                     <div>
                       {a.previewUrl ? (
                         <motion.div
@@ -165,7 +273,6 @@ export default function AdminAttemptsPage() {
                             sizes="(min-width: 768px) 180px, 100vw"
                             className="object-cover"
                             referrerPolicy="no-referrer"
-                            unoptimized
                           />
                         </motion.div>
                       ) : (
@@ -262,7 +369,7 @@ export default function AdminAttemptsPage() {
                       </motion.div>
                     </div>
 
-                    <div className="pt-2 flex gap-2">
+                    <div className="pt-2 flex flex-wrap gap-2">
                       <motion.div {...buttonInteraction}>
                         <Button
                           size="sm"
@@ -286,6 +393,17 @@ export default function AdminAttemptsPage() {
                           Reject
                         </Button>
                       </motion.div>
+                      <motion.div {...buttonInteraction}>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          disabled={deleteMutation.isPending}
+                          onClick={() => openDeleteDialog([a.id])}
+                        >
+                          <Trash2 className="size-3.5" />
+                          Delete
+                        </Button>
+                      </motion.div>
                     </div>
                     </div>
                   </Card>
@@ -295,6 +413,48 @@ export default function AdminAttemptsPage() {
           </AnimatePresence>
         </motion.div>
       )}
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleteMutation.isPending) {
+            setDeleteTarget(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md" showCloseButton={!deleteMutation.isPending}>
+          <DialogHeader>
+            <DialogTitle>
+              Delete {deleteCount === 1 ? "attempt" : `${deleteCount} attempts`}?
+            </DialogTitle>
+            <DialogDescription>
+              {deleteCount === 1
+                ? "This attempt will be permanently removed."
+                : `These ${deleteCount} attempts will be permanently removed.`}{" "}
+              Any linked claims will also be deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={deleteMutation.isPending}
+              onClick={() => setDeleteTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              disabled={deleteMutation.isPending}
+              onClick={handleConfirmDelete}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }

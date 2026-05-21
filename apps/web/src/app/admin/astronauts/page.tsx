@@ -479,6 +479,7 @@ export default function AdminAstronautsPage() {
   const [description, setDescription] = useState("");
   const [hint, setHint] = useState("");
   const [editingAssignment, setEditingAssignment] = useState<Astronaut | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: trpc.astronaut.list.queryKey() });
@@ -516,7 +517,10 @@ export default function AdminAstronautsPage() {
 
   const deleteMutation = useMutation({
     ...trpc.astronaut.delete.mutationOptions(),
-    onSuccess: invalidateAll,
+    onSuccess: () => {
+      setDeleteTarget(null);
+      invalidateAll();
+    },
     onError: (err) => toast.error(err.message),
   });
 
@@ -567,11 +571,7 @@ export default function AdminAstronautsPage() {
       },
       onRegenerateCode: (id) => regenerateMutation.mutate({ id }),
       onToggleActive: (id) => toggleActiveMutation.mutate({ id }),
-      onDelete: (id, astronautName) => {
-        if (confirm(`Delete astronaut "${astronautName}"?`)) {
-          deleteMutation.mutate({ id });
-        }
-      },
+      onDelete: (id, astronautName) => setDeleteTarget({ id, name: astronautName }),
       onEditAssignment: setEditingAssignment,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -663,6 +663,47 @@ export default function AdminAstronautsPage() {
           isPending={assignMutation.isPending || unassignMutation.isPending}
         />
       )}
+
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleteMutation.isPending) {
+            setDeleteTarget(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md" showCloseButton={!deleteMutation.isPending}>
+          <DialogHeader>
+            <DialogTitle>Delete astronaut?</DialogTitle>
+            <DialogDescription>
+              Delete astronaut &ldquo;{deleteTarget?.name}&rdquo;? This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={deleteMutation.isPending}
+              onClick={() => setDeleteTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              disabled={deleteMutation.isPending}
+              onClick={() => {
+                if (!deleteTarget) return;
+                deleteMutation.mutate({ id: deleteTarget.id });
+              }}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }

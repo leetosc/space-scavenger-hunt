@@ -1,5 +1,15 @@
 "use client";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@space-scavenger-hunt/ui/components/alert-dialog";
 import { Button } from "@space-scavenger-hunt/ui/components/button";
 import { Card } from "@space-scavenger-hunt/ui/components/card";
 import {
@@ -85,6 +95,7 @@ function EditPlayerDialog({
   const [role, setRole] = useState<"PLAYER" | "ADMIN">(
     (player.authUser?.role as "PLAYER" | "ADMIN") ?? "PLAYER",
   );
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const updateMutation = useMutation({
     ...trpc.player.update.mutationOptions(),
@@ -108,7 +119,8 @@ function EditPlayerDialog({
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Edit player</DialogTitle>
@@ -194,11 +206,7 @@ function EditPlayerDialog({
               variant="destructive"
               size="sm"
               disabled={deleteMutation.isPending}
-              onClick={() => {
-                if (confirm(`Delete player "${player.name}"? This also removes their auth account.`)) {
-                  deleteMutation.mutate({ id: player.id });
-                }
-              }}
+              onClick={() => setDeleteOpen(true)}
             >
               Delete
             </Button>
@@ -223,7 +231,29 @@ function EditPlayerDialog({
           </motion.div>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+      </Dialog>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete player?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Delete player &ldquo;{player.name}&rdquo;? This also removes their auth account.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              onClick={() => deleteMutation.mutate({ id: player.id })}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

@@ -2,6 +2,14 @@
 
 import { Button } from "@space-scavenger-hunt/ui/components/button";
 import { Card } from "@space-scavenger-hunt/ui/components/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@space-scavenger-hunt/ui/components/dialog";
 import { Input } from "@space-scavenger-hunt/ui/components/input";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
@@ -22,6 +30,7 @@ import { trpc } from "@/utils/trpc";
 export default function AdminKickoffPage() {
   const queryClient = useQueryClient();
   const [timeLimitMinutes, setTimeLimitMinutes] = useState("30");
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const stateQuery = useQuery({
     ...trpc.kickoff.getDisplayState.queryOptions(),
     refetchInterval: 2000,
@@ -61,6 +70,7 @@ export default function AdminKickoffPage() {
     ...trpc.kickoff.resetAssignments.mutationOptions(),
     onSuccess: () => {
       toast.success("Assignments reset");
+      setResetConfirmOpen(false);
       invalidate();
     },
     onError: (err) => toast.error(err.message),
@@ -135,7 +145,7 @@ export default function AdminKickoffPage() {
               { label: "Start team assignment", onClick: () => start.mutate(), disabled: state.status !== "SETUP" || start.isPending, variant: "default" as const },
               { label: "Spin next player", onClick: () => spin.mutate(), disabled: state.status !== "TEAM_ASSIGNMENT" || spin.isPending, variant: "secondary" as const },
               { label: "Auto-assign remaining", onClick: () => autoAssign.mutate(), disabled: state.status !== "TEAM_ASSIGNMENT" || autoAssign.isPending, variant: "secondary" as const },
-              { label: "Reset assignments", onClick: () => { if (confirm("Reset all team assignments?")) reset.mutate(); }, disabled: state.status === "ACTIVE" || state.status === "FINISHED" || reset.isPending, variant: "secondary" as const },
+              { label: "Reset assignments", onClick: () => setResetConfirmOpen(true), disabled: state.status === "ACTIVE" || state.status === "FINISHED" || reset.isPending, variant: "secondary" as const },
               { label: "Begin activity", onClick: handleBeginActivity, disabled: state.status !== "TEAM_ASSIGNMENT" || begin.isPending || state.assignedCount === 0, variant: "default" as const },
             ].map((btn) => (
               <motion.div key={btn.label} {...buttonInteraction}>
@@ -219,6 +229,45 @@ export default function AdminKickoffPage() {
           ))}
         </motion.div>
       </motion.div>
+
+      <Dialog
+        open={resetConfirmOpen}
+        onOpenChange={(open) => {
+          if (!open && !reset.isPending) {
+            setResetConfirmOpen(false);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md" showCloseButton={!reset.isPending}>
+          <DialogHeader>
+            <DialogTitle>Reset team assignments?</DialogTitle>
+            <DialogDescription>
+              All players will be unassigned from their teams. You can run team assignment again
+              from the beginning.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={reset.isPending}
+              onClick={() => setResetConfirmOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              disabled={reset.isPending}
+              onClick={() => reset.mutate()}
+            >
+              {reset.isPending ? "Resetting..." : "Reset assignments"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }

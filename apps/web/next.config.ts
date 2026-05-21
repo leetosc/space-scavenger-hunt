@@ -21,6 +21,7 @@ function getImageRemoteHosts(): string[] {
 }
 
 const imageRemoteHosts = getImageRemoteHosts();
+const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL ?? "http://localhost:3000";
 
 const nextConfig: NextConfig = {
   // typedRoutes requires a Next.js build/dev cycle to generate `.next/types/routes.d.ts`
@@ -34,6 +35,14 @@ const nextConfig: NextConfig = {
       protocol: "https",
       hostname,
     })),
+  },
+  async rewrites() {
+    return [
+      {
+        source: "/attempt-photos/:attemptId/:token",
+        destination: `${serverUrl}/api/attempts/:attemptId/photo/:token`,
+      },
+    ];
   },
 };
 

@@ -8,6 +8,7 @@ import cors from "cors";
 import express from "express";
 
 import { bootstrapAdmin } from "./lib/bootstrap-admin";
+import { getAttemptPhoto } from "./routes/attempt-photo";
 import { uploadAttemptPhoto, uploadMiddleware } from "./routes/upload";
 
 const app = express();
@@ -46,6 +47,8 @@ app.post(
   uploadMiddleware.single("image"),
   uploadAttemptPhoto,
 );
+
+app.get("/api/attempts/:attemptId/photo/:token", getAttemptPhoto);
 
 app.use(express.json());
 
