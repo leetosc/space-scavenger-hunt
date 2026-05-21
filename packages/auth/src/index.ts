@@ -38,6 +38,18 @@ export function createAuth() {
           defaultValue: "PLAYER",
           input: false,
         },
+        firstName: {
+          type: "string",
+          required: false,
+          defaultValue: "",
+          input: true,
+        },
+        lastName: {
+          type: "string",
+          required: false,
+          defaultValue: "",
+          input: true,
+        },
       },
     },
     plugins: [username()],

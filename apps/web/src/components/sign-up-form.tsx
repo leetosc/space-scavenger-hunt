@@ -24,6 +24,8 @@ export default function SignUpForm() {
 
   const form = useForm({
     defaultValues: {
+      firstName: "",
+      lastName: "",
       username: "",
       password: "",
       icon: "Rocket",
@@ -31,12 +33,13 @@ export default function SignUpForm() {
     onSubmit: async ({ value }) => {
       try {
         await signUpMutation.mutateAsync({
+          firstName: value.firstName,
+          lastName: value.lastName,
           username: value.username,
           password: value.password,
           icon: value.icon,
         });
 
-        // Sign in automatically after sign-up
         await authClient.signIn.username(
           {
             username: value.username.trim().toLowerCase(),
@@ -48,8 +51,7 @@ export default function SignUpForm() {
               router.refresh();
               toast.success("Welcome aboard, astronaut!");
             },
-            onError: (error) => {
-              // Account created but auto-login failed -- redirect to login
+            onError: () => {
               toast.error("Account created. Please sign in manually.");
               router.push("/login");
             },
@@ -63,6 +65,8 @@ export default function SignUpForm() {
     },
     validators: {
       onSubmit: z.object({
+        firstName: z.string().min(1, "First name is required"),
+        lastName: z.string().min(1, "Last name is required"),
         username: z.string().min(3, "Username must be at least 3 characters"),
         password: z.string().min(8, "Password must be at least 8 characters"),
         icon: z.string().min(1, "Choose an icon"),
@@ -89,6 +93,50 @@ export default function SignUpForm() {
         }}
         className="space-y-5"
       >
+        <div className="grid grid-cols-2 gap-4">
+          <form.Field name="firstName">
+            {(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>First name</Label>
+                <Input
+                  id={field.name}
+                  name={field.name}
+                  autoComplete="given-name"
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                />
+                {field.state.meta.errors.map((error) => (
+                  <p key={error?.message} className="text-red-500 text-sm">
+                    {error?.message}
+                  </p>
+                ))}
+              </div>
+            )}
+          </form.Field>
+
+          <form.Field name="lastName">
+            {(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>Last name</Label>
+                <Input
+                  id={field.name}
+                  name={field.name}
+                  autoComplete="family-name"
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                />
+                {field.state.meta.errors.map((error) => (
+                  <p key={error?.message} className="text-red-500 text-sm">
+                    {error?.message}
+                  </p>
+                ))}
+              </div>
+            )}
+          </form.Field>
+        </div>
+
         <div>
           <form.Field name="username">
             {(field) => (

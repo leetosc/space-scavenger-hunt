@@ -10,7 +10,7 @@ import {
 } from "@space-scavenger-hunt/ui/components/dropdown-menu";
 import { Skeleton } from "@space-scavenger-hunt/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
-import { User } from "lucide-react";
+import { User, UserCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -69,6 +69,10 @@ export default function UserMenu() {
             <span>@{session.user.username ?? session.user.name}</span>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => router.push("/profile")}>
+            <UserCircle className="size-4" />
+            Profile
+          </DropdownMenuItem>
           <DropdownMenuItem
             variant="destructive"
             onClick={() => {
