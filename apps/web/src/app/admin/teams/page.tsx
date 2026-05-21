@@ -17,6 +17,64 @@ const DEFAULT_TEAMS = [
   { name: "Red Dwarfs", color: "#ef9c5b", icon: "D" },
 ];
 
+const PRESET_COLORS = [
+  { hex: "#5b8def", label: "Nebula Blue" },
+  { hex: "#ef5b8d", label: "Solar Flare" },
+  { hex: "#5bef9c", label: "Aurora Green" },
+  { hex: "#ef9c5b", label: "Mars Orange" },
+  { hex: "#a855f7", label: "Pulsar Purple" },
+  { hex: "#f59e0b", label: "Stardust Gold" },
+  { hex: "#06b6d4", label: "Comet Cyan" },
+  { hex: "#f43f5e", label: "Red Giant" },
+];
+
+function ColorPicker({
+  value,
+  onChange,
+  id,
+}: {
+  value: string;
+  onChange: (color: string) => void;
+  id?: string;
+}) {
+  return (
+    <div className="space-y-2">
+      {/* Preset swatches */}
+      <div className="flex flex-wrap gap-1.5">
+        {PRESET_COLORS.map((preset) => {
+          const isSelected = value.toLowerCase() === preset.hex.toLowerCase();
+          return (
+            <button
+              key={preset.hex}
+              type="button"
+              title={preset.label}
+              aria-label={preset.label}
+              onClick={() => onChange(preset.hex)}
+              className="h-6 w-6 rounded-full border-2 transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-1"
+              style={{
+                backgroundColor: preset.hex,
+                borderColor: isSelected ? "white" : "transparent",
+                boxShadow: isSelected ? `0 0 0 2px ${preset.hex}` : "none",
+              }}
+            />
+          );
+        })}
+      </div>
+      {/* Custom color input */}
+      <div className="flex items-center gap-2">
+        <Input
+          id={id}
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-8 w-14 cursor-pointer p-0.5"
+        />
+        <span className="text-xs text-muted-foreground font-mono">{value}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminTeamsPage() {
   const queryClient = useQueryClient();
   const listQuery = useQuery(trpc.team.list.queryOptions());
@@ -82,7 +140,7 @@ export default function AdminTeamsPage() {
 
       <Card className="p-4">
         <form
-          className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end"
+          className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
             if (!canCreate) return;
@@ -90,36 +148,35 @@ export default function AdminTeamsPage() {
             setNewName("");
           }}
         >
-          <div>
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              required
-            />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="icon">Icon</Label>
+              <Input
+                id="icon"
+                value={newIcon}
+                onChange={(e) => setNewIcon(e.target.value)}
+                maxLength={4}
+              />
+            </div>
+            <div className="flex items-end">
+              <Button type="submit" disabled={!canCreate || createMutation.isPending} className="w-full">
+                {canCreate ? "Create team" : "4 / 4"}
+              </Button>
+            </div>
           </div>
           <div>
-            <Label htmlFor="color">Color</Label>
-            <Input
-              id="color"
-              type="color"
-              value={newColor}
-              onChange={(e) => setNewColor(e.target.value)}
-            />
+            <Label className="mb-1.5 block">Color</Label>
+            <ColorPicker id="color" value={newColor} onChange={setNewColor} />
           </div>
-          <div>
-            <Label htmlFor="icon">Icon</Label>
-            <Input
-              id="icon"
-              value={newIcon}
-              onChange={(e) => setNewIcon(e.target.value)}
-              maxLength={4}
-            />
-          </div>
-          <Button type="submit" disabled={!canCreate || createMutation.isPending}>
-            {canCreate ? "Create team" : "4 / 4"}
-          </Button>
         </form>
       </Card>
 
@@ -130,50 +187,60 @@ export default function AdminTeamsPage() {
         ) : (
           <ul className="divide-y">
             {teams.map((team) => (
-              <li key={team.id} className="py-3 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <span
-                    className="inline-flex h-8 w-8 items-center justify-center rounded text-xs font-bold text-white"
-                    style={{ backgroundColor: team.color ?? "#888" }}
-                  >
-                    {team.icon ?? team.name.slice(0, 1)}
-                  </span>
-                  <div>
-                    <p className="font-medium">{team.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {team._count.players} players · {team._count.assignments} astronauts ·{" "}
-                      {team._count.claims} claims
-                    </p>
+              <li key={team.id} className="py-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="inline-flex h-8 w-8 items-center justify-center rounded text-xs font-bold text-white"
+                      style={{ backgroundColor: team.color ?? "#888" }}
+                    >
+                      {team.icon ?? team.name.slice(0, 1)}
+                    </span>
+                    <div>
+                      <p className="font-medium">{team.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {team._count.players} players · {team._count.assignments} astronauts ·{" "}
+                        {team._count.claims} claims
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const name = prompt("New name", team.name);
+                        if (name && name !== team.name) {
+                          updateMutation.mutate({ id: team.id, name });
+                        }
+                      }}
+                    >
+                      Rename
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        if (
+                          confirm(
+                            `Delete team "${team.name}"? Players assigned to it will be unassigned.`,
+                          )
+                        ) {
+                          deleteMutation.mutate({ id: team.id });
+                        }
+                      }}
+                    >
+                      Delete
+                    </Button>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      const name = prompt("New name", team.name);
-                      if (name && name !== team.name) {
-                        updateMutation.mutate({ id: team.id, name });
-                      }
-                    }}
-                  >
-                    Rename
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      if (
-                        confirm(
-                          `Delete team "${team.name}"? Players assigned to it will be unassigned.`,
-                        )
-                      ) {
-                        deleteMutation.mutate({ id: team.id });
-                      }
-                    }}
-                  >
-                    Delete
-                  </Button>
+                {/* Inline color picker for existing teams */}
+                <div className="pl-11">
+                  <p className="text-xs text-muted-foreground mb-1.5">Team color</p>
+                  <ColorPicker
+                    value={team.color ?? "#888888"}
+                    onChange={(color) => updateMutation.mutate({ id: team.id, color })}
+                  />
                 </div>
               </li>
             ))}
