@@ -8,6 +8,7 @@ import {
 } from "@space-scavenger-hunt/ui/components/sheet";
 import { useQuery } from "@tanstack/react-query";
 import { Menu } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -53,44 +54,59 @@ export default function Header() {
   return (
     <div className="backdrop-blur-md bg-background/25 border-b border-border/40 relative z-20">
       <div className="flex flex-row items-center justify-between px-4 sm:px-6 py-2.5">
-        {/* Desktop nav */}
-        <nav className="hidden sm:flex gap-6 text-xs font-mono tracking-wider uppercase">
-          {links.map(({ to, label }) => (
-            <Link key={to} href={to} className="transition-colors text-muted-foreground hover:text-cyan-400 whitespace-nowrap">
-              {label}
-            </Link>
-          ))}
-        </nav>
+        <div className="flex min-w-0 items-center gap-3 sm:gap-6">
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <button
+              onClick={() => setMobileOpen(true)}
+              className="sm:hidden flex items-center justify-center size-9 text-muted-foreground hover:text-cyan-400 transition-colors"
+              aria-label="Open menu"
+            >
+              <Menu className="size-5" />
+            </button>
 
-        {/* Mobile hamburger + Sheet drawer */}
-        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <button
-            onClick={() => setMobileOpen(true)}
-            className="sm:hidden flex items-center justify-center size-9 text-muted-foreground hover:text-cyan-400 transition-colors"
-            aria-label="Open menu"
+            <SheetContent side="left" className="bg-background/95 backdrop-blur-md border-border/40">
+              <SheetHeader>
+                <SheetTitle className="text-xs font-mono tracking-widest text-cyan-400 uppercase font-bold">
+                  Menu
+                </SheetTitle>
+              </SheetHeader>
+              <nav className="flex flex-col gap-1 px-4">
+                {links.map(({ to, label }) => (
+                  <Link
+                    key={to}
+                    href={to}
+                    className="text-sm font-mono tracking-wider uppercase py-2.5 px-3 transition-colors text-muted-foreground hover:text-cyan-400 hover:bg-cyan-400/5"
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </nav>
+            </SheetContent>
+          </Sheet>
+
+          <Link
+            href="/"
+            className="flex shrink-0 items-center transition-opacity hover:opacity-80"
+            aria-label="Space Scavenger Hunt home"
           >
-            <Menu className="size-5" />
-          </button>
+            <Image
+              src="/spacelogo.png"
+              alt="Space Scavenger Hunt"
+              width={36}
+              height={36}
+              className="size-9"
+              priority
+            />
+          </Link>
 
-          <SheetContent side="left" className="bg-background/95 backdrop-blur-md border-border/40">
-            <SheetHeader>
-              <SheetTitle className="text-xs font-mono tracking-widest text-cyan-400 uppercase font-bold">
-                Menu
-              </SheetTitle>
-            </SheetHeader>
-            <nav className="flex flex-col gap-1 px-4">
-              {links.map(({ to, label }) => (
-                <Link
-                  key={to}
-                  href={to}
-                  className="text-sm font-mono tracking-wider uppercase py-2.5 px-3 transition-colors text-muted-foreground hover:text-cyan-400 hover:bg-cyan-400/5"
-                >
-                  {label}
-                </Link>
-              ))}
-            </nav>
-          </SheetContent>
-        </Sheet>
+          <nav className="hidden sm:flex gap-6 text-xs font-mono tracking-wider uppercase">
+            {links.map(({ to, label }) => (
+              <Link key={to} href={to} className="transition-colors text-muted-foreground hover:text-cyan-400 whitespace-nowrap">
+                {label}
+              </Link>
+            ))}
+          </nav>
+        </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
           <UserMenu />

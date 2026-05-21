@@ -16,9 +16,45 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteDescription =
+  "The Starfarer-9 has suffered a critical hull failure. Enlist with your team, decrypt sector logs, and rescue stranded astronauts before life support systems fail.";
+
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.NODE_ENV === "production"
+    ? process.env.NEXT_PUBLIC_SERVER_URL
+    : "http://localhost:3001");
+
 export const metadata: Metadata = {
-  title: "space-scavenger-hunt",
-  description: "space-scavenger-hunt",
+  metadataBase: siteUrl ? new URL(siteUrl) : undefined,
+  title: {
+    default: "Space Scavenger Hunt",
+    template: "%s | Space Scavenger Hunt",
+  },
+  description: siteDescription,
+  icons: {
+    icon: "/favicon.ico",
+  },
+  openGraph: {
+    title: "Space Scavenger Hunt",
+    description: siteDescription,
+    siteName: "Space Scavenger Hunt",
+    url: "/",
+    locale: "en_US",
+    type: "website",
+    images: [
+      {
+        url: "/spacelogo.png",
+        alt: "Space Scavenger Hunt",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Space Scavenger Hunt",
+    description: siteDescription,
+    images: ["/spacelogo.png"],
+  },
 };
 
 export default function RootLayout({
