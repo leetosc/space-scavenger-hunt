@@ -18,7 +18,8 @@ import { Pencil } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { ICON_MAP, SPACE_ICONS } from "@/lib/icons";
+import { IconPicker } from "@/components/icon-picker";
+import { ICON_MAP } from "@/lib/icons";
 import { trpc } from "@/utils/trpc";
 
 const DEFAULT_TEAMS = [
@@ -80,36 +81,6 @@ function ColorPicker({
         />
         <span className="text-xs text-muted-foreground font-mono">{value}</span>
       </div>
-    </div>
-  );
-}
-
-function IconPicker({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (icon: string) => void;
-}) {
-  return (
-    <div className="grid grid-cols-7 gap-1.5">
-      {SPACE_ICONS.map(({ name, icon: Icon }) => (
-        <button
-          key={name}
-          type="button"
-          onClick={() => onChange(name)}
-          className={cn(
-            "flex items-center justify-center p-1.5 border transition-all",
-            "hover:border-cyan-400 hover:text-cyan-400",
-            value === name
-              ? "border-cyan-400 text-cyan-400 bg-cyan-400/10 shadow-[0_0_12px_rgba(34,211,238,0.25)]"
-              : "border-border/40 text-muted-foreground",
-          )}
-          title={name}
-        >
-          <Icon className="size-4" />
-        </button>
-      ))}
     </div>
   );
 }

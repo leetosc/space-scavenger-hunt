@@ -3,8 +3,10 @@
 import { Button } from "@space-scavenger-hunt/ui/components/button";
 import { Card } from "@space-scavenger-hunt/ui/components/card";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
+import { TeamIcon } from "@/components/team-icon";
 import { trpc } from "@/utils/trpc";
 
 export default function AdminKickoffPage() {
@@ -78,52 +80,55 @@ export default function AdminKickoffPage() {
           href="/kickoff"
           target="_blank"
           rel="noreferrer"
-          className="text-sm underline text-blue-600"
+          className="inline-flex items-center gap-1.5 rounded-none border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted dark:border-input dark:bg-input/30 dark:hover:bg-input/50"
         >
+          <ExternalLink className="size-3.5" />
           Open kickoff display
         </a>
       </header>
 
-      <Card className="p-4 flex flex-wrap gap-2">
-        <Button
-          disabled={state.status !== "SETUP" || start.isPending}
-          onClick={() => start.mutate()}
-        >
-          Start team assignment
-        </Button>
-        <Button
-          variant="outline"
-          disabled={state.status !== "TEAM_ASSIGNMENT" || spin.isPending}
-          onClick={() => spin.mutate()}
-        >
-          Spin next player
-        </Button>
-        <Button
-          variant="outline"
-          disabled={state.status !== "TEAM_ASSIGNMENT" || autoAssign.isPending}
-          onClick={() => autoAssign.mutate()}
-        >
-          Auto-assign remaining
-        </Button>
-        <Button
-          variant="outline"
-          disabled={state.status === "ACTIVE" || state.status === "FINISHED" || reset.isPending}
-          onClick={() => {
-            if (confirm("Reset all team assignments?")) reset.mutate();
-          }}
-        >
-          Reset assignments
-        </Button>
-        <Button
-          disabled={state.status !== "TEAM_ASSIGNMENT" || begin.isPending || state.assignedCount === 0}
-          onClick={() => begin.mutate()}
-        >
-          Begin activity
-        </Button>
+      <Card className="p-4 gap-3">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            disabled={state.status !== "SETUP" || start.isPending}
+            onClick={() => start.mutate()}
+          >
+            Start team assignment
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={state.status !== "TEAM_ASSIGNMENT" || spin.isPending}
+            onClick={() => spin.mutate()}
+          >
+            Spin next player
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={state.status !== "TEAM_ASSIGNMENT" || autoAssign.isPending}
+            onClick={() => autoAssign.mutate()}
+          >
+            Auto-assign remaining
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={state.status === "ACTIVE" || state.status === "FINISHED" || reset.isPending}
+            onClick={() => {
+              if (confirm("Reset all team assignments?")) reset.mutate();
+            }}
+          >
+            Reset assignments
+          </Button>
+          <Button
+            disabled={state.status !== "TEAM_ASSIGNMENT" || begin.isPending || state.assignedCount === 0}
+            onClick={() => begin.mutate()}
+          >
+            Begin activity
+          </Button>
+        </div>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="p-4">
+      <div className="space-y-4">
+        <Card className="p-4 min-h-[120px]">
           <h2 className="font-bold mb-2">Unassigned ({state.unassignedPlayers.length})</h2>
           {state.unassignedPlayers.length === 0 ? (
             <p className="text-sm text-muted-foreground">All players assigned.</p>
@@ -136,30 +141,27 @@ export default function AdminKickoffPage() {
           )}
         </Card>
 
-        {state.teams.map((team) => (
-          <Card key={team.id} className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <span
-                className="inline-flex h-6 w-6 items-center justify-center rounded text-[10px] font-bold text-white"
-                style={{ backgroundColor: team.color ?? "#888" }}
-              >
-                {team.icon ?? team.name.slice(0, 1)}
-              </span>
-              <h2 className="font-bold">
-                {team.name} ({team.players.length})
-              </h2>
-            </div>
-            {team.players.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No players yet.</p>
-            ) : (
-              <ul className="text-sm space-y-1">
-                {team.players.map((p) => (
-                  <li key={p.id}>{p.name}</li>
-                ))}
-              </ul>
-            )}
-          </Card>
-        ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {state.teams.map((team) => (
+            <Card key={team.id} className="p-4 min-h-[120px]">
+              <div className="flex items-center gap-2 mb-2 min-w-0">
+                <TeamIcon icon={team.icon} color={team.color} name={team.name} />
+                <h2 className="font-bold truncate">
+                  {team.name} ({team.players.length})
+                </h2>
+              </div>
+              {team.players.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No players yet.</p>
+              ) : (
+                <ul className="text-sm space-y-1">
+                  {team.players.map((p) => (
+                    <li key={p.id}>{p.name}</li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          ))}
+        </div>
       </div>
     </div>
   );

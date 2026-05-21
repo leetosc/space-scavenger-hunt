@@ -142,11 +142,42 @@ export const playerRouter = router({
     }),
 
   update: adminProcedure
-    .input(z.object({ id: z.string().min(1), name: z.string().min(1).max(80) }))
-    .mutation(({ ctx, input }) => {
+    .input(
+      z.object({
+        id: z.string().min(1),
+        name: z.string().min(1).max(80).optional(),
+        icon: z.string().max(100).optional(),
+        teamId: z.string().nullish(),
+        isCheckedIn: z.boolean().optional(),
+        role: z.enum(["PLAYER", "ADMIN"]).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { id, role, ...playerData } = input;
+
+      // Update auth user role if provided
+      if (role !== undefined) {
+        const player = await ctx.prisma.player.findUnique({ where: { id } });
+        if (player?.authUserId) {
+          await ctx.prisma.user.update({
+            where: { id: player.authUserId },
+            data: { role },
+          });
+        }
+      }
+
       return ctx.prisma.player.update({
-        where: { id: input.id },
-        data: { name: input.name },
+        where: { id },
+        data: {
+          ...(playerData.name !== undefined && { name: playerData.name }),
+          ...(playerData.icon !== undefined && { icon: playerData.icon }),
+          ...(playerData.teamId !== undefined && { teamId: playerData.teamId ?? null }),
+          ...(playerData.isCheckedIn !== undefined && { isCheckedIn: playerData.isCheckedIn }),
+        },
+        include: {
+          team: true,
+          authUser: { select: { id: true, username: true, role: true } },
+        },
       });
     }),
 

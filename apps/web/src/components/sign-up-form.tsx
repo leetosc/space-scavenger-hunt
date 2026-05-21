@@ -3,7 +3,6 @@
 import { Button } from "@space-scavenger-hunt/ui/components/button";
 import { Input } from "@space-scavenger-hunt/ui/components/input";
 import { Label } from "@space-scavenger-hunt/ui/components/label";
-import { cn } from "@space-scavenger-hunt/ui/lib/utils";
 import { useForm } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
@@ -12,9 +11,9 @@ import { toast } from "sonner";
 import z from "zod";
 
 import { authClient } from "@/lib/auth-client";
-import { SPACE_ICONS } from "@/lib/icons";
 import { trpc } from "@/utils/trpc";
 
+import { IconPicker } from "./icon-picker";
 import Loader from "./loader";
 
 export default function SignUpForm() {
@@ -142,25 +141,10 @@ export default function SignUpForm() {
             {(field) => (
               <div className="space-y-2">
                 <Label>Choose Your Icon</Label>
-                <div className="grid grid-cols-5 sm:grid-cols-7 gap-2">
-                  {SPACE_ICONS.map(({ name, icon: Icon }) => (
-                    <button
-                      key={name}
-                      type="button"
-                      onClick={() => field.handleChange(name)}
-                      className={cn(
-                        "flex items-center justify-center p-2 border transition-all",
-                        "hover:border-cyan-400 hover:text-cyan-400",
-                        field.state.value === name
-                          ? "border-cyan-400 text-cyan-400 bg-cyan-400/10 shadow-[0_0_12px_rgba(34,211,238,0.25)]"
-                          : "border-border/40 text-muted-foreground",
-                      )}
-                      title={name}
-                    >
-                      <Icon className="size-5" />
-                    </button>
-                  ))}
-                </div>
+                <IconPicker
+                  value={field.state.value}
+                  onChange={(icon) => field.handleChange(icon)}
+                />
                 {field.state.meta.errors.map((error) => (
                   <p key={error?.message} className="text-red-500 text-sm">
                     {error?.message}
