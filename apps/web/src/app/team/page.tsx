@@ -62,8 +62,7 @@ export default function TeamPage() {
     );
   }
 
-  const { team, players, assignedCount, claimedCount, progress, pendingAttempts, claims } =
-    dashboard.data;
+  const { team, players, assignedCount, claimedCount, progress, claims } = dashboard.data;
 
   return (
     <motion.div
@@ -167,62 +166,12 @@ export default function TeamPage() {
         </Card>
       </motion.div>
 
-      {/* In progress */}
+      {/* Successful attempts */}
       <motion.div variants={fadeInUp}>
         <Card className="p-4">
-          <h2 className="font-bold mb-2">In progress</h2>
-          {pendingAttempts.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Nothing in progress. Find and scan an astronaut tag to start a challenge.
-            </p>
-          ) : (
-            <ul className="divide-y">
-              <AnimatePresence>
-                {pendingAttempts.map((a, idx) => (
-                  <motion.li
-                    key={a.id}
-                    className="py-3"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ ...springTransition, delay: idx * 0.05 }}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <p className="font-medium">{a.astronautName}</p>
-                        <p className="text-sm text-muted-foreground">{a.taskPrompt}</p>
-                      </div>
-                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Link
-                          href={`/attempt/${a.id}` as Route}
-                          className="text-sm font-medium text-blue-600 underline whitespace-nowrap"
-                        >
-                          Open
-                        </Link>
-                      </motion.div>
-                    </div>
-                    <motion.p
-                      className="text-xs text-muted-foreground mt-1"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.2 }}
-                    >
-                      Status: {a.status}
-                    </motion.p>
-                  </motion.li>
-                ))}
-              </AnimatePresence>
-            </ul>
-          )}
-        </Card>
-      </motion.div>
-
-      {/* Claimed astronauts */}
-      <motion.div variants={fadeInUp}>
-        <Card className="p-4">
-          <h2 className="font-bold mb-2">Claimed astronauts</h2>
+          <h2 className="font-bold mb-2">Successful attempts</h2>
           {claims.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No claims yet. Get scanning!</p>
+            <p className="text-sm text-muted-foreground">No successful attempts yet. Get scanning!</p>
           ) : (
             <ul className="divide-y">
               <AnimatePresence>

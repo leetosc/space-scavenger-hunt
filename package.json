@@ -47,6 +47,7 @@
   "devDependencies": {
     "@space-scavenger-hunt/config": "workspace:*",
     "@types/bun": "catalog:",
+    "playwright": "^1.60.0",
     "turbo": "^2.8.12",
     "typescript": "catalog:"
   },

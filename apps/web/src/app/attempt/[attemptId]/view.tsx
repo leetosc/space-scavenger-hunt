@@ -61,7 +61,7 @@ const LOADING_MESSAGES = [
 ];
 
 const JUDGING_MESSAGES = [
-  "AI scanning photo evidence...",
+  "Scanning photo evidence...",
   "Analyzing visual telemetry...",
   "Cross-referencing rescue database...",
   "Verifying crew identification...",
@@ -197,7 +197,11 @@ function JudgingOverlay() {
             >
               <motion.div
                 animate={{ rotate: [0, 5, -5, 0] }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                transition={{
+                  duration: 2.5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
               >
                 <BrainCircuit className="size-6 text-indigo-400" />
               </motion.div>
@@ -216,7 +220,7 @@ function JudgingOverlay() {
           <div className="flex-1 space-y-2">
             <div className="flex items-center gap-2">
               <h3 className="font-mono text-xs tracking-widest text-indigo-300 uppercase font-bold">
-                AI Analysis In Progress
+                Analysis In Progress
               </h3>
               {/* pulsing dots */}
               <div className="flex gap-0.5">
@@ -502,7 +506,11 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
                 <motion.div
                   className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent pointer-events-none"
                   animate={{ top: ["0%", "100%", "0%"] }}
-                  transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                  transition={{
+                    duration: 2.5,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
                 />
               )}
             </Card>
@@ -591,10 +599,7 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
                     {pendingFile.name}
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <Button
-                      onClick={handleConfirmUpload}
-                      disabled={uploading}
-                    >
+                    <Button onClick={handleConfirmUpload} disabled={uploading}>
                       Submit photo
                     </Button>
                     <Button

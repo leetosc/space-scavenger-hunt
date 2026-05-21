@@ -37,11 +37,6 @@ export const teamRouter = router({
           include: { astronaut: true, claimAttempt: true },
           orderBy: { claimedAt: "desc" },
         },
-        attempts: {
-          where: { status: { in: ["PENDING_PHOTO", "SUBMITTED", "REJECTED"] } },
-          include: { astronaut: true },
-          orderBy: { createdAt: "desc" },
-        },
       },
     });
     if (!team) return null;
@@ -58,13 +53,6 @@ export const teamRouter = router({
       assignedCount,
       claimedCount,
       progress: assignedCount > 0 ? claimedCount / assignedCount : 0,
-      pendingAttempts: team.attempts.map((a) => ({
-        id: a.id,
-        astronautName: a.astronaut.name,
-        status: a.status,
-        taskPrompt: a.taskPrompt,
-        createdAt: a.createdAt,
-      })),
       claims: team.claims.map((c) => ({
         astronautId: c.astronautId,
         astronautName: c.astronaut.name,
