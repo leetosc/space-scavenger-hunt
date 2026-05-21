@@ -2,9 +2,11 @@
 
 import { Button } from "@space-scavenger-hunt/ui/components/button";
 import { Card } from "@space-scavenger-hunt/ui/components/card";
+import { Input } from "@space-scavenger-hunt/ui/components/input";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { ExternalLink } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { TeamIcon } from "@/components/team-icon";
@@ -19,6 +21,7 @@ import { trpc } from "@/utils/trpc";
 
 export default function AdminKickoffPage() {
   const queryClient = useQueryClient();
+  const [timeLimitMinutes, setTimeLimitMinutes] = useState("30");
   const stateQuery = useQuery({
     ...trpc.kickoff.getDisplayState.queryOptions(),
     refetchInterval: 2000,
@@ -71,6 +74,15 @@ export default function AdminKickoffPage() {
     onError: (err) => toast.error(err.message),
   });
 
+  const handleBeginActivity = () => {
+    const minutes = Number(timeLimitMinutes);
+    if (!Number.isInteger(minutes) || minutes <= 0) {
+      toast.error("Enter a positive whole number of minutes.");
+      return;
+    }
+    begin.mutate({ timeLimitMinutes: minutes });
+  };
+
   const state = stateQuery.data;
   if (!state) return <p className="text-sm text-muted-foreground">Loading kickoff state...</p>;
 
@@ -102,13 +114,29 @@ export default function AdminKickoffPage() {
 
       <motion.div variants={fadeInUp}>
         <Card className="p-4 gap-3">
+          <div className="flex max-w-xs flex-col gap-1.5">
+            <label htmlFor="time-limit-minutes" className="text-xs font-medium text-muted-foreground">
+              Activity time limit (minutes)
+            </label>
+            <Input
+              id="time-limit-minutes"
+              type="number"
+              min={1}
+              max={1440}
+              step={1}
+              inputMode="numeric"
+              value={timeLimitMinutes}
+              disabled={state.status === "ACTIVE" || state.status === "FINISHED"}
+              onChange={(event) => setTimeLimitMinutes(event.target.value)}
+            />
+          </div>
           <div className="flex flex-wrap gap-2">
             {[
               { label: "Start team assignment", onClick: () => start.mutate(), disabled: state.status !== "SETUP" || start.isPending, variant: "default" as const },
               { label: "Spin next player", onClick: () => spin.mutate(), disabled: state.status !== "TEAM_ASSIGNMENT" || spin.isPending, variant: "secondary" as const },
               { label: "Auto-assign remaining", onClick: () => autoAssign.mutate(), disabled: state.status !== "TEAM_ASSIGNMENT" || autoAssign.isPending, variant: "secondary" as const },
               { label: "Reset assignments", onClick: () => { if (confirm("Reset all team assignments?")) reset.mutate(); }, disabled: state.status === "ACTIVE" || state.status === "FINISHED" || reset.isPending, variant: "secondary" as const },
-              { label: "Begin activity", onClick: () => begin.mutate(), disabled: state.status !== "TEAM_ASSIGNMENT" || begin.isPending || state.assignedCount === 0, variant: "default" as const },
+              { label: "Begin activity", onClick: handleBeginActivity, disabled: state.status !== "TEAM_ASSIGNMENT" || begin.isPending || state.assignedCount === 0, variant: "default" as const },
             ].map((btn) => (
               <motion.div key={btn.label} {...buttonInteraction}>
                 <Button

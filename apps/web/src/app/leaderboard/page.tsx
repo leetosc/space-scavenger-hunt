@@ -4,6 +4,7 @@ import { Card } from "@space-scavenger-hunt/ui/components/card";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 
+import { MissionCountdown } from "@/components/mission-countdown";
 import { ICON_MAP } from "@/lib/icons";
 import {
   staggerContainer,
@@ -15,9 +16,20 @@ import {
 } from "@/lib/animations";
 import { trpc } from "@/utils/trpc";
 
+function formatElapsed(seconds: number | null): string {
+  if (seconds === null) return "\u2014";
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return `${minutes}:${remainder.toString().padStart(2, "0")}`;
+}
+
 export default function LeaderboardPage() {
   const board = useQuery({
     ...trpc.leaderboard.getCurrent.queryOptions(),
+    refetchInterval: 5000,
+  });
+  const activity = useQuery({
+    ...trpc.activity.getState.queryOptions(),
     refetchInterval: 5000,
   });
 
@@ -45,6 +57,14 @@ export default function LeaderboardPage() {
         <p className="text-sm text-muted-foreground">Updated every few seconds.</p>
       </motion.header>
 
+      <motion.div variants={fadeInUp}>
+        <MissionCountdown
+          status={activity.data?.status}
+          deadlineAt={activity.data?.deadlineAt}
+          serverNow={activity.data?.serverNow}
+        />
+      </motion.div>
+
       <motion.div variants={scaleIn}>
         <Card className="p-0 overflow-hidden">
           <div className="overflow-x-auto">
@@ -56,6 +76,7 @@ export default function LeaderboardPage() {
                   <th className="p-3 text-right">Claimed</th>
                   <th className="p-3 text-right hidden sm:table-cell">Rejected</th>
                   <th className="p-3 text-right hidden sm:table-cell">Latest claim</th>
+                  <th className="p-3 text-right hidden md:table-cell">Tiebreak time</th>
                 </tr>
               </thead>
               <motion.tbody
@@ -107,11 +128,14 @@ export default function LeaderboardPage() {
                     <td className="p-3 text-right text-xs text-muted-foreground hidden sm:table-cell whitespace-nowrap">
                       {row.latestClaimAt ? new Date(row.latestClaimAt).toLocaleTimeString() : "\u2014"}
                     </td>
+                    <td className="p-3 text-right text-xs text-muted-foreground hidden md:table-cell whitespace-nowrap tabular-nums">
+                      {formatElapsed(row.latestClaimElapsedSeconds)}
+                    </td>
                   </motion.tr>
                 ))}
                 {board.data.length === 0 && (
                   <motion.tr variants={fadeIn}>
-                    <td colSpan={5} className="p-6 text-center text-muted-foreground">
+                    <td colSpan={6} className="p-6 text-center text-muted-foreground">
                       No teams yet.
                     </td>
                   </motion.tr>

@@ -2,6 +2,7 @@
 
 import { Button } from "@space-scavenger-hunt/ui/components/button";
 import { Card } from "@space-scavenger-hunt/ui/components/card";
+import { Label } from "@space-scavenger-hunt/ui/components/label";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
@@ -25,9 +26,20 @@ const STATUS_FILTERS = [
   { id: "EXPIRED", label: "Expired" },
 ] as const;
 
+const ATTEMPT_STATUSES = [
+  "PENDING_PHOTO",
+  "SUBMITTED",
+  "APPROVED",
+  "REJECTED",
+  "EXPIRED",
+] as const;
+
 export default function AdminAttemptsPage() {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<(typeof STATUS_FILTERS)[number]["id"]>("SUBMITTED");
+  const [statusDrafts, setStatusDrafts] = useState<
+    Record<string, (typeof ATTEMPT_STATUSES)[number]>
+  >({});
 
   const attemptsQuery = useQuery({
     ...trpc.attempt.adminList.queryOptions(
@@ -36,8 +48,13 @@ export default function AdminAttemptsPage() {
     refetchInterval: 5000,
   });
 
-  const invalidate = () =>
+  const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: trpc.attempt.adminList.queryKey() });
+    queryClient.invalidateQueries({ queryKey: trpc.leaderboard.getCurrent.queryKey() });
+    queryClient.invalidateQueries({ queryKey: trpc.leaderboard.getFinal.queryKey() });
+    queryClient.invalidateQueries({ queryKey: trpc.activity.validateSetup.queryKey() });
+    queryClient.invalidateQueries({ queryKey: trpc.team.getDashboard.queryKey() });
+  };
 
   const approveMutation = useMutation({
     ...trpc.attempt.adminApprove.mutationOptions(),
@@ -52,6 +69,15 @@ export default function AdminAttemptsPage() {
     ...trpc.attempt.adminReject.mutationOptions(),
     onSuccess: () => {
       toast.success("Rejected");
+      invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const setStatusMutation = useMutation({
+    ...trpc.attempt.adminSetStatus.mutationOptions(),
+    onSuccess: () => {
+      toast.success("Attempt status updated");
       invalidate();
     },
     onError: (err) => toast.error(err.message),
@@ -111,31 +137,35 @@ export default function AdminAttemptsPage() {
           animate="visible"
         >
           <AnimatePresence>
-            {attemptsQuery.data.map((a) => (
-              <motion.div
-                key={a.id}
-                variants={fadeInUp}
-                exit={{ opacity: 0, y: -10 }}
-                layout
-              >
-                <Card className="p-4 grid grid-cols-1 md:grid-cols-[180px_1fr] gap-4">
-                  <div>
-                    {a.previewUrl ? (
-                      <motion.img
-                        src={a.previewUrl}
-                        alt="Submission"
-                        className="w-full rounded border"
-                        referrerPolicy="no-referrer"
-                        variants={scaleIn}
-                        initial="hidden"
-                        animate="visible"
-                      />
-                    ) : (
-                      <div className="aspect-square rounded border bg-muted/30 flex items-center justify-center text-xs text-muted-foreground">
-                        No photo
-                      </div>
-                    )}
-                  </div>
+            {attemptsQuery.data.map((a) => {
+              const draftStatus =
+                statusDrafts[a.id] ?? (a.status as (typeof ATTEMPT_STATUSES)[number]);
+
+              return (
+                <motion.div
+                  key={a.id}
+                  variants={fadeInUp}
+                  exit={{ opacity: 0, y: -10 }}
+                  layout
+                >
+                  <Card className="p-4 grid grid-cols-1 md:grid-cols-[180px_1fr] gap-4">
+                    <div>
+                      {a.previewUrl ? (
+                        <motion.img
+                          src={a.previewUrl}
+                          alt="Submission"
+                          className="w-full rounded border"
+                          referrerPolicy="no-referrer"
+                          variants={scaleIn}
+                          initial="hidden"
+                          animate="visible"
+                        />
+                      ) : (
+                        <div className="aspect-square rounded border bg-muted/30 flex items-center justify-center text-xs text-muted-foreground">
+                          No photo
+                        </div>
+                      )}
+                    </div>
 
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -175,6 +205,55 @@ export default function AdminAttemptsPage() {
                       </p>
                     ) : null}
 
+                    <div className="pt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+                      <div className="min-w-[180px]">
+                        <Label htmlFor={`attempt-status-${a.id}`} className="mb-1.5 block">
+                          Testing status
+                        </Label>
+                        <select
+                          id={`attempt-status-${a.id}`}
+                          value={draftStatus}
+                          onChange={(event) =>
+                            setStatusDrafts((current) => ({
+                              ...current,
+                              [a.id]: event.target.value as (typeof ATTEMPT_STATUSES)[number],
+                            }))
+                          }
+                          className="flex h-8 w-full items-center border border-input bg-transparent px-2.5 py-1.5 text-xs outline-none focus:border-ring focus:ring-1 focus:ring-ring/50 dark:bg-input/30"
+                        >
+                          {ATTEMPT_STATUSES.map((attemptStatus) => (
+                            <option key={attemptStatus} value={attemptStatus}>
+                              {attemptStatus}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <motion.div {...buttonInteraction}>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          disabled={
+                            setStatusMutation.isPending ||
+                            draftStatus === a.status
+                          }
+                          onClick={() => {
+                            const feedback =
+                              draftStatus === "REJECTED"
+                                ? prompt("Reason (optional)") ?? "Manually rejected by admin."
+                                : undefined;
+                            setStatusMutation.mutate({
+                              attemptId: a.id,
+                              status: draftStatus,
+                              ...(feedback ? { feedback } : {}),
+                            });
+                          }}
+                        >
+                          Set status
+                        </Button>
+                      </motion.div>
+                    </div>
+
                     <div className="pt-2 flex gap-2">
                       <motion.div {...buttonInteraction}>
                         <Button
@@ -200,10 +279,11 @@ export default function AdminAttemptsPage() {
                         </Button>
                       </motion.div>
                     </div>
-                  </div>
-                </Card>
-              </motion.div>
-            ))}
+                    </div>
+                  </Card>
+                </motion.div>
+              );
+            })}
           </AnimatePresence>
         </motion.div>
       )}

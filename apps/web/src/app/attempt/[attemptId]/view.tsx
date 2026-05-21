@@ -9,6 +9,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { MissionCountdown } from "@/components/mission-countdown";
 import {
   staggerContainer,
   fadeInUp,
@@ -40,6 +41,10 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
   const attemptQuery = useQuery({
     ...trpc.attempt.getById.queryOptions({ id: attemptId }),
     refetchInterval: 3000,
+  });
+  const activity = useQuery({
+    ...trpc.activity.getState.queryOptions(),
+    refetchInterval: 5000,
   });
 
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -110,6 +115,15 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
       initial="hidden"
       animate="visible"
     >
+      <motion.div variants={fadeInUp}>
+        <MissionCountdown
+          status={activity.data?.status}
+          deadlineAt={activity.data?.deadlineAt}
+          serverNow={activity.data?.serverNow}
+          className="w-full justify-center"
+        />
+      </motion.div>
+
       <motion.header variants={fadeInUp}>
         <p className="text-xs uppercase tracking-wide text-muted-foreground">Challenge</p>
         <motion.h1

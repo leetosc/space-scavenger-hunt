@@ -1,16 +1,26 @@
 import { TRPCError } from "@trpc/server";
+import { z } from "zod";
 
 import { adminProcedure, publicProcedure, router } from "../index";
-import { getOrCreateActivity } from "../services/activity";
+import { ACTIVITY_STATUSES, buildActivityTiming, getOrCreateActivity } from "../services/activity";
 
 export const activityRouter = router({
   getCurrent: publicProcedure.query(async () => {
-    return getOrCreateActivity();
+    const activity = await getOrCreateActivity();
+    return {
+      ...activity,
+      ...buildActivityTiming(activity),
+    };
   }),
 
   getState: publicProcedure.query(async () => {
     const activity = await getOrCreateActivity();
-    return { id: activity.id, name: activity.name, status: activity.status };
+    return {
+      id: activity.id,
+      name: activity.name,
+      status: activity.status,
+      ...buildActivityTiming(activity),
+    };
   }),
 
   validateSetup: adminProcedure.query(async ({ ctx }) => {
@@ -62,6 +72,37 @@ export const activityRouter = router({
       ready: issues.length === 0,
     };
   }),
+
+  adminSetState: adminProcedure
+    .input(
+      z.object({
+        status: z.enum(ACTIVITY_STATUSES),
+        timeLimitMinutes: z.number().int().positive().max(24 * 60).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const activity = await getOrCreateActivity();
+      const now = new Date();
+
+      return ctx.prisma.activity.update({
+        where: { id: activity.id },
+        data: {
+          status: input.status,
+          ...(input.status === "ACTIVE" && {
+            startedAt: activity.startedAt ?? now,
+            ...(input.timeLimitMinutes !== undefined && {
+              timeLimitMinutes: input.timeLimitMinutes,
+            }),
+          }),
+          ...(input.status === "FINISHED" && {
+            endedAt: activity.endedAt ?? now,
+          }),
+          ...((input.status === "SETUP" || input.status === "TEAM_ASSIGNMENT") && {
+            endedAt: null,
+          }),
+        },
+      });
+    }),
 
   finish: adminProcedure.mutation(async ({ ctx }) => {
     const activity = await getOrCreateActivity();

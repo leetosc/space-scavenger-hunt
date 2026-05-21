@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { authClient } from "@/lib/auth-client";
+import { MissionCountdown } from "@/components/mission-countdown";
 import {
   staggerContainer,
   staggerContainerSlow,
@@ -91,6 +92,15 @@ export default function TeamPage() {
           />
         </div>
       </motion.header>
+
+      <motion.div variants={fadeInUp}>
+        <MissionCountdown
+          status={activity.data?.status}
+          deadlineAt={activity.data?.deadlineAt}
+          serverNow={activity.data?.serverNow}
+          className="w-full justify-center"
+        />
+      </motion.div>
 
       {/* Manual code input */}
       <motion.div variants={fadeInUp}>

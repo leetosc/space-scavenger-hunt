@@ -1,7 +1,8 @@
 import { TRPCError } from "@trpc/server";
+import { z } from "zod";
 
 import { adminProcedure, publicProcedure, router } from "../index";
-import { getOrCreateActivity } from "../services/activity";
+import { buildActivityTiming, getOrCreateActivity } from "../services/activity";
 import {
   assignNextPlayer,
   autoAssignRemaining,
@@ -19,6 +20,7 @@ export const kickoffRouter = router({
     ]);
     return {
       status: activity.status,
+      ...buildActivityTiming(activity),
       teams: teams.map((t) => ({
         id: t.id,
         name: t.name,
@@ -70,25 +72,31 @@ export const kickoffRouter = router({
     return { ok: true };
   }),
 
-  beginActivity: adminProcedure.mutation(async ({ ctx }) => {
-    const activity = await getOrCreateActivity();
-    if (activity.status === "ACTIVE") return activity;
-    if (activity.status !== "TEAM_ASSIGNMENT") {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "Team assignment must be in progress before beginning the activity.",
+  beginActivity: adminProcedure
+    .input(z.object({ timeLimitMinutes: z.number().int().positive().max(24 * 60) }))
+    .mutation(async ({ ctx, input }) => {
+      const activity = await getOrCreateActivity();
+      if (activity.status === "ACTIVE") return activity;
+      if (activity.status !== "TEAM_ASSIGNMENT") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Team assignment must be in progress before beginning the activity.",
+        });
+      }
+      const unassigned = await ctx.prisma.player.count({ where: { teamId: null } });
+      if (unassigned > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `${unassigned} player(s) are not yet assigned to a team.`,
+        });
+      }
+      return ctx.prisma.activity.update({
+        where: { id: activity.id },
+        data: {
+          status: "ACTIVE",
+          startedAt: new Date(),
+          timeLimitMinutes: input.timeLimitMinutes,
+        },
       });
-    }
-    const unassigned = await ctx.prisma.player.count({ where: { teamId: null } });
-    if (unassigned > 0) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: `${unassigned} player(s) are not yet assigned to a team.`,
-      });
-    }
-    return ctx.prisma.activity.update({
-      where: { id: activity.id },
-      data: { status: "ACTIVE", startedAt: new Date() },
-    });
-  }),
+    }),
 });

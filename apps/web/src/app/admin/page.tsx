@@ -1,16 +1,24 @@
 "use client";
 
+import { Button } from "@space-scavenger-hunt/ui/components/button";
 import { Card } from "@space-scavenger-hunt/ui/components/card";
-import { useQuery } from "@tanstack/react-query";
+import { Input } from "@space-scavenger-hunt/ui/components/input";
+import { Label } from "@space-scavenger-hunt/ui/components/label";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import {
   staggerContainer,
   fadeInUp,
   popIn,
   fadeIn,
+  buttonInteraction,
 } from "@/lib/animations";
 import { trpc } from "@/utils/trpc";
+
+const ACTIVITY_STATUSES = ["SETUP", "TEAM_ASSIGNMENT", "ACTIVE", "FINISHED"] as const;
 
 function Stat({ label, value, idx }: { label: string; value: string | number; idx: number }) {
   return (
@@ -29,7 +37,34 @@ function Stat({ label, value, idx }: { label: string; value: string | number; id
 }
 
 export default function AdminOverviewPage() {
+  const queryClient = useQueryClient();
   const validate = useQuery(trpc.activity.validateSetup.queryOptions());
+  const [status, setStatus] = useState<(typeof ACTIVITY_STATUSES)[number]>("SETUP");
+  const [timeLimitMinutes, setTimeLimitMinutes] = useState("30");
+
+  useEffect(() => {
+    const activity = validate.data?.activity;
+    if (!activity) return;
+    if (ACTIVITY_STATUSES.includes(activity.status as (typeof ACTIVITY_STATUSES)[number])) {
+      setStatus(activity.status as (typeof ACTIVITY_STATUSES)[number]);
+    }
+    if (activity.timeLimitMinutes) {
+      setTimeLimitMinutes(String(activity.timeLimitMinutes));
+    }
+  }, [validate.data?.activity]);
+
+  const setStateMutation = useMutation({
+    ...trpc.activity.adminSetState.mutationOptions(),
+    onSuccess: () => {
+      toast.success("Activity state updated");
+      queryClient.invalidateQueries({ queryKey: trpc.activity.validateSetup.queryKey() });
+      queryClient.invalidateQueries({ queryKey: trpc.activity.getCurrent.queryKey() });
+      queryClient.invalidateQueries({ queryKey: trpc.activity.getState.queryKey() });
+      queryClient.invalidateQueries({ queryKey: trpc.kickoff.getDisplayState.queryKey() });
+      queryClient.invalidateQueries({ queryKey: trpc.leaderboard.getCurrent.queryKey() });
+    },
+    onError: (err) => toast.error(err.message),
+  });
 
   if (!validate.data) {
     return <p className="text-sm text-muted-foreground">Loading setup status...</p>;
@@ -71,6 +106,71 @@ export default function AdminOverviewPage() {
         <Stat label="Astronauts" value={counts.astronauts} idx={3} />
         <Stat label="Assignments" value={counts.assignments} idx={4} />
       </div>
+
+      <motion.div variants={fadeInUp}>
+        <Card className="p-4 gap-4">
+          <div>
+            <h2 className="font-bold">Testing state controls</h2>
+            <p className="text-sm text-muted-foreground">
+              Move the activity between statuses while testing admin and player flows.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_180px_auto] gap-3 items-end">
+            <div>
+              <Label htmlFor="activity-status" className="mb-1.5 block">
+                Activity status
+              </Label>
+              <select
+                id="activity-status"
+                value={status}
+                onChange={(event) =>
+                  setStatus(event.target.value as (typeof ACTIVITY_STATUSES)[number])
+                }
+                className="flex h-9 w-full items-center border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none focus:border-ring focus:ring-1 focus:ring-ring/50 dark:bg-input/30"
+              >
+                {ACTIVITY_STATUSES.map((activityStatus) => (
+                  <option key={activityStatus} value={activityStatus}>
+                    {activityStatus}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="activity-time-limit" className="mb-1.5 block">
+                Time limit
+              </Label>
+              <Input
+                id="activity-time-limit"
+                type="number"
+                min={1}
+                step={1}
+                inputMode="numeric"
+                value={timeLimitMinutes}
+                onChange={(event) => setTimeLimitMinutes(event.target.value)}
+              />
+            </div>
+            <motion.div {...buttonInteraction}>
+              <Button
+                type="button"
+                disabled={setStateMutation.isPending}
+                onClick={() => {
+                  const minutes = Number(timeLimitMinutes);
+                  if (!Number.isInteger(minutes) || minutes <= 0) {
+                    toast.error("Enter a positive whole number of minutes.");
+                    return;
+                  }
+                  setStateMutation.mutate({
+                    status,
+                    ...(status === "ACTIVE" ? { timeLimitMinutes: minutes } : {}),
+                  });
+                }}
+              >
+                Save state
+              </Button>
+            </motion.div>
+          </div>
+        </Card>
+      </motion.div>
 
       <motion.div variants={fadeIn}>
         {issues.length > 0 ? (

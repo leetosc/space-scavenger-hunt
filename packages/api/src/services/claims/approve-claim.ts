@@ -13,6 +13,12 @@ export async function approveClaim(attemptId: string): Promise<ApproveClaimResul
       throw new Error("Attempt not found.");
     }
 
+    const activity = await tx.activity.findFirst({ orderBy: { createdAt: "asc" } });
+    const claimedAt = new Date();
+    const claimedElapsedSeconds = activity?.startedAt
+      ? Math.max(0, Math.floor((claimedAt.getTime() - activity.startedAt.getTime()) / 1000))
+      : null;
+
     const existing = await tx.teamClaim.findUnique({
       where: {
         teamId_astronautId: {
@@ -25,12 +31,26 @@ export async function approveClaim(attemptId: string): Promise<ApproveClaimResul
     let claimId: string;
     if (existing) {
       claimId = existing.id;
+      const existingElapsedSeconds = activity?.startedAt
+        ? Math.max(
+            0,
+            Math.floor((existing.claimedAt.getTime() - activity.startedAt.getTime()) / 1000),
+          )
+        : null;
+      if (existing.claimedElapsedSeconds === null && existingElapsedSeconds !== null) {
+        await tx.teamClaim.update({
+          where: { id: existing.id },
+          data: { claimedElapsedSeconds: existingElapsedSeconds },
+        });
+      }
     } else {
       const created = await tx.teamClaim.create({
         data: {
           teamId: attempt.teamId,
           astronautId: attempt.astronautId,
           claimAttemptId: attempt.id,
+          claimedAt,
+          claimedElapsedSeconds,
         },
       });
       claimId = created.id;

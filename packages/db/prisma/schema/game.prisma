@@ -1,11 +1,12 @@
 model Activity {
-  id        String    @id @default(cuid())
-  name      String
-  status    String    @default("SETUP")
-  startedAt DateTime?
-  endedAt   DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  name             String
+  status           String    @default("SETUP")
+  startedAt        DateTime?
+  endedAt          DateTime?
+  timeLimitMinutes Int?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@map("activity")
 }
@@ -109,14 +110,15 @@ model ClaimAttempt {
 }
 
 model TeamClaim {
-  id             String       @id @default(cuid())
-  teamId         String
-  team           Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  astronautId    String
-  astronaut      Astronaut    @relation(fields: [astronautId], references: [id], onDelete: Cascade)
-  claimAttemptId String       @unique
-  claimAttempt   ClaimAttempt @relation(fields: [claimAttemptId], references: [id], onDelete: Cascade)
-  claimedAt      DateTime     @default(now())
+  id                    String       @id @default(cuid())
+  teamId                String
+  team                  Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  astronautId           String
+  astronaut             Astronaut    @relation(fields: [astronautId], references: [id], onDelete: Cascade)
+  claimAttemptId        String       @unique
+  claimAttempt          ClaimAttempt @relation(fields: [claimAttemptId], references: [id], onDelete: Cascade)
+  claimedAt             DateTime     @default(now())
+  claimedElapsedSeconds Int?
 
   @@unique([teamId, astronautId])
   @@index([teamId])

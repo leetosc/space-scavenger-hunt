@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useRef } from "react";
 
+import { MissionCountdown } from "@/components/mission-countdown";
 import { authClient } from "@/lib/auth-client";
 import {
   staggerContainer,
@@ -35,6 +36,10 @@ export default function AstronautPage({
 
   const astronautQuery = useQuery({
     ...trpc.astronaut.getByCode.queryOptions({ code }),
+  });
+  const activity = useQuery({
+    ...trpc.activity.getState.queryOptions(),
+    refetchInterval: 5000,
   });
 
   const scanMutation = useMutation(trpc.scan.handleScan.mutationOptions());
@@ -114,6 +119,15 @@ export default function AstronautPage({
       initial="hidden"
       animate="visible"
     >
+      <motion.div variants={fadeInUp}>
+        <MissionCountdown
+          status={activity.data?.status}
+          deadlineAt={activity.data?.deadlineAt}
+          serverNow={activity.data?.serverNow}
+          className="w-full justify-center"
+        />
+      </motion.div>
+
       {/* Astronaut info */}
       <motion.div variants={scaleIn}>
         <Card className="p-6 space-y-4">

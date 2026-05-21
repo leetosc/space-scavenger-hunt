@@ -6,6 +6,14 @@ import { getReadSasUrl } from "../services/azure-blob";
 import { approveClaim } from "../services/claims/approve-claim";
 import { rejectClaim } from "../services/claims/reject-claim";
 
+export const CLAIM_ATTEMPT_STATUSES = [
+  "PENDING_PHOTO",
+  "SUBMITTED",
+  "APPROVED",
+  "REJECTED",
+  "EXPIRED",
+] as const;
+
 export const attemptRouter = router({
   getById: playerProcedure
     .input(z.object({ id: z.string().min(1) }))
@@ -69,5 +77,41 @@ export const attemptRouter = router({
     .input(z.object({ attemptId: z.string().min(1), feedback: z.string().max(500).optional() }))
     .mutation(async ({ input }) => {
       return rejectClaim(input.attemptId, input.feedback);
+    }),
+
+  adminSetStatus: adminProcedure
+    .input(
+      z.object({
+        attemptId: z.string().min(1),
+        status: z.enum(CLAIM_ATTEMPT_STATUSES),
+        feedback: z.string().max(500).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (input.status === "APPROVED") {
+        return approveClaim(input.attemptId);
+      }
+      if (input.status === "REJECTED") {
+        return rejectClaim(input.attemptId, input.feedback);
+      }
+
+      return ctx.prisma.$transaction(async (tx) => {
+        const attempt = await tx.claimAttempt.findUnique({
+          where: { id: input.attemptId },
+          include: { claim: true },
+        });
+        if (!attempt) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Attempt not found." });
+        }
+
+        if (attempt.claim) {
+          await tx.teamClaim.delete({ where: { id: attempt.claim.id } });
+        }
+
+        return tx.claimAttempt.update({
+          where: { id: attempt.id },
+          data: { status: input.status },
+        });
+      });
     }),
 });
