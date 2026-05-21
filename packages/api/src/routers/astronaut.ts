@@ -3,7 +3,8 @@ import { customAlphabet } from "nanoid";
 import { z } from "zod";
 
 import type { Context } from "../context";
-import { adminProcedure, router } from "../index";
+import { adminProcedure, publicProcedure, router } from "../index";
+import { generateAstronautProfile } from "../services/ai/generate-astronaut";
 
 const CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const generateFourLetterCode = customAlphabet(CODE_ALPHABET, 4);
@@ -22,6 +23,42 @@ async function generateUniqueCode(prisma: Context["prisma"]) {
 }
 
 export const astronautRouter = router({
+  getByCode: publicProcedure
+    .input(z.object({ code: z.string().min(1).max(64) }))
+    .query(async ({ ctx, input }) => {
+      const code = input.code.length === 4 ? input.code.toUpperCase() : input.code;
+      const astronaut = await ctx.prisma.astronaut.findUnique({
+        where: { code },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          hint: true,
+          code: true,
+          active: true,
+          claims: {
+            select: {
+              team: { select: { id: true, name: true, color: true, icon: true } },
+              claimedAt: true,
+            },
+          },
+        },
+      });
+      if (!astronaut) return null;
+      const claimedBy = astronaut.claims[0]?.team ?? null;
+      const claimedAt = astronaut.claims[0]?.claimedAt ?? null;
+      return {
+        id: astronaut.id,
+        name: astronaut.name,
+        description: astronaut.description,
+        hint: astronaut.hint,
+        code: astronaut.code,
+        active: astronaut.active,
+        claimedBy,
+        claimedAt,
+      };
+    }),
+
   list: adminProcedure.query(({ ctx }) => {
     return ctx.prisma.astronaut.findMany({
       orderBy: { createdAt: "asc" },
@@ -35,16 +72,25 @@ export const astronautRouter = router({
   create: adminProcedure
     .input(
       z.object({
-        name: z.string().min(1).max(80),
+        name: z.string().max(80).optional(),
         description: z.string().max(500).optional(),
         hint: z.string().max(500).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      let { name, description } = input;
+
+      // Use AI to generate missing name/description
+      if (!name?.trim() || !description?.trim()) {
+        const generated = await generateAstronautProfile();
+        if (!name?.trim()) name = generated.name;
+        if (!description?.trim()) description = generated.description;
+      }
+
       return ctx.prisma.astronaut.create({
         data: {
-          name: input.name,
-          description: input.description,
+          name,
+          description,
           hint: input.hint,
           code: await generateUniqueCode(ctx.prisma),
           active: true,
@@ -99,6 +145,6 @@ export const astronautRouter = router({
     .query(async ({ ctx, input }) => {
       const astronaut = await ctx.prisma.astronaut.findUnique({ where: { id: input.id } });
       if (!astronaut) throw new Error("Not found");
-      return { url: `${env.APP_BASE_URL.replace(/\/$/, "")}/scan/${astronaut.code}` };
+      return { url: `${env.APP_BASE_URL.replace(/\/$/, "")}/astronaut/${astronaut.code}` };
     }),
 });

@@ -83,7 +83,7 @@ export default function TeamPage() {
           onSubmit={(e) => {
             e.preventDefault();
             if (manualCode.length !== 4) return;
-            router.push(`/scan/${manualCode}` as Route);
+            router.push(`/astronaut/${manualCode}` as Route);
           }}
         >
           <Input
