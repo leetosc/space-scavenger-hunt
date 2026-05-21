@@ -25,7 +25,7 @@ export default function AdminOverviewPage() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <header className="flex items-end justify-between">
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
         <div>
           <h1 className="text-2xl font-bold">Mission Control</h1>
           <p className="text-sm text-muted-foreground">

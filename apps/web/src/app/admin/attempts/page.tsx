@@ -51,7 +51,7 @@ export default function AdminAttemptsPage() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <header className="flex items-center justify-between">
+      <header className="space-y-3">
         <div>
           <h1 className="text-2xl font-bold">Attempt review</h1>
           <p className="text-sm text-muted-foreground">
@@ -59,7 +59,7 @@ export default function AdminAttemptsPage() {
             claim.
           </p>
         </div>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1">
           {STATUS_FILTERS.map((f) => (
             <Button
               key={f.id}

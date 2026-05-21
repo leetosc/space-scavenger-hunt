@@ -2,6 +2,8 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 
+import { ICON_MAP } from "@/lib/icons";
+
 type TeamWithPlayers = {
   id: string;
   name: string;
@@ -12,7 +14,7 @@ type TeamWithPlayers = {
 
 export default function TeamCards({ teams }: { teams: TeamWithPlayers[] }) {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
       {teams.map((team) => (
         <div
           key={team.id}
@@ -20,12 +22,17 @@ export default function TeamCards({ teams }: { teams: TeamWithPlayers[] }) {
           style={team.color ? { borderColor: team.color } : undefined}
         >
           <div className="flex items-center gap-2">
-            <span
-              className="inline-flex h-8 w-8 items-center justify-center rounded text-sm font-bold text-white"
-              style={{ backgroundColor: team.color ?? "#888" }}
-            >
-              {team.icon ?? team.name.slice(0, 1)}
-            </span>
+            {(() => {
+              const Icon = team.icon ? ICON_MAP[team.icon] : null;
+              return (
+                <span
+                  className="inline-flex h-8 w-8 items-center justify-center rounded text-white"
+                  style={{ backgroundColor: team.color ?? "#888" }}
+                >
+                  {Icon ? <Icon className="size-4" /> : <span className="text-sm font-bold">{team.name.slice(0, 1)}</span>}
+                </span>
+              );
+            })()}
             <h3 className="text-lg font-bold">{team.name}</h3>
             <span className="ml-auto text-xs tabular-nums text-muted-foreground">
               {team.players.length}

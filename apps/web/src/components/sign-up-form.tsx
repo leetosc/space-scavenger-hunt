@@ -6,67 +6,16 @@ import { Label } from "@space-scavenger-hunt/ui/components/label";
 import { cn } from "@space-scavenger-hunt/ui/lib/utils";
 import { useForm } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
-import {
-  Atom,
-  Cat,
-  Compass,
-  Eclipse,
-  Flame,
-  Ghost,
-  Globe,
-  Hexagon,
-  Moon,
-  Orbit,
-  Radiation,
-  Rocket,
-  Satellite,
-  SatelliteDish,
-  Shield,
-  Skull,
-  Sparkles,
-  Star,
-  Sun,
-  Telescope,
-  Zap,
-} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import z from "zod";
 
 import { authClient } from "@/lib/auth-client";
+import { SPACE_ICONS } from "@/lib/icons";
 import { trpc } from "@/utils/trpc";
 
 import Loader from "./loader";
-
-const SPACE_ICONS = [
-  { name: "Rocket", icon: Rocket },
-  { name: "Star", icon: Star },
-  { name: "Moon", icon: Moon },
-  { name: "Sun", icon: Sun },
-  { name: "Orbit", icon: Orbit },
-  { name: "Satellite", icon: Satellite },
-  { name: "SatelliteDish", icon: SatelliteDish },
-  { name: "Telescope", icon: Telescope },
-  { name: "Sparkles", icon: Sparkles },
-  { name: "Globe", icon: Globe },
-  { name: "Eclipse", icon: Eclipse },
-  { name: "Compass", icon: Compass },
-  { name: "Atom", icon: Atom },
-  { name: "Flame", icon: Flame },
-  { name: "Zap", icon: Zap },
-  { name: "Shield", icon: Shield },
-  { name: "Radiation", icon: Radiation },
-  { name: "Hexagon", icon: Hexagon },
-  { name: "Skull", icon: Skull },
-  { name: "Ghost", icon: Ghost },
-  { name: "Cat", icon: Cat },
-] as const;
-
-export const ICON_MAP: Record<
-  string,
-  React.ComponentType<{ className?: string }>
-> = Object.fromEntries(SPACE_ICONS.map(({ name, icon }) => [name, icon]));
 
 export default function SignUpForm() {
   const router = useRouter();
@@ -193,7 +142,7 @@ export default function SignUpForm() {
             {(field) => (
               <div className="space-y-2">
                 <Label>Choose Your Icon</Label>
-                <div className="grid grid-cols-7 gap-2">
+                <div className="grid grid-cols-5 sm:grid-cols-7 gap-2">
                   {SPACE_ICONS.map(({ name, icon: Icon }) => (
                     <button
                       key={name}

@@ -15,7 +15,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { authClient } from "@/lib/auth-client";
-import { ICON_MAP } from "@/components/sign-up-form";
+import { ICON_MAP } from "@/lib/icons";
 import { trpc } from "@/utils/trpc";
 
 export default function UserMenu() {

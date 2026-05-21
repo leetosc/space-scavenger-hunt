@@ -89,7 +89,7 @@ export default function Home() {
   return (
     <div className="relative min-h-full w-full overflow-x-hidden flex flex-col justify-between">
       {/* Main Content Area */}
-      <div className="relative z-10 flex-1 flex flex-col max-w-6xl mx-auto w-full px-6 py-12 md:py-20 justify-center items-center gap-16">
+      <div className="relative z-10 flex-1 flex flex-col max-w-6xl mx-auto w-full px-4 sm:px-6 py-12 md:py-20 justify-center items-center gap-12 sm:gap-16">
         
         {/* Hero Header Section */}
         <div className="text-center space-y-6 max-w-3xl">
@@ -300,19 +300,19 @@ export default function Home() {
                 {board.data.slice(0, 3).map((team, idx) => (
                   <div 
                     key={team.teamId} 
-                    className="flex items-center justify-between bg-slate-950/40 border border-slate-900 px-4 py-2.5 rounded-none hover:bg-slate-900/20 transition-colors"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between bg-slate-950/40 border border-slate-900 px-4 py-2.5 rounded-none hover:bg-slate-900/20 transition-colors gap-1 sm:gap-0"
                   >
                     <div className="flex items-center gap-3">
                       <span className="font-bold text-slate-500">0{idx + 1}.</span>
                       <div className="flex items-center gap-2">
                         <span 
-                          className="h-2 w-2 rounded-full" 
+                          className="h-2 w-2 rounded-full shrink-0" 
                           style={{ backgroundColor: team.color || '#3b82f6' }}
                         />
-                        <span className="text-slate-200 font-medium">{team.teamName}</span>
+                        <span className="text-slate-200 font-medium truncate">{team.teamName}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 pl-8 sm:pl-0">
                       <span className="text-slate-500">RESCUED:</span>
                       <span className="text-cyan-400 font-bold">{team.claimedCount} / {team.assignedCount}</span>
                     </div>
