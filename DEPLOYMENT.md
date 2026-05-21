@@ -85,8 +85,16 @@ NEXT_PUBLIC_SERVER_URL=https://your-domain.com
 Push schema and build:
 
 ```bash
-bun run db:push        # creates SQLite tables on first run
+bun run db:deploy      # applies migrations (creates SQLite tables on first run)
 bun run build          # builds both apps via turbo
+```
+
+If you previously created `prod.db` with `db:push`, baseline it once so
+`db:deploy` does not try to recreate existing tables:
+
+```bash
+cd packages/db
+bunx prisma migrate resolve --applied 0_init
 ```
 
 ## 4. Run the processes
@@ -208,7 +216,7 @@ Also run a snapshot manually right before and right after the event.
 cd /var/www/scavenger-hunt/app
 git pull
 bun install
-bun run db:push        # only if schema changed
+bun run db:deploy      # only if schema changed
 bun run build
 pm2 restart scavenger-server scavenger-web
 ```

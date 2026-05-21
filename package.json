@@ -36,6 +36,7 @@
     "db:studio": "turbo -F @space-scavenger-hunt/db db:studio",
     "db:generate": "turbo -F @space-scavenger-hunt/db db:generate",
     "db:migrate": "turbo -F @space-scavenger-hunt/db db:migrate",
+    "db:deploy": "turbo -F @space-scavenger-hunt/db db:deploy",
     "db:local": "turbo -F @space-scavenger-hunt/db db:local"
   },
   "dependencies": {

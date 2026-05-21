@@ -116,8 +116,9 @@ space-scavenger-hunt/
 - `bun run dev:web`: Start only the web application
 - `bun run dev:server`: Start only the server
 - `bun run check-types`: Check TypeScript types across all apps
-- `bun run db:push`: Push schema changes to database
+- `bun run db:push`: Push schema changes to database (local dev only)
 - `bun run db:generate`: Generate database client/types
-- `bun run db:migrate`: Run database migrations
+- `bun run db:migrate`: Create and apply migrations in development
+- `bun run db:deploy`: Apply pending migrations (production)
 - `bun run db:studio`: Open database studio UI
 - `bun run db:local`: Start the local SQLite database
