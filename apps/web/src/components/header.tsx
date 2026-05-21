@@ -7,6 +7,7 @@ import {
   SheetTitle,
 } from "@space-scavenger-hunt/ui/components/sheet";
 import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 import { Menu } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -14,6 +15,11 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { authClient } from "@/lib/auth-client";
+import {
+  staggerContainer,
+  fadeInUp,
+  springTransition,
+} from "@/lib/animations";
 import { trpc } from "@/utils/trpc";
 
 import UserMenu from "./user-menu";
@@ -70,17 +76,23 @@ export default function Header() {
                   Menu
                 </SheetTitle>
               </SheetHeader>
-              <nav className="flex flex-col gap-1 px-4">
+              <motion.nav
+                className="flex flex-col gap-1 px-4"
+                variants={staggerContainer}
+                initial="hidden"
+                animate="visible"
+              >
                 {links.map(({ to, label }) => (
-                  <Link
-                    key={to}
-                    href={to}
-                    className="text-sm font-mono tracking-wider uppercase py-2.5 px-3 transition-colors text-muted-foreground hover:text-cyan-400 hover:bg-cyan-400/5"
-                  >
-                    {label}
-                  </Link>
+                  <motion.div key={to} variants={fadeInUp}>
+                    <Link
+                      href={to}
+                      className="text-sm font-mono tracking-wider uppercase py-2.5 px-3 transition-colors text-muted-foreground hover:text-cyan-400 hover:bg-cyan-400/5 block"
+                    >
+                      {label}
+                    </Link>
+                  </motion.div>
                 ))}
-              </nav>
+              </motion.nav>
             </SheetContent>
           </Sheet>
 
@@ -89,23 +101,40 @@ export default function Header() {
             className="flex shrink-0 items-center transition-opacity hover:opacity-80"
             aria-label="Space Scavenger Hunt home"
           >
-            <Image
-              src="/spacelogo.png"
-              alt="Space Scavenger Hunt"
-              width={36}
-              height={36}
-              className="size-9"
-              priority
-            />
+            <motion.div
+              whileHover={{ rotate: 12, scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              transition={springTransition}
+            >
+              <Image
+                src="/spacelogo.png"
+                alt="Space Scavenger Hunt"
+                width={36}
+                height={36}
+                className="size-9"
+                priority
+              />
+            </motion.div>
           </Link>
 
-          <nav className="hidden sm:flex gap-6 text-xs font-mono tracking-wider uppercase">
+          <motion.nav
+            className="hidden sm:flex gap-6 text-xs font-mono tracking-wider uppercase"
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+          >
             {links.map(({ to, label }) => (
-              <Link key={to} href={to} className="transition-colors text-muted-foreground hover:text-cyan-400 whitespace-nowrap">
-                {label}
-              </Link>
+              <motion.div key={to} variants={fadeInUp}>
+                <Link
+                  href={to}
+                  className="relative transition-colors text-muted-foreground hover:text-cyan-400 whitespace-nowrap group"
+                >
+                  {label}
+                  <span className="absolute -bottom-1 left-0 h-[1px] w-0 bg-cyan-400 transition-all duration-300 group-hover:w-full" />
+                </Link>
+              </motion.div>
             ))}
-          </nav>
+          </motion.nav>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">

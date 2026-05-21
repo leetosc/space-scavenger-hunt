@@ -14,11 +14,20 @@ import { Input } from "@space-scavenger-hunt/ui/components/input";
 import { Label } from "@space-scavenger-hunt/ui/components/label";
 import { cn } from "@space-scavenger-hunt/ui/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
 import { Pencil } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { IconPicker } from "@/components/icon-picker";
+import {
+  staggerContainer,
+  fadeInUp,
+  scaleIn,
+  buttonInteraction,
+  iconButtonInteraction,
+  springTransition,
+} from "@/lib/animations";
 import { ICON_MAP } from "@/lib/icons";
 import { trpc } from "@/utils/trpc";
 
@@ -55,18 +64,19 @@ function ColorPicker({
         {PRESET_COLORS.map((preset) => {
           const isSelected = value.toLowerCase() === preset.hex.toLowerCase();
           return (
-            <button
+            <motion.button
               key={preset.hex}
               type="button"
               title={preset.label}
               aria-label={preset.label}
               onClick={() => onChange(preset.hex)}
-              className="h-6 w-6 rounded-full border-2 transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-1"
+              className="h-6 w-6 rounded-full border-2 transition-transform focus:outline-none focus:ring-2 focus:ring-offset-1"
               style={{
                 backgroundColor: preset.hex,
                 borderColor: isSelected ? "white" : "transparent",
                 boxShadow: isSelected ? `0 0 0 2px ${preset.hex}` : "none",
               }}
+              {...iconButtonInteraction}
             />
           );
         })}
@@ -149,49 +159,58 @@ function EditTeamDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div>
+        <motion.div
+          className="space-y-4"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+        >
+          <motion.div variants={fadeInUp}>
             <Label htmlFor="edit-name">Name</Label>
             <Input
               id="edit-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
-          </div>
-          <div>
+          </motion.div>
+          <motion.div variants={fadeInUp}>
             <Label className="mb-1.5 block">Icon</Label>
             <IconPicker value={icon} onChange={setIcon} />
-          </div>
-          <div>
+          </motion.div>
+          <motion.div variants={fadeInUp}>
             <Label className="mb-1.5 block">Color</Label>
             <ColorPicker id="edit-color" value={color} onChange={setColor} />
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
         <DialogFooter className="flex-row justify-between sm:justify-between gap-2">
-          <Button
-            variant="destructive"
-            size="sm"
-            disabled={isDeleting}
-            onClick={() => {
-              if (confirm(`Delete team "${team.name}"? Players assigned to it will be unassigned.`)) {
-                onDelete(team.id);
+          <motion.div {...buttonInteraction}>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={isDeleting}
+              onClick={() => {
+                if (confirm(`Delete team "${team.name}"? Players assigned to it will be unassigned.`)) {
+                  onDelete(team.id);
+                  onOpenChange(false);
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </motion.div>
+          <motion.div {...buttonInteraction}>
+            <Button
+              size="sm"
+              disabled={isUpdating}
+              onClick={() => {
+                onUpdate({ id: team.id, name, icon, color });
                 onOpenChange(false);
-              }
-            }}
-          >
-            Delete
-          </Button>
-          <Button
-            size="sm"
-            disabled={isUpdating}
-            onClick={() => {
-              onUpdate({ id: team.id, name, icon, color });
-              onOpenChange(false);
-            }}
-          >
-            Save
-          </Button>
+              }}
+            >
+              Save
+            </Button>
+          </motion.div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -237,8 +256,16 @@ export default function AdminTeamsPage() {
   const canCreate = teams.length < 4;
 
   return (
-    <div className="space-y-6 max-w-3xl">
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <motion.div
+      className="space-y-6 max-w-3xl"
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+    >
+      <motion.header
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+        variants={fadeInUp}
+      >
         <div>
           <h1 className="text-2xl font-bold">Teams</h1>
           <p className="text-sm text-muted-foreground">
@@ -246,84 +273,103 @@ export default function AdminTeamsPage() {
           </p>
         </div>
         {teams.length < 4 ? (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={createMutation.isPending}
-            onClick={async () => {
-              for (const t of DEFAULT_TEAMS.slice(teams.length, 4)) {
-                await createMutation.mutateAsync({ name: t.name, color: t.color, icon: t.icon });
-              }
-              toast.success("Seeded default teams");
+          <motion.div {...buttonInteraction}>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={createMutation.isPending}
+              onClick={async () => {
+                for (const t of DEFAULT_TEAMS.slice(teams.length, 4)) {
+                  await createMutation.mutateAsync({ name: t.name, color: t.color, icon: t.icon });
+                }
+                toast.success("Seeded default teams");
+              }}
+            >
+              Seed default teams
+            </Button>
+          </motion.div>
+        ) : null}
+      </motion.header>
+
+      <motion.div variants={scaleIn}>
+        <Card className="p-4">
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!canCreate) return;
+              createMutation.mutate({ name: newName, color: newColor, icon: newIcon });
+              setNewName("");
             }}
           >
-            Seed default teams
-          </Button>
-        ) : null}
-      </header>
+            <div>
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label className="mb-1.5 block">Icon</Label>
+              <IconPicker value={newIcon} onChange={setNewIcon} />
+            </div>
+            <div>
+              <Label className="mb-1.5 block">Color</Label>
+              <ColorPicker id="color" value={newColor} onChange={setNewColor} />
+            </div>
+            <motion.div {...buttonInteraction}>
+              <Button type="submit" disabled={!canCreate || createMutation.isPending} className="w-full">
+                {canCreate ? "Create team" : "4 / 4"}
+              </Button>
+            </motion.div>
+          </form>
+        </Card>
+      </motion.div>
 
-      <Card className="p-4">
-        <form
-          className="space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!canCreate) return;
-            createMutation.mutate({ name: newName, color: newColor, icon: newIcon });
-            setNewName("");
-          }}
-        >
-          <div>
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <Label className="mb-1.5 block">Icon</Label>
-            <IconPicker value={newIcon} onChange={setNewIcon} />
-          </div>
-          <div>
-            <Label className="mb-1.5 block">Color</Label>
-            <ColorPicker id="color" value={newColor} onChange={setNewColor} />
-          </div>
-          <Button type="submit" disabled={!canCreate || createMutation.isPending} className="w-full">
-            {canCreate ? "Create team" : "4 / 4"}
-          </Button>
-        </form>
-      </Card>
-
-      <Card className="p-4">
-        <h2 className="font-bold mb-2">Existing teams</h2>
-        {teams.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No teams yet.</p>
-        ) : (
-          <ul className="divide-y">
-            {teams.map((team) => (
-              <li key={team.id} className="flex items-center justify-between gap-3 py-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <TeamIcon icon={team.icon} color={team.color} name={team.name} />
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{team.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {team._count.players} players · {team._count.assignments} astronauts · {team._count.claims} claims
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setEditingTeam(team)}
-                >
-                  <Pencil className="size-4" />
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+      <motion.div variants={fadeInUp}>
+        <Card className="p-4">
+          <h2 className="font-bold mb-2">Existing teams</h2>
+          {teams.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No teams yet.</p>
+          ) : (
+            <ul className="divide-y">
+              <AnimatePresence>
+                {teams.map((team, idx) => (
+                  <motion.li
+                    key={team.id}
+                    className="flex items-center justify-between gap-3 py-3"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ ...springTransition, delay: idx * 0.05 }}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <TeamIcon icon={team.icon} color={team.color} name={team.name} />
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{team.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {team._count.players} players · {team._count.assignments} astronauts · {team._count.claims} claims
+                        </p>
+                      </div>
+                    </div>
+                    <motion.div {...iconButtonInteraction}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setEditingTeam(team)}
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                    </motion.div>
+                  </motion.li>
+                ))}
+              </AnimatePresence>
+            </ul>
+          )}
+        </Card>
+      </motion.div>
 
       {editingTeam && (
         <EditTeamDialog
@@ -337,6 +383,6 @@ export default function AdminTeamsPage() {
           isDeleting={deleteMutation.isPending}
         />
       )}
-    </div>
+    </motion.div>
   );
 }

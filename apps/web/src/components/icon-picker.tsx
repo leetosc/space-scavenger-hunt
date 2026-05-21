@@ -6,9 +6,11 @@ import {
   PopoverTrigger,
 } from "@space-scavenger-hunt/ui/components/popover";
 import { cn } from "@space-scavenger-hunt/ui/lib/utils";
+import { motion } from "framer-motion";
 import { useState } from "react";
 
 import { ICON_MAP, SPACE_ICONS } from "@/lib/icons";
+import { staggerContainer, popIn, iconButtonInteraction } from "@/lib/animations";
 
 export function IconPicker({
   value,
@@ -24,10 +26,12 @@ export function IconPicker({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         render={
-          <button
+          <motion.button
             type="button"
             className="flex items-center justify-center size-8 border border-border/40 hover:border-cyan-400 transition-colors"
             title={value || "Choose icon"}
+            whileHover={{ scale: 1.1, rotate: 5 }}
+            whileTap={{ scale: 0.9 }}
           />
         }
       >
@@ -38,9 +42,14 @@ export function IconPicker({
         )}
       </PopoverTrigger>
       <PopoverContent align="start" className="w-auto p-2">
-        <div className="grid grid-cols-7 gap-1.5">
+        <motion.div
+          className="grid grid-cols-7 gap-1.5"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+        >
           {SPACE_ICONS.map(({ name, icon: Icon }) => (
-            <button
+            <motion.button
               key={name}
               type="button"
               onClick={() => {
@@ -55,11 +64,13 @@ export function IconPicker({
                   : "border-border/40 text-muted-foreground",
               )}
               title={name}
+              variants={popIn}
+              {...iconButtonInteraction}
             >
               <Icon className="size-4" />
-            </button>
+            </motion.button>
           ))}
-        </div>
+        </motion.div>
       </PopoverContent>
     </Popover>
   );

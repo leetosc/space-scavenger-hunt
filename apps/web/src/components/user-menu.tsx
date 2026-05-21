@@ -10,11 +10,13 @@ import {
 } from "@space-scavenger-hunt/ui/components/dropdown-menu";
 import { Skeleton } from "@space-scavenger-hunt/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 import { User, UserCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { authClient } from "@/lib/auth-client";
+import { springTransition } from "@/lib/animations";
 import { ICON_MAP } from "@/lib/icons";
 import { trpc } from "@/utils/trpc";
 
@@ -38,7 +40,13 @@ export default function UserMenu() {
   if (!session) {
     return (
       <Link href="/login">
-        <Button variant="outline">Sign In</Button>
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          transition={springTransition}
+        >
+          <Button variant="outline">Sign In</Button>
+        </motion.div>
       </Link>
     );
   }
@@ -47,7 +55,12 @@ export default function UserMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <button className="flex items-center justify-center size-9 border border-border/40 bg-background/50 text-cyan-400 hover:border-cyan-400 hover:bg-cyan-400/10 transition-all cursor-pointer">
+          <motion.button
+            className="flex items-center justify-center size-9 border border-border/40 bg-background/50 text-cyan-400 hover:border-cyan-400 hover:bg-cyan-400/10 transition-all cursor-pointer"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            transition={springTransition}
+          >
             {userImage ? (
               <img
                 src={userImage}
@@ -59,7 +72,7 @@ export default function UserMenu() {
             ) : (
               <User className="size-5" />
             )}
-          </button>
+          </motion.button>
         }
       />
       <DropdownMenuContent className="bg-card">

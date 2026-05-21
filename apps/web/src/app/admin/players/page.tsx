@@ -30,11 +30,20 @@ import {
   type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
+import { motion } from "framer-motion";
 import { ArrowUpDown, Pencil } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { IconPicker } from "@/components/icon-picker";
+import {
+  staggerContainer,
+  fadeInUp,
+  scaleIn,
+  buttonInteraction,
+  iconButtonInteraction,
+  springTransition,
+} from "@/lib/animations";
 import { ICON_MAP } from "@/lib/icons";
 import { trpc } from "@/utils/trpc";
 
@@ -108,25 +117,30 @@ function EditPlayerDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <motion.div
+          className="space-y-4"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+        >
           {/* Name */}
-          <div>
+          <motion.div variants={fadeInUp}>
             <Label htmlFor="edit-player-name">Display name</Label>
             <Input
               id="edit-player-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
-          </div>
+          </motion.div>
 
           {/* Icon */}
-          <div>
+          <motion.div variants={fadeInUp}>
             <Label className="mb-1.5 block">Icon</Label>
             <IconPicker value={icon} onChange={setIcon} />
-          </div>
+          </motion.div>
 
           {/* Team */}
-          <div>
+          <motion.div variants={fadeInUp}>
             <Label htmlFor="edit-player-team" className="mb-1.5 block">Team</Label>
             <select
               id="edit-player-team"
@@ -141,11 +155,11 @@ function EditPlayerDialog({
                 </option>
               ))}
             </select>
-          </div>
+          </motion.div>
 
           {/* Role */}
           {player.authUser && (
-            <div>
+            <motion.div variants={fadeInUp}>
               <Label htmlFor="edit-player-role" className="mb-1.5 block">Role</Label>
               <select
                 id="edit-player-role"
@@ -156,11 +170,11 @@ function EditPlayerDialog({
                 <option value="PLAYER">Player</option>
                 <option value="ADMIN">Admin</option>
               </select>
-            </div>
+            </motion.div>
           )}
 
           {/* Checked in */}
-          <div className="flex items-center gap-2">
+          <motion.div className="flex items-center gap-2" variants={fadeInUp}>
             <input
               id="edit-player-checkin"
               type="checkbox"
@@ -171,38 +185,42 @@ function EditPlayerDialog({
             <Label htmlFor="edit-player-checkin" className="text-sm font-normal">
               Checked in
             </Label>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
         <DialogFooter className="flex-row justify-between sm:justify-between gap-2">
-          <Button
-            variant="destructive"
-            size="sm"
-            disabled={deleteMutation.isPending}
-            onClick={() => {
-              if (confirm(`Delete player "${player.name}"? This also removes their auth account.`)) {
-                deleteMutation.mutate({ id: player.id });
-              }
-            }}
-          >
-            Delete
-          </Button>
-          <Button
-            size="sm"
-            disabled={updateMutation.isPending}
-            onClick={() => {
-              updateMutation.mutate({
-                id: player.id,
-                name,
-                icon,
-                teamId,
-                isCheckedIn,
-                ...(player.authUser ? { role } : {}),
-              });
-            }}
-          >
-            Save
-          </Button>
+          <motion.div {...buttonInteraction}>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={deleteMutation.isPending}
+              onClick={() => {
+                if (confirm(`Delete player "${player.name}"? This also removes their auth account.`)) {
+                  deleteMutation.mutate({ id: player.id });
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </motion.div>
+          <motion.div {...buttonInteraction}>
+            <Button
+              size="sm"
+              disabled={updateMutation.isPending}
+              onClick={() => {
+                updateMutation.mutate({
+                  id: player.id,
+                  name,
+                  icon,
+                  teamId,
+                  isCheckedIn,
+                  ...(player.authUser ? { role } : {}),
+                });
+              }}
+            >
+              Save
+            </Button>
+          </motion.div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -307,9 +325,11 @@ function useColumns(onEdit: (player: Player) => void) {
         id: "actions",
         header: "",
         cell: ({ row }) => (
-          <Button size="sm" variant="ghost" onClick={() => onEdit(row.original)}>
-            <Pencil className="size-3.5" />
-          </Button>
+          <motion.div {...iconButtonInteraction} className="inline-flex">
+            <Button size="sm" variant="ghost" onClick={() => onEdit(row.original)}>
+              <Pencil className="size-3.5" />
+            </Button>
+          </motion.div>
         ),
         enableSorting: false,
       },
@@ -358,14 +378,20 @@ function DataTable({ data, onEdit }: { data: Player[]; onEdit: (p: Player) => vo
             </TableCell>
           </TableRow>
         ) : (
-          table.getRowModel().rows.map((row) => (
-            <TableRow key={row.id}>
+          table.getRowModel().rows.map((row, idx) => (
+            <motion.tr
+              key={row.id}
+              className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...springTransition, delay: idx * 0.03 }}
+            >
               {row.getVisibleCells().map((cell) => (
                 <TableCell key={cell.id}>
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>
               ))}
-            </TableRow>
+            </motion.tr>
           ))
         )}
       </TableBody>
@@ -415,69 +441,80 @@ export default function AdminPlayersPage() {
   const teams = (teamsQuery.data ?? []).map((t) => ({ id: t.id, name: t.name }));
 
   return (
-    <div className="space-y-6">
-      <header>
+    <motion.div
+      className="space-y-6"
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+    >
+      <motion.header variants={fadeInUp}>
         <h1 className="text-2xl font-bold">Players</h1>
         <p className="text-sm text-muted-foreground">
           Manage player accounts. Share username and password so they can sign in.
         </p>
-      </header>
+      </motion.header>
 
       {/* Create form */}
-      <Card className="p-4">
-        <form
-          className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end"
-          onSubmit={(e) => {
-            e.preventDefault();
-            createMutation.mutate({ name, username, password });
-          }}
-        >
-          <div>
-            <Label htmlFor="name">Display name</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              minLength={1}
-            />
-          </div>
-          <div>
-            <Label htmlFor="username">Username</Label>
-            <Input
-              id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value.toLowerCase())}
-              required
-              minLength={3}
-              pattern="^[a-z0-9_.-]+$"
-            />
-          </div>
-          <div>
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="text"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-            />
-          </div>
-          <Button type="submit" disabled={createMutation.isPending}>
-            {createMutation.isPending ? "Creating..." : "Add player"}
-          </Button>
-        </form>
-      </Card>
+      <motion.div variants={fadeInUp}>
+        <Card className="p-4">
+          <form
+            className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end"
+            onSubmit={(e) => {
+              e.preventDefault();
+              createMutation.mutate({ name, username, password });
+            }}
+          >
+            <div>
+              <Label htmlFor="name">Display name</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                minLength={1}
+              />
+            </div>
+            <div>
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value.toLowerCase())}
+                required
+                minLength={3}
+                pattern="^[a-z0-9_.-]+$"
+              />
+            </div>
+            <div>
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="text"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={8}
+              />
+            </div>
+            <motion.div {...buttonInteraction}>
+              <Button type="submit" disabled={createMutation.isPending}>
+                {createMutation.isPending ? "Creating..." : "Add player"}
+              </Button>
+            </motion.div>
+          </form>
+        </Card>
+      </motion.div>
 
       {/* Table */}
-      <Card className="p-0">
-        {listQuery.isPending ? (
-          <p className="p-4 text-sm text-muted-foreground">Loading...</p>
-        ) : (
-          <DataTable data={players} onEdit={setEditing} />
-        )}
-      </Card>
+      <motion.div variants={scaleIn}>
+        <Card className="p-0">
+          {listQuery.isPending ? (
+            <p className="p-4 text-sm text-muted-foreground">Loading...</p>
+          ) : (
+            <DataTable data={players} onEdit={setEditing} />
+          )}
+        </Card>
+      </motion.div>
 
       {/* Edit dialog */}
       {editing && (
@@ -491,6 +528,6 @@ export default function AdminPlayersPage() {
           }}
         />
       )}
-    </div>
+    </motion.div>
   );
 }

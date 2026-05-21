@@ -36,10 +36,19 @@ import {
   type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
+import { motion } from "framer-motion";
 import { ArrowUpDown, Power, RefreshCw, Trash2 } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import {
+  staggerContainer,
+  fadeInUp,
+  scaleIn,
+  buttonInteraction,
+  iconButtonInteraction,
+  springTransition,
+} from "@/lib/animations";
 import { ICON_MAP } from "@/lib/icons";
 import { trpc } from "@/utils/trpc";
 
@@ -84,15 +93,17 @@ function IconActionButton({
     <Tooltip>
       <TooltipTrigger
         render={
-          <Button
-            type="button"
-            size="icon-sm"
-            variant={variant}
-            aria-label={label}
-            onClick={onClick}
-          >
-            {children}
-          </Button>
+          <motion.div {...iconButtonInteraction} className="inline-flex">
+            <Button
+              type="button"
+              size="icon-sm"
+              variant={variant}
+              aria-label={label}
+              onClick={onClick}
+            >
+              {children}
+            </Button>
+          </motion.div>
         }
       />
       <TooltipContent>{label}</TooltipContent>
@@ -158,8 +169,13 @@ function AssignTeamDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-2">
-          <button
+        <motion.div
+          className="space-y-2"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+        >
+          <motion.button
             type="button"
             onClick={() => setSelectedTeamId(null)}
             className={cn(
@@ -168,11 +184,14 @@ function AssignTeamDialog({
                 ? "border-ring ring-1 ring-ring/50 bg-muted/30"
                 : "border-border/60",
             )}
+            variants={fadeInUp}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
           >
             <span className="text-muted-foreground">Unassigned</span>
-          </button>
+          </motion.button>
           {teams.map((team) => (
-            <button
+            <motion.button
               key={team.id}
               type="button"
               onClick={() => setSelectedTeamId(team.id)}
@@ -182,32 +201,37 @@ function AssignTeamDialog({
                   ? "border-ring ring-1 ring-ring/50 bg-muted/30"
                   : "border-border/60",
               )}
+              variants={fadeInUp}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
             >
               <TeamBadge team={team} />
-            </button>
+            </motion.button>
           ))}
-        </div>
+        </motion.div>
 
         <DialogFooter>
-          <Button
-            size="sm"
-            disabled={isPending}
-            onClick={() => {
-              const currentTeamId = astronaut.assignedTeam?.id ?? null;
-              if (selectedTeamId === currentTeamId) {
+          <motion.div {...buttonInteraction}>
+            <Button
+              size="sm"
+              disabled={isPending}
+              onClick={() => {
+                const currentTeamId = astronaut.assignedTeam?.id ?? null;
+                if (selectedTeamId === currentTeamId) {
+                  onOpenChange(false);
+                  return;
+                }
+                if (selectedTeamId) {
+                  onAssign(astronaut.id, selectedTeamId);
+                } else if (currentTeamId) {
+                  onUnassign(astronaut.id, currentTeamId);
+                }
                 onOpenChange(false);
-                return;
-              }
-              if (selectedTeamId) {
-                onAssign(astronaut.id, selectedTeamId);
-              } else if (currentTeamId) {
-                onUnassign(astronaut.id, currentTeamId);
-              }
-              onOpenChange(false);
-            }}
-          >
-            Save
-          </Button>
+              }}
+            >
+              Save
+            </Button>
+          </motion.div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -310,14 +334,16 @@ function useColumns(callbacks: ColumnCallbacks) {
           return (
             <div className="flex items-center gap-2">
               <code className="bg-muted px-2 py-0.5 rounded text-xs shrink-0">{a.code}</code>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => callbacks.onCopyUrl(scanUrl)}
-              >
-                Copy
-              </Button>
+              <motion.div {...buttonInteraction}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => callbacks.onCopyUrl(scanUrl)}
+                >
+                  Copy
+                </Button>
+              </motion.div>
             </div>
           );
         },
@@ -412,8 +438,14 @@ function DataTable({ data, callbacks }: { data: Astronaut[]; callbacks: ColumnCa
               </TableCell>
             </TableRow>
           ) : (
-            table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id}>
+            table.getRowModel().rows.map((row, idx) => (
+              <motion.tr
+                key={row.id}
+                className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...springTransition, delay: idx * 0.03 }}
+              >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell
                     key={cell.id}
@@ -425,7 +457,7 @@ function DataTable({ data, callbacks }: { data: Astronaut[]; callbacks: ColumnCa
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
-              </TableRow>
+              </motion.tr>
             ))
           )}
         </TableBody>
@@ -547,64 +579,75 @@ export default function AdminAstronautsPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <header>
+    <motion.div
+      className="space-y-6"
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+    >
+      <motion.header variants={fadeInUp}>
         <h1 className="text-2xl font-bold">Astronauts</h1>
         <p className="text-sm text-muted-foreground">
           Create astronauts and assign them to teams. Copy scan URLs onto NFC tags.
         </p>
-      </header>
+      </motion.header>
 
-      <Card className="p-4">
-        <form
-          className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end"
-          onSubmit={(e) => {
-            e.preventDefault();
-            createMutation.mutate({
-              name: name || undefined,
-              description: description || undefined,
-              hint: hint || undefined,
-            });
-          }}
-        >
-          <div>
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="AI-generated if empty"
-            />
-          </div>
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Input
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="AI-generated if empty"
-            />
-          </div>
-          <div>
-            <Label htmlFor="hint">Hint</Label>
-            <Input id="hint" value={hint} onChange={(e) => setHint(e.target.value)} />
-          </div>
-          <Button type="submit" disabled={createMutation.isPending}>
-            {createMutation.isPending ? "Creating..." : "Add astronaut"}
-          </Button>
-        </form>
-        <p className="text-xs text-muted-foreground mt-2">
-          Leave name or description empty to auto-generate with AI.
-        </p>
-      </Card>
+      <motion.div variants={fadeInUp}>
+        <Card className="p-4">
+          <form
+            className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end"
+            onSubmit={(e) => {
+              e.preventDefault();
+              createMutation.mutate({
+                name: name || undefined,
+                description: description || undefined,
+                hint: hint || undefined,
+              });
+            }}
+          >
+            <div>
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="AI-generated if empty"
+              />
+            </div>
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Input
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="AI-generated if empty"
+              />
+            </div>
+            <div>
+              <Label htmlFor="hint">Hint</Label>
+              <Input id="hint" value={hint} onChange={(e) => setHint(e.target.value)} />
+            </div>
+            <motion.div {...buttonInteraction}>
+              <Button type="submit" disabled={createMutation.isPending}>
+                {createMutation.isPending ? "Creating..." : "Add astronaut"}
+              </Button>
+            </motion.div>
+          </form>
+          <p className="text-xs text-muted-foreground mt-2">
+            Leave name or description empty to auto-generate with AI.
+          </p>
+        </Card>
+      </motion.div>
 
-      <Card className="p-0">
-        {listQuery.isPending ? (
-          <p className="p-4 text-sm text-muted-foreground">Loading...</p>
-        ) : (
-          <DataTable data={astronauts} callbacks={callbacks} />
-        )}
-      </Card>
+      <motion.div variants={scaleIn}>
+        <Card className="p-0">
+          {listQuery.isPending ? (
+            <p className="p-4 text-sm text-muted-foreground">Loading...</p>
+          ) : (
+            <DataTable data={astronauts} callbacks={callbacks} />
+          )}
+        </Card>
+      </motion.div>
 
       {editingAssignment && (
         <AssignTeamDialog
@@ -620,6 +663,6 @@ export default function AdminAstronautsPage() {
           isPending={assignMutation.isPending || unassignMutation.isPending}
         />
       )}
-    </div>
+    </motion.div>
   );
 }

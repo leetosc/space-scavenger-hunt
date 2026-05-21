@@ -5,12 +5,19 @@ import { Input } from "@space-scavenger-hunt/ui/components/input";
 import { Label } from "@space-scavenger-hunt/ui/components/label";
 import { useForm } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import z from "zod";
 
 import { authClient } from "@/lib/auth-client";
+import {
+  staggerContainer,
+  fadeInUp,
+  scaleIn,
+  buttonInteraction,
+} from "@/lib/animations";
 import { trpc } from "@/utils/trpc";
 
 import { IconPicker } from "./icon-picker";
@@ -79,21 +86,42 @@ export default function SignUpForm() {
   }
 
   return (
-    <div className="mx-auto w-full mt-10 max-w-md p-6">
-      <h1 className="mb-2 text-center text-3xl font-bold">Join the Mission</h1>
-      <p className="mb-6 text-center text-sm text-muted-foreground">
+    <motion.div
+      className="mx-auto w-full mt-10 max-w-md p-6"
+      variants={scaleIn}
+      initial="hidden"
+      animate="visible"
+    >
+      <motion.h1
+        className="mb-2 text-center text-3xl font-bold"
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+      >
+        Join the Mission
+      </motion.h1>
+      <motion.p
+        className="mb-6 text-center text-sm text-muted-foreground"
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.1 }}
+      >
         Create your account.
-      </p>
+      </motion.p>
 
-      <form
+      <motion.form
         onSubmit={(e) => {
           e.preventDefault();
           e.stopPropagation();
           form.handleSubmit();
         }}
         className="space-y-5"
+        variants={staggerContainer}
+        initial="hidden"
+        animate="visible"
       >
-        <div className="grid grid-cols-2 gap-4">
+        <motion.div className="grid grid-cols-2 gap-4" variants={fadeInUp}>
           <form.Field name="firstName">
             {(field) => (
               <div className="space-y-2">
@@ -107,9 +135,14 @@ export default function SignUpForm() {
                   onChange={(e) => field.handleChange(e.target.value)}
                 />
                 {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-red-500 text-sm">
+                  <motion.p
+                    key={error?.message}
+                    className="text-red-500 text-sm"
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
                     {error?.message}
-                  </p>
+                  </motion.p>
                 ))}
               </div>
             )}
@@ -128,16 +161,21 @@ export default function SignUpForm() {
                   onChange={(e) => field.handleChange(e.target.value)}
                 />
                 {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-red-500 text-sm">
+                  <motion.p
+                    key={error?.message}
+                    className="text-red-500 text-sm"
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
                     {error?.message}
-                  </p>
+                  </motion.p>
                 ))}
               </div>
             )}
           </form.Field>
-        </div>
+        </motion.div>
 
-        <div>
+        <motion.div variants={fadeInUp}>
           <form.Field name="username">
             {(field) => (
               <div className="space-y-2">
@@ -151,16 +189,21 @@ export default function SignUpForm() {
                   onChange={(e) => field.handleChange(e.target.value)}
                 />
                 {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-red-500 text-sm">
+                  <motion.p
+                    key={error?.message}
+                    className="text-red-500 text-sm"
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
                     {error?.message}
-                  </p>
+                  </motion.p>
                 ))}
               </div>
             )}
           </form.Field>
-        </div>
+        </motion.div>
 
-        <div>
+        <motion.div variants={fadeInUp}>
           <form.Field name="password">
             {(field) => (
               <div className="space-y-2">
@@ -175,16 +218,21 @@ export default function SignUpForm() {
                   onChange={(e) => field.handleChange(e.target.value)}
                 />
                 {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-red-500 text-sm">
+                  <motion.p
+                    key={error?.message}
+                    className="text-red-500 text-sm"
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
                     {error?.message}
-                  </p>
+                  </motion.p>
                 ))}
               </div>
             )}
           </form.Field>
-        </div>
+        </motion.div>
 
-        <div>
+        <motion.div variants={fadeInUp}>
           <form.Field name="icon">
             {(field) => (
               <div className="space-y-2">
@@ -194,39 +242,54 @@ export default function SignUpForm() {
                   onChange={(icon) => field.handleChange(icon)}
                 />
                 {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-red-500 text-sm">
+                  <motion.p
+                    key={error?.message}
+                    className="text-red-500 text-sm"
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
                     {error?.message}
-                  </p>
+                  </motion.p>
                 ))}
               </div>
             )}
           </form.Field>
-        </div>
+        </motion.div>
 
-        <form.Subscribe
-          selector={(state) => ({
-            canSubmit: state.canSubmit,
-            isSubmitting: state.isSubmitting,
-          })}
-        >
-          {({ canSubmit, isSubmitting }) => (
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={!canSubmit || isSubmitting}
-            >
-              {isSubmitting ? "Creating account..." : "Sign Up"}
-            </Button>
-          )}
-        </form.Subscribe>
-      </form>
+        <motion.div variants={fadeInUp}>
+          <form.Subscribe
+            selector={(state) => ({
+              canSubmit: state.canSubmit,
+              isSubmitting: state.isSubmitting,
+            })}
+          >
+            {({ canSubmit, isSubmitting }) => (
+              <motion.div {...buttonInteraction}>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={!canSubmit || isSubmitting}
+                >
+                  {isSubmitting ? "Creating account..." : "Sign Up"}
+                </Button>
+              </motion.div>
+            )}
+          </form.Subscribe>
+        </motion.div>
+      </motion.form>
 
-      <p className="mt-6 text-center text-xs text-muted-foreground">
+      <motion.p
+        className="mt-6 text-center text-xs text-muted-foreground"
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.5 }}
+      >
         Already have an account?{" "}
         <Link href="/login" className="text-cyan-400 hover:underline">
           Sign in
         </Link>
-      </p>
-    </div>
+      </motion.p>
+    </motion.div>
   );
 }

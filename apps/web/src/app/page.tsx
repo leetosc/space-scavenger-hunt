@@ -12,6 +12,12 @@ import { useRouter } from "next/navigation";
 
 import Loader from "@/components/loader";
 import { authClient } from "@/lib/auth-client";
+import {
+  staggerContainer,
+  fadeInUp,
+  buttonInteraction,
+  springTransition,
+} from "@/lib/animations";
 import { trpc } from "@/utils/trpc";
 
 export default function Home() {
@@ -188,12 +194,14 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <Button 
-                    onClick={handleEnterMission}
-                    className="w-full h-10 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-mono tracking-widest uppercase rounded-none border border-cyan-400/30 hover:border-cyan-400/60 shadow-[0_0_15px_rgba(99,102,241,0.3)] transition-all duration-300"
-                  >
-                    Enter Mission Control
-                  </Button>
+                  <motion.div {...buttonInteraction}>
+                    <Button 
+                      onClick={handleEnterMission}
+                      className="w-full h-10 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-mono tracking-widest uppercase rounded-none border border-cyan-400/30 hover:border-cyan-400/60 shadow-[0_0_15px_rgba(99,102,241,0.3)] transition-all duration-300"
+                    >
+                      Enter Mission Control
+                    </Button>
+                  </motion.div>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -201,12 +209,14 @@ export default function Home() {
                     Awaiting authorization key. Enlist as a rescue pilot to access sector coordinates and telemetry log files.
                   </p>
 
-                  <Button 
-                    onClick={handleEnterMission}
-                    className="w-full h-10 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-mono tracking-widest uppercase rounded-none border border-cyan-400/30 hover:border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all duration-300"
-                  >
-                    INITIALIZE LAUNCH SEQUENCE
-                  </Button>
+                  <motion.div {...buttonInteraction}>
+                    <Button 
+                      onClick={handleEnterMission}
+                      className="w-full h-10 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-mono tracking-widest uppercase rounded-none border border-cyan-400/30 hover:border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all duration-300"
+                    >
+                      INITIALIZE LAUNCH SEQUENCE
+                    </Button>
+                  </motion.div>
                   
                   <p className="text-[10px] text-center text-slate-500 font-mono">
                     Request an authorization pass from your Mission Commander.
@@ -226,9 +236,15 @@ export default function Home() {
             </h3>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <motion.div
+            className="grid md:grid-cols-3 gap-6"
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+          >
             {/* Step 1 */}
             <motion.div
+              variants={fadeInUp}
               whileHover={{ y: -4, borderColor: "rgba(99, 102, 241, 0.4)" }}
               className="bg-slate-900/40 border border-slate-800/80 p-5 rounded-none space-y-3 transition-colors duration-300"
             >
@@ -245,6 +261,7 @@ export default function Home() {
 
             {/* Step 2 */}
             <motion.div
+              variants={fadeInUp}
               whileHover={{ y: -4, borderColor: "rgba(6, 182, 212, 0.4)" }}
               className="bg-slate-900/40 border border-slate-800/80 p-5 rounded-none space-y-3 transition-colors duration-300"
             >
@@ -261,6 +278,7 @@ export default function Home() {
 
             {/* Step 3 */}
             <motion.div
+              variants={fadeInUp}
               whileHover={{ y: -4, borderColor: "rgba(168, 85, 247, 0.4)" }}
               className="bg-slate-900/40 border border-slate-800/80 p-5 rounded-none space-y-3 transition-colors duration-300"
             >
@@ -274,7 +292,7 @@ export default function Home() {
                 Log the found crew members with correct authorization codes to dispatch secure escape pods. Save the astronauts in time!
               </p>
             </motion.div>
-          </div>
+          </motion.div>
         </div>
 
         {/* Live Leaderboard / Telemetry Feed */}
@@ -296,11 +314,19 @@ export default function Home() {
 
           <div className="bg-slate-900/30 border border-slate-800/60 rounded-none overflow-hidden p-4">
             {board.data && board.data.length > 0 ? (
-              <div className="space-y-3 font-mono text-xs">
-                {board.data.slice(0, 3).map((team, idx) => (
-                  <div 
+              <motion.div
+                className="space-y-3 font-mono text-xs"
+                variants={staggerContainer}
+                initial="hidden"
+                animate="visible"
+              >
+                {board.data.slice(0, 4).map((team, idx) => (
+                  <motion.div 
                     key={team.teamId} 
                     className="flex flex-col sm:flex-row sm:items-center justify-between bg-slate-950/40 border border-slate-900 px-4 py-2.5 rounded-none hover:bg-slate-900/20 transition-colors gap-1 sm:gap-0"
+                    variants={fadeInUp}
+                    whileHover={{ x: 4, borderColor: "rgba(6, 182, 212, 0.3)" }}
+                    transition={springTransition}
                   >
                     <div className="flex items-center gap-3">
                       <span className="font-bold text-slate-500">0{idx + 1}.</span>
@@ -316,9 +342,9 @@ export default function Home() {
                       <span className="text-slate-500">RESCUED:</span>
                       <span className="text-cyan-400 font-bold">{team.claimedCount} / {team.assignedCount}</span>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
             ) : (
               <div className="p-6 text-center text-xs text-slate-500 font-mono flex items-center justify-center gap-2">
                 <AlertCircle className="size-4 text-slate-600" />

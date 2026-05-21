@@ -3,10 +3,18 @@
 import { Button } from "@space-scavenger-hunt/ui/components/button";
 import { Card } from "@space-scavenger-hunt/ui/components/card";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
 import { ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 import { TeamIcon } from "@/components/team-icon";
+import {
+  staggerContainer,
+  fadeInUp,
+  slideInLeft,
+  buttonInteraction,
+  springTransition,
+} from "@/lib/animations";
 import { trpc } from "@/utils/trpc";
 
 export default function AdminKickoffPage() {
@@ -67,8 +75,13 @@ export default function AdminKickoffPage() {
   if (!state) return <p className="text-sm text-muted-foreground">Loading kickoff state...</p>;
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <header className="flex items-center justify-between">
+    <motion.div
+      className="space-y-6 max-w-4xl"
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+    >
+      <motion.header className="flex items-center justify-between" variants={fadeInUp}>
         <div>
           <h1 className="text-2xl font-bold">Kickoff Controls</h1>
           <p className="text-sm text-muted-foreground">
@@ -85,84 +98,99 @@ export default function AdminKickoffPage() {
           <ExternalLink className="size-3.5" />
           Open kickoff display
         </a>
-      </header>
+      </motion.header>
 
-      <Card className="p-4 gap-3">
-        <div className="flex flex-wrap gap-2">
-          <Button
-            disabled={state.status !== "SETUP" || start.isPending}
-            onClick={() => start.mutate()}
-          >
-            Start team assignment
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={state.status !== "TEAM_ASSIGNMENT" || spin.isPending}
-            onClick={() => spin.mutate()}
-          >
-            Spin next player
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={state.status !== "TEAM_ASSIGNMENT" || autoAssign.isPending}
-            onClick={() => autoAssign.mutate()}
-          >
-            Auto-assign remaining
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={state.status === "ACTIVE" || state.status === "FINISHED" || reset.isPending}
-            onClick={() => {
-              if (confirm("Reset all team assignments?")) reset.mutate();
-            }}
-          >
-            Reset assignments
-          </Button>
-          <Button
-            disabled={state.status !== "TEAM_ASSIGNMENT" || begin.isPending || state.assignedCount === 0}
-            onClick={() => begin.mutate()}
-          >
-            Begin activity
-          </Button>
-        </div>
-      </Card>
+      <motion.div variants={fadeInUp}>
+        <Card className="p-4 gap-3">
+          <div className="flex flex-wrap gap-2">
+            {[
+              { label: "Start team assignment", onClick: () => start.mutate(), disabled: state.status !== "SETUP" || start.isPending, variant: "default" as const },
+              { label: "Spin next player", onClick: () => spin.mutate(), disabled: state.status !== "TEAM_ASSIGNMENT" || spin.isPending, variant: "secondary" as const },
+              { label: "Auto-assign remaining", onClick: () => autoAssign.mutate(), disabled: state.status !== "TEAM_ASSIGNMENT" || autoAssign.isPending, variant: "secondary" as const },
+              { label: "Reset assignments", onClick: () => { if (confirm("Reset all team assignments?")) reset.mutate(); }, disabled: state.status === "ACTIVE" || state.status === "FINISHED" || reset.isPending, variant: "secondary" as const },
+              { label: "Begin activity", onClick: () => begin.mutate(), disabled: state.status !== "TEAM_ASSIGNMENT" || begin.isPending || state.assignedCount === 0, variant: "default" as const },
+            ].map((btn) => (
+              <motion.div key={btn.label} {...buttonInteraction}>
+                <Button
+                  variant={btn.variant}
+                  disabled={btn.disabled}
+                  onClick={btn.onClick}
+                >
+                  {btn.label}
+                </Button>
+              </motion.div>
+            ))}
+          </div>
+        </Card>
+      </motion.div>
 
-      <div className="space-y-4">
+      <motion.div className="space-y-4" variants={fadeInUp}>
         <Card className="p-4 min-h-[120px]">
           <h2 className="font-bold mb-2">Unassigned ({state.unassignedPlayers.length})</h2>
           {state.unassignedPlayers.length === 0 ? (
             <p className="text-sm text-muted-foreground">All players assigned.</p>
           ) : (
-            <ul className="text-sm space-y-1">
-              {state.unassignedPlayers.map((p) => (
-                <li key={p.id}>{p.name}</li>
-              ))}
-            </ul>
+            <motion.ul
+              className="text-sm space-y-1"
+              variants={staggerContainer}
+              initial="hidden"
+              animate="visible"
+            >
+              <AnimatePresence>
+                {state.unassignedPlayers.map((p) => (
+                  <motion.li
+                    key={p.id}
+                    variants={slideInLeft}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={springTransition}
+                  >
+                    {p.name}
+                  </motion.li>
+                ))}
+              </AnimatePresence>
+            </motion.ul>
           )}
         </Card>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <motion.div
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+        >
           {state.teams.map((team) => (
-            <Card key={team.id} className="p-4 min-h-[120px]">
-              <div className="flex items-center gap-2 mb-2 min-w-0">
-                <TeamIcon icon={team.icon} color={team.color} name={team.name} />
-                <h2 className="font-bold truncate">
-                  {team.name} ({team.players.length})
-                </h2>
-              </div>
-              {team.players.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No players yet.</p>
-              ) : (
-                <ul className="text-sm space-y-1">
-                  {team.players.map((p) => (
-                    <li key={p.id}>{p.name}</li>
-                  ))}
-                </ul>
-              )}
-            </Card>
+            <motion.div key={team.id} variants={fadeInUp}>
+              <Card className="p-4 min-h-[120px]">
+                <div className="flex items-center gap-2 mb-2 min-w-0">
+                  <TeamIcon icon={team.icon} color={team.color} name={team.name} />
+                  <h2 className="font-bold truncate">
+                    {team.name} ({team.players.length})
+                  </h2>
+                </div>
+                {team.players.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No players yet.</p>
+                ) : (
+                  <ul className="text-sm space-y-1">
+                    <AnimatePresence>
+                      {team.players.map((p) => (
+                        <motion.li
+                          key={p.id}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 10 }}
+                          transition={springTransition}
+                        >
+                          {p.name}
+                        </motion.li>
+                      ))}
+                    </AnimatePresence>
+                  </ul>
+                )}
+              </Card>
+            </motion.div>
           ))}
-        </div>
-      </div>
-    </div>
+        </motion.div>
+      </motion.div>
+    </motion.div>
   );
 }

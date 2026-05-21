@@ -2,10 +2,19 @@
 
 import { Card } from "@space-scavenger-hunt/ui/components/card";
 import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import { Rocket } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 import { authClient } from "@/lib/auth-client";
+import {
+  staggerContainer,
+  fadeInUp,
+  scaleIn,
+  float,
+  pulse,
+} from "@/lib/animations";
 import { trpc } from "@/utils/trpc";
 
 const STATUS_COPY: Record<string, { title: string; body: string }> = {
@@ -57,16 +66,90 @@ export default function WaitingPage() {
 
   return (
     <div className="mx-auto max-w-xl px-6 py-12">
-      <Card className="p-8 gap-3 text-center">
-        <h1 className="text-3xl font-bold">{copy.title}</h1>
-        <p className="text-sm text-muted-foreground">{copy.body}</p>
-        {me.data.player ? (
-          <p className="text-xs text-muted-foreground mt-4">
-            Signed in as {me.data.player.name}
-            {me.data.player.team ? ` - Team ${me.data.player.team.name}` : " - no team yet"}
-          </p>
-        ) : null}
-      </Card>
+      <motion.div
+        className="flex justify-center mb-6"
+        variants={float}
+        animate="animate"
+      >
+        <div className="relative">
+          <motion.div
+            className="h-20 w-20 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center"
+            animate={{
+              boxShadow: [
+                "0 0 0 0 rgba(6, 182, 212, 0)",
+                "0 0 20px 10px rgba(6, 182, 212, 0.15)",
+                "0 0 0 0 rgba(6, 182, 212, 0)",
+              ],
+            }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <Rocket className="size-8 text-cyan-400" />
+          </motion.div>
+        </div>
+      </motion.div>
+
+      <motion.div
+        variants={scaleIn}
+        initial="hidden"
+        animate="visible"
+      >
+        <Card className="p-8 gap-3 text-center">
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+          >
+            <motion.h1
+              className="text-3xl font-bold"
+              variants={fadeInUp}
+            >
+              {copy.title}
+            </motion.h1>
+            <motion.p
+              className="text-sm text-muted-foreground mt-3"
+              variants={fadeInUp}
+            >
+              {copy.body}
+            </motion.p>
+
+            {me.data.player ? (
+              <motion.p
+                className="text-xs text-muted-foreground mt-4"
+                variants={fadeInUp}
+              >
+                <motion.span variants={pulse} animate="animate">
+                  Signed in as {me.data.player.name}
+                  {me.data.player.team ? ` - Team ${me.data.player.team.name}` : " - no team yet"}
+                </motion.span>
+              </motion.p>
+            ) : null}
+          </motion.div>
+
+          <motion.div
+            className="flex justify-center gap-1.5 mt-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+          >
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                className="h-1.5 w-1.5 rounded-full bg-cyan-400"
+                animate={{
+                  opacity: [0.3, 1, 0.3],
+                  scale: [0.8, 1.2, 0.8],
+                }}
+                transition={{
+                  duration: 1.2,
+                  repeat: Infinity,
+                  delay: i * 0.2,
+                  ease: "easeInOut",
+                }}
+              />
+            ))}
+          </motion.div>
+        </Card>
+      </motion.div>
     </div>
   );
 }

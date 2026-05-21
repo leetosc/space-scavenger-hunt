@@ -4,12 +4,19 @@ import { Button } from "@space-scavenger-hunt/ui/components/button";
 import { Input } from "@space-scavenger-hunt/ui/components/input";
 import { Label } from "@space-scavenger-hunt/ui/components/label";
 import { useForm } from "@tanstack/react-form";
+import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import z from "zod";
 
 import { authClient } from "@/lib/auth-client";
+import {
+  staggerContainer,
+  fadeInUp,
+  scaleIn,
+  buttonInteraction,
+} from "@/lib/animations";
 
 import Loader from "./loader";
 
@@ -53,21 +60,42 @@ export default function SignInForm() {
   }
 
   return (
-    <div className="mx-auto w-full mt-10 max-w-md p-6">
-      <h1 className="mb-2 text-center text-3xl font-bold">Mission Control</h1>
-      <p className="mb-6 text-center text-sm text-muted-foreground">
+    <motion.div
+      className="mx-auto w-full mt-10 max-w-md p-6"
+      variants={scaleIn}
+      initial="hidden"
+      animate="visible"
+    >
+      <motion.h1
+        className="mb-2 text-center text-3xl font-bold"
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+      >
+        Mission Control
+      </motion.h1>
+      <motion.p
+        className="mb-6 text-center text-sm text-muted-foreground"
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.1 }}
+      >
         Sign in to join the scavenger hunt.
-      </p>
+      </motion.p>
 
-      <form
+      <motion.form
         onSubmit={(e) => {
           e.preventDefault();
           e.stopPropagation();
           form.handleSubmit();
         }}
         className="space-y-4"
+        variants={staggerContainer}
+        initial="hidden"
+        animate="visible"
       >
-        <div>
+        <motion.div variants={fadeInUp}>
           <form.Field name="username">
             {(field) => (
               <div className="space-y-2">
@@ -81,16 +109,21 @@ export default function SignInForm() {
                   onChange={(e) => field.handleChange(e.target.value)}
                 />
                 {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-red-500">
+                  <motion.p
+                    key={error?.message}
+                    className="text-red-500"
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
                     {error?.message}
-                  </p>
+                  </motion.p>
                 ))}
               </div>
             )}
           </form.Field>
-        </div>
+        </motion.div>
 
-        <div>
+        <motion.div variants={fadeInUp}>
           <form.Field name="password">
             {(field) => (
               <div className="space-y-2">
@@ -105,32 +138,47 @@ export default function SignInForm() {
                   onChange={(e) => field.handleChange(e.target.value)}
                 />
                 {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-red-500">
+                  <motion.p
+                    key={error?.message}
+                    className="text-red-500"
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
                     {error?.message}
-                  </p>
+                  </motion.p>
                 ))}
               </div>
             )}
           </form.Field>
-        </div>
+        </motion.div>
 
-        <form.Subscribe
-          selector={(state) => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}
-        >
-          {({ canSubmit, isSubmitting }) => (
-            <Button type="submit" className="w-full" disabled={!canSubmit || isSubmitting}>
-              {isSubmitting ? "Signing in..." : "Sign In"}
-            </Button>
-          )}
-        </form.Subscribe>
-      </form>
+        <motion.div variants={fadeInUp}>
+          <form.Subscribe
+            selector={(state) => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}
+          >
+            {({ canSubmit, isSubmitting }) => (
+              <motion.div {...buttonInteraction}>
+                <Button type="submit" className="w-full" disabled={!canSubmit || isSubmitting}>
+                  {isSubmitting ? "Signing in..." : "Sign In"}
+                </Button>
+              </motion.div>
+            )}
+          </form.Subscribe>
+        </motion.div>
+      </motion.form>
 
-      <p className="mt-6 text-center text-xs text-muted-foreground">
+      <motion.p
+        className="mt-6 text-center text-xs text-muted-foreground"
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.4 }}
+      >
         Don&apos;t have an account?{" "}
         <Link href="/signup" className="text-cyan-400 hover:underline">
           Sign up
         </Link>
-      </p>
-    </div>
+      </motion.p>
+    </motion.div>
   );
 }
