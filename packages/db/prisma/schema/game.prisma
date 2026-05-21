@@ -13,6 +13,7 @@ model Activity {
 model Player {
   id              String         @id @default(cuid())
   name            String
+  icon            String?
   authUserId      String?        @unique
   authUser        User?          @relation(fields: [authUserId], references: [id], onDelete: SetNull)
   teamId          String?

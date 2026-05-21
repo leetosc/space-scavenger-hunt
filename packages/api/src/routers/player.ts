@@ -3,9 +3,58 @@ import { env } from "@space-scavenger-hunt/env/server";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { adminProcedure, protectedProcedure, router } from "../index";
+import { adminProcedure, protectedProcedure, publicProcedure, router } from "../index";
 
 export const playerRouter = router({
+  signUp: publicProcedure
+    .input(
+      z.object({
+        username: z.string().min(3).max(40),
+        password: z.string().min(8).max(200),
+        icon: z.string().min(1).max(100),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const username = input.username.trim().toLowerCase();
+      const existing = await ctx.prisma.user.findUnique({ where: { username } });
+      if (existing) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `Username "${username}" is already taken.`,
+        });
+      }
+
+      const email = `${username}@${env.USER_EMAIL_DOMAIN}`.toLowerCase();
+
+      await auth.api.signUpEmail({
+        body: {
+          name: username,
+          email,
+          password: input.password,
+          username,
+        },
+      });
+
+      const user = await ctx.prisma.user.findUnique({ where: { email } });
+      if (!user) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "User creation failed unexpectedly.",
+        });
+      }
+
+      const player = await ctx.prisma.player.create({
+        data: {
+          name: username,
+          icon: input.icon,
+          authUserId: user.id,
+          isCheckedIn: true,
+        },
+      });
+
+      return { playerId: player.id, userId: user.id, username };
+    }),
+
   me: protectedProcedure.query(({ ctx }) => {
     return {
       user: {
@@ -13,11 +62,13 @@ export const playerRouter = router({
         name: ctx.user.name,
         username: ctx.user.username,
         role: ctx.user.role,
+        image: ctx.user.image,
       },
       player: ctx.user.player
         ? {
             id: ctx.user.player.id,
             name: ctx.user.player.name,
+            icon: ctx.user.player.icon,
             isCheckedIn: ctx.user.player.isCheckedIn,
             teamId: ctx.user.player.teamId,
             team: ctx.user.player.team

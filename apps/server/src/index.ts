@@ -21,12 +21,13 @@ app.use(
   }),
 );
 
-// Block public sign-up endpoints. Admin and bootstrap create users via `auth.api.signUpEmail`
-// directly (in-process), so disabling the HTTP routes does not affect them.
+// Public sign-up is handled by the player.signUp tRPC mutation which calls
+// auth.api.signUpEmail in-process. The HTTP auth sign-up routes remain blocked
+// so users can only register through our controlled flow.
 app.all("/api/auth/sign-up{/*path}", (_req, res) => {
   res.status(403).json({
     code: "PUBLIC_SIGN_UP_DISABLED",
-    message: "Public sign-up is disabled. Ask your event admin for an account.",
+    message: "Public sign-up is disabled. Use the sign-up page instead.",
   });
 });
 

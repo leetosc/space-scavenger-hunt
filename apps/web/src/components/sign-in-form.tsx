@@ -4,6 +4,7 @@ import { Button } from "@space-scavenger-hunt/ui/components/button";
 import { Input } from "@space-scavenger-hunt/ui/components/input";
 import { Label } from "@space-scavenger-hunt/ui/components/label";
 import { useForm } from "@tanstack/react-form";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import z from "zod";
@@ -125,7 +126,10 @@ export default function SignInForm() {
       </form>
 
       <p className="mt-6 text-center text-xs text-muted-foreground">
-        Don't have an account? Ask your event admin to create one for you.
+        Don&apos;t have an account?{" "}
+        <Link href="/signup" className="text-cyan-400 hover:underline">
+          Sign up
+        </Link>
       </p>
     </div>
   );

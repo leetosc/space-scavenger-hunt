@@ -1,19 +1,35 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
+
+interface Star {
+  id: number;
+  x: number;
+  y: number;
+  size: number;
+  twinkleDuration: number;
+  twinkleDelay: number;
+}
+
+function generateStars(count: number): Star[] {
+  return Array.from({ length: count }).map((_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    size: Math.random() * 2 + 1,
+    twinkleDuration: Math.random() * 3 + 2,
+    twinkleDelay: Math.random() * 5,
+  }));
+}
 
 export default function StarfieldBackground() {
-  // Memoize random star field coordinates to prevent layout shifts or re-generation on render
-  const stars = useMemo(() => {
-    return Array.from({ length: 80 }).map((_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 2 + 1,
-      twinkleDuration: Math.random() * 3 + 2,
-      twinkleDelay: Math.random() * 5,
-    }));
+  // Generate stars only on the client to avoid hydration mismatches
+  // (Math.random() produces different values on server vs client).
+  const [stars, setStars] = useState<Star[]>([]);
+
+  useEffect(() => {
+    setStars(generateStars(80));
   }, []);
 
   return (
