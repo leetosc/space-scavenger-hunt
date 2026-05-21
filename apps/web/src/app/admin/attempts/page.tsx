@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@space-scavenger-hunt/ui/components/button";
+import { Badge } from "@space-scavenger-hunt/ui/components/badge";
 import { Card } from "@space-scavenger-hunt/ui/components/card";
 import {
   Dialog,
@@ -11,7 +12,10 @@ import {
   DialogTitle,
 } from "@space-scavenger-hunt/ui/components/dialog";
 import { Label } from "@space-scavenger-hunt/ui/components/label";
+import { cn } from "@space-scavenger-hunt/ui/lib/utils";
+import type { AppRouter } from "@space-scavenger-hunt/api/routers/index";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { inferRouterOutputs } from "@trpc/server";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import { Trash2 } from "lucide-react";
@@ -21,9 +25,7 @@ import { toast } from "sonner";
 import {
   staggerContainer,
   fadeInUp,
-  scaleIn,
   buttonInteraction,
-  springTransition,
 } from "@/lib/animations";
 import { trpc } from "@/utils/trpc";
 
@@ -44,13 +46,398 @@ const ATTEMPT_STATUSES = [
   "EXPIRED",
 ] as const;
 
+type RouterOutputs = inferRouterOutputs<AppRouter>;
+type Attempt = RouterOutputs["attempt"]["adminList"][number];
+type AttemptStatus = (typeof ATTEMPT_STATUSES)[number];
+type StatusFilterId = (typeof STATUS_FILTERS)[number]["id"];
+
+function formatStatus(status: string) {
+  return status.replaceAll("_", " ").toLowerCase();
+}
+
+function statusBadgeClass(status: string) {
+  if (status === "APPROVED") {
+    return "border-emerald-500/40 bg-emerald-500/10 text-emerald-300";
+  }
+  if (status === "REJECTED") {
+    return "border-rose-500/40 bg-rose-500/10 text-rose-300";
+  }
+  if (status === "SUBMITTED") {
+    return "border-cyan-500/40 bg-cyan-500/10 text-cyan-300";
+  }
+  if (status === "EXPIRED") {
+    return "border-amber-500/40 bg-amber-500/10 text-amber-300";
+  }
+  return "border-slate-500/40 bg-slate-500/10 text-slate-300";
+}
+
+function StatusBadge({ status }: { status: string }) {
+  return (
+    <Badge
+      variant="outline"
+      className={cn("h-5 rounded-sm px-1.5 capitalize", statusBadgeClass(status))}
+    >
+      {formatStatus(status)}
+    </Badge>
+  );
+}
+
+function AttemptToolbar({
+  filter,
+  attemptsCount,
+  selectedCount,
+  allSelected,
+  someSelected,
+  deletePending,
+  onFilterChange,
+  onSelectAll,
+  onDeleteSelected,
+}: {
+  filter: StatusFilterId;
+  attemptsCount: number;
+  selectedCount: number;
+  allSelected: boolean;
+  someSelected: boolean;
+  deletePending: boolean;
+  onFilterChange: (filter: StatusFilterId) => void;
+  onSelectAll: (checked: boolean) => void;
+  onDeleteSelected: () => void;
+}) {
+  return (
+    <motion.div
+      className="sticky top-0 z-20 -mx-1 rounded border border-border/70 bg-background/90 px-3 py-2 shadow-sm backdrop-blur"
+      variants={fadeInUp}
+    >
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+          {STATUS_FILTERS.map((f) => (
+            <Button
+              key={f.id}
+              size="sm"
+              variant={filter === f.id ? "default" : "outline"}
+              className="h-7 px-2.5 text-xs"
+              onClick={() => onFilterChange(f.id)}
+            >
+              {f.label}
+            </Button>
+          ))}
+          <span className="ml-1 text-xs text-muted-foreground">
+            {attemptsCount} visible
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex h-7 items-center gap-2 rounded border border-border/70 bg-muted/20 px-2.5 text-xs">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              ref={(input) => {
+                if (input) {
+                  input.indeterminate = someSelected && !allSelected;
+                }
+              }}
+              onChange={(event) => onSelectAll(event.target.checked)}
+              className="accent-cyan-400"
+            />
+            Select all
+          </label>
+          {selectedCount > 0 ? (
+            <motion.div {...buttonInteraction}>
+              <Button
+                type="button"
+                size="sm"
+                variant="destructive"
+                className="h-7 px-2.5 text-xs"
+                disabled={deletePending}
+                onClick={onDeleteSelected}
+              >
+                <Trash2 className="size-3.5" />
+                Delete selected ({selectedCount})
+              </Button>
+            </motion.div>
+          ) : null}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function getAiText(attempt: Attempt) {
+  return typeof attempt.aiPassed === "boolean"
+    ? `${attempt.aiPassed ? "passed" : "failed"}${
+        typeof attempt.aiConfidence === "number"
+          ? ` (${Math.round(attempt.aiConfidence * 100)}%)`
+          : ""
+      }${attempt.aiFeedback ? ` - ${attempt.aiFeedback}` : ""}`
+    : attempt.aiFeedback;
+}
+
+function AttemptPhoto({
+  attempt,
+  className,
+  sizes = "112px",
+}: {
+  attempt: Attempt;
+  className?: string;
+  sizes?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "relative aspect-square w-full overflow-hidden rounded border border-border/70 bg-muted/20",
+        className,
+      )}
+    >
+      {attempt.previewUrl ? (
+        <Image
+          src={attempt.previewUrl}
+          alt="Submission"
+          fill
+          sizes={sizes}
+          className="object-cover"
+          referrerPolicy="no-referrer"
+        />
+      ) : (
+        <div className="flex h-full items-center justify-center px-2 text-center text-xs text-muted-foreground">
+          No photo
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AttemptTags({ attempt }: { attempt: Attempt }) {
+  return (
+    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+      <StatusBadge status={attempt.status} />
+      <Badge
+        variant="outline"
+        className="h-5 rounded-sm border-blue-500/30 bg-blue-500/10 px-1.5 text-blue-300"
+      >
+        {attempt.team.name}
+      </Badge>
+      {attempt.claim ? (
+        <Badge
+          variant="outline"
+          className="h-5 rounded-sm border-emerald-500/30 bg-emerald-500/10 px-1.5 text-emerald-300"
+        >
+          claimed
+        </Badge>
+      ) : null}
+    </div>
+  );
+}
+
+function AttemptTile({
+  attempt,
+  selected,
+  onSelectedChange,
+  onOpen,
+}: {
+  attempt: Attempt;
+  selected: boolean;
+  onSelectedChange: (checked: boolean) => void;
+  onOpen: () => void;
+}) {
+  return (
+    <Card
+      role="button"
+      tabIndex={0}
+      className="group cursor-pointer overflow-hidden p-0 transition-colors hover:border-cyan-400/50 hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
+      onClick={onOpen}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen();
+        }
+      }}
+    >
+      <div className="relative">
+        <AttemptPhoto
+          attempt={attempt}
+          className="rounded-b-none border-0 border-b"
+          sizes="(min-width: 1280px) 280px, (min-width: 768px) 33vw, 100vw"
+        />
+        <label
+          className="absolute left-2 top-2 flex size-7 items-center justify-center rounded border border-border/70 bg-background/85 backdrop-blur"
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <span className="sr-only">Select attempt for {attempt.astronaut.name}</span>
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={(event) => onSelectedChange(event.target.checked)}
+            className="accent-cyan-400"
+          />
+        </label>
+      </div>
+
+      <div className="space-y-2 p-3">
+        <div className="min-w-0 space-y-1.5">
+          <h2 className="truncate text-sm font-bold">{attempt.astronaut.name}</h2>
+          <AttemptTags attempt={attempt} />
+        </div>
+        <p className="line-clamp-3 min-h-[3.75rem] text-xs leading-snug text-muted-foreground">
+          {attempt.taskPrompt}
+        </p>
+      </div>
+    </Card>
+  );
+}
+
+function AttemptReviewDialog({
+  attempt,
+  draftStatus,
+  approvePending,
+  rejectPending,
+  setStatusPending,
+  deletePending,
+  onDraftStatusChange,
+  onSetStatus,
+  onApprove,
+  onReject,
+  onDelete,
+  onOpenChange,
+}: {
+  attempt: Attempt | null;
+  draftStatus: AttemptStatus;
+  approvePending: boolean;
+  rejectPending: boolean;
+  setStatusPending: boolean;
+  deletePending: boolean;
+  onDraftStatusChange: (status: AttemptStatus) => void;
+  onSetStatus: () => void;
+  onApprove: () => void;
+  onReject: () => void;
+  onDelete: () => void;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const aiText = attempt ? getAiText(attempt) : undefined;
+
+  return (
+    <Dialog open={attempt !== null} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+        {attempt ? (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex flex-wrap items-center gap-2">
+                <span>{attempt.astronaut.name}</span>
+                <AttemptTags attempt={attempt} />
+              </DialogTitle>
+              <DialogDescription>
+                Scanned by {attempt.scannedByPlayer.name} ·{" "}
+                {new Date(attempt.createdAt).toLocaleString()}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4 md:grid-cols-[minmax(0,320px)_1fr]">
+              <AttemptPhoto
+                attempt={attempt}
+                className="mx-auto max-w-80"
+                sizes="(min-width: 768px) 320px, 100vw"
+              />
+
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Task
+                  </h3>
+                  <p className="text-sm leading-relaxed">{attempt.taskPrompt}</p>
+                </div>
+
+                {aiText ? (
+                  <div className="space-y-1.5">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      AI review
+                    </h3>
+                    <p className="text-sm leading-relaxed">{aiText}</p>
+                  </div>
+                ) : null}
+
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
+                  <div className="min-w-0">
+                    <Label htmlFor={`attempt-status-${attempt.id}`} className="mb-1 block text-xs">
+                      Manual status
+                    </Label>
+                    <select
+                      id={`attempt-status-${attempt.id}`}
+                      value={draftStatus}
+                      onChange={(event) =>
+                        onDraftStatusChange(event.target.value as AttemptStatus)
+                      }
+                      className="flex h-8 w-full items-center border border-input bg-transparent px-2.5 py-1.5 text-xs outline-none focus:border-ring focus:ring-1 focus:ring-ring/50 dark:bg-input/30"
+                    >
+                      {ATTEMPT_STATUSES.map((attemptStatus) => (
+                        <option key={attemptStatus} value={attemptStatus}>
+                          {attemptStatus}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <motion.div {...buttonInteraction}>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="h-8 px-2.5 text-xs"
+                      disabled={setStatusPending || draftStatus === attempt.status}
+                      onClick={onSetStatus}
+                    >
+                      Set
+                    </Button>
+                  </motion.div>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:justify-between">
+              <motion.div {...buttonInteraction}>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={deletePending}
+                  onClick={onDelete}
+                >
+                  <Trash2 className="size-3.5" />
+                  Delete
+                </Button>
+              </motion.div>
+              <div className="flex flex-wrap gap-2">
+                <motion.div {...buttonInteraction}>
+                  <Button
+                    size="sm"
+                    disabled={attempt.status === "APPROVED" || approvePending}
+                    onClick={onApprove}
+                  >
+                    Approve
+                  </Button>
+                </motion.div>
+                <motion.div {...buttonInteraction}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={attempt.status === "REJECTED" || rejectPending}
+                    onClick={onReject}
+                  >
+                    Reject
+                  </Button>
+                </motion.div>
+              </div>
+            </DialogFooter>
+          </>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function AdminAttemptsPage() {
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<(typeof STATUS_FILTERS)[number]["id"]>("all");
-  const [statusDrafts, setStatusDrafts] = useState<
-    Record<string, (typeof ATTEMPT_STATUSES)[number]>
-  >({});
+  const [filter, setFilter] = useState<StatusFilterId>("all");
+  const [statusDrafts, setStatusDrafts] = useState<Record<string, AttemptStatus>>({});
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [reviewingAttemptId, setReviewingAttemptId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string[] | null>(null);
 
   const attemptsQuery = useQuery({
@@ -112,6 +499,12 @@ export default function AdminAttemptsPage() {
 
   const attempts = attemptsQuery.data ?? [];
   const attemptIds = useMemo(() => attempts.map((attempt) => attempt.id), [attempts]);
+  const reviewingAttempt = reviewingAttemptId
+    ? attempts.find((attempt) => attempt.id === reviewingAttemptId) ?? null
+    : null;
+  const reviewingDraftStatus = reviewingAttempt
+    ? statusDrafts[reviewingAttempt.id] ?? (reviewingAttempt.status as AttemptStatus)
+    : ATTEMPT_STATUSES[0];
   const allSelected =
     attemptIds.length > 0 && attemptIds.every((id) => selectedIds.has(id));
   const someSelected = attemptIds.some((id) => selectedIds.has(id));
@@ -123,6 +516,12 @@ export default function AdminAttemptsPage() {
       return next.size === current.size ? current : next;
     });
   }, [attemptIds]);
+
+  useEffect(() => {
+    if (reviewingAttemptId && !attemptIds.includes(reviewingAttemptId)) {
+      setReviewingAttemptId(null);
+    }
+  }, [attemptIds, reviewingAttemptId]);
 
   const toggleSelected = (attemptId: string, checked: boolean) => {
     setSelectedIds((current) => {
@@ -151,12 +550,15 @@ export default function AdminAttemptsPage() {
 
   return (
     <motion.div
-      className="space-y-6 max-w-4xl"
+      className="w-full max-w-7xl space-y-4"
       variants={staggerContainer}
       initial="hidden"
       animate="visible"
     >
-      <motion.header className="space-y-3" variants={fadeInUp}>
+      <motion.header
+        className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between"
+        variants={fadeInUp}
+      >
         <div>
           <h1 className="text-2xl font-bold">Attempt review</h1>
           <p className="text-sm text-muted-foreground">
@@ -164,23 +566,11 @@ export default function AdminAttemptsPage() {
             claim.
           </p>
         </div>
-        <div className="flex flex-wrap gap-1">
-          {STATUS_FILTERS.map((f) => (
-            <motion.div
-              key={f.id}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button
-                size="sm"
-                variant={filter === f.id ? "default" : "outline"}
-                onClick={() => setFilter(f.id)}
-              >
-                {f.label}
-              </Button>
-            </motion.div>
-          ))}
-        </div>
+        {attemptsQuery.data ? (
+          <p className="text-xs text-muted-foreground">
+            Refreshes every 5s · {selectedIds.size} selected
+          </p>
+        ) : null}
       </motion.header>
 
       {!attemptsQuery.data ? (
@@ -197,222 +587,91 @@ export default function AdminAttemptsPage() {
         </motion.div>
       ) : (
         <motion.div
-          className="space-y-4"
+          className="space-y-3"
           variants={staggerContainer}
           initial="hidden"
           animate="visible"
         >
-          <motion.div
-            className="flex flex-wrap items-center justify-between gap-3 rounded border bg-muted/20 px-4 py-3"
-            variants={fadeInUp}
-          >
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={allSelected}
-                ref={(input) => {
-                  if (input) {
-                    input.indeterminate = someSelected && !allSelected;
-                  }
-                }}
-                onChange={(event) => toggleSelectAll(event.target.checked)}
-                className="accent-cyan-400"
-              />
-              Select all ({attempts.length})
-            </label>
-            {selectedIds.size > 0 ? (
-              <motion.div {...buttonInteraction}>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="destructive"
-                  disabled={deleteMutation.isPending}
-                  onClick={() => openDeleteDialog([...selectedIds])}
-                >
-                  <Trash2 className="size-3.5" />
-                  Delete selected ({selectedIds.size})
-                </Button>
-              </motion.div>
-            ) : null}
-          </motion.div>
+          <AttemptToolbar
+            filter={filter}
+            attemptsCount={attempts.length}
+            selectedCount={selectedIds.size}
+            allSelected={allSelected}
+            someSelected={someSelected}
+            deletePending={deleteMutation.isPending}
+            onFilterChange={setFilter}
+            onSelectAll={toggleSelectAll}
+            onDeleteSelected={() => openDeleteDialog([...selectedIds])}
+          />
 
           <AnimatePresence>
-            {attempts.map((a) => {
-              const draftStatus =
-                statusDrafts[a.id] ?? (a.status as (typeof ATTEMPT_STATUSES)[number]);
-
-              return (
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {attempts.map((a) => (
                 <motion.div
                   key={a.id}
                   variants={fadeInUp}
                   exit={{ opacity: 0, y: -10 }}
                   layout
                 >
-                  <Card className="p-4 grid grid-cols-1 md:grid-cols-[auto_180px_1fr] gap-4">
-                    <div className="flex items-start pt-1">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(a.id)}
-                        onChange={(event) => toggleSelected(a.id, event.target.checked)}
-                        aria-label={`Select attempt for ${a.astronaut.name}`}
-                        className="accent-cyan-400"
-                      />
-                    </div>
-                    <div>
-                      {a.previewUrl ? (
-                        <motion.div
-                          className="relative aspect-square w-full overflow-hidden rounded border bg-muted/20"
-                          variants={scaleIn}
-                          initial="hidden"
-                          animate="visible"
-                        >
-                          <Image
-                            src={a.previewUrl}
-                            alt="Submission"
-                            fill
-                            sizes="(min-width: 768px) 180px, 100vw"
-                            className="object-cover"
-                            referrerPolicy="no-referrer"
-                          />
-                        </motion.div>
-                      ) : (
-                        <div className="aspect-square rounded border bg-muted/30 flex items-center justify-center text-xs text-muted-foreground">
-                          No photo
-                        </div>
-                      )}
-                    </div>
-
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h2 className="font-bold">{a.astronaut.name}</h2>
-                      <span className="text-xs rounded px-2 py-0.5 bg-muted">{a.status}</span>
-                      <span className="text-xs rounded px-2 py-0.5 bg-blue-500/15 text-blue-700">
-                        {a.team.name}
-                      </span>
-                      {a.claim ? (
-                        <motion.span
-                          className="text-xs rounded px-2 py-0.5 bg-green-500/15 text-green-700"
-                          initial={{ opacity: 0, scale: 0.5 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                        >
-                          claimed
-                        </motion.span>
-                      ) : null}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Scanned by {a.scannedByPlayer.name} ·{" "}
-                      {new Date(a.createdAt).toLocaleString()}
-                    </p>
-                    <p className="text-sm">
-                      <strong>Task:</strong> {a.taskPrompt}
-                    </p>
-                    {typeof a.aiPassed === "boolean" ? (
-                      <p className="text-sm">
-                        <strong>AI:</strong> {a.aiPassed ? "passed" : "failed"}
-                        {typeof a.aiConfidence === "number"
-                          ? ` (${Math.round(a.aiConfidence * 100)}%)`
-                          : null}
-                        {a.aiFeedback ? ` - ${a.aiFeedback}` : null}
-                      </p>
-                    ) : a.aiFeedback ? (
-                      <p className="text-sm">
-                        <strong>AI:</strong> {a.aiFeedback}
-                      </p>
-                    ) : null}
-
-                    <div className="pt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
-                      <div className="min-w-[180px]">
-                        <Label htmlFor={`attempt-status-${a.id}`} className="mb-1.5 block">
-                          Testing status
-                        </Label>
-                        <select
-                          id={`attempt-status-${a.id}`}
-                          value={draftStatus}
-                          onChange={(event) =>
-                            setStatusDrafts((current) => ({
-                              ...current,
-                              [a.id]: event.target.value as (typeof ATTEMPT_STATUSES)[number],
-                            }))
-                          }
-                          className="flex h-8 w-full items-center border border-input bg-transparent px-2.5 py-1.5 text-xs outline-none focus:border-ring focus:ring-1 focus:ring-ring/50 dark:bg-input/30"
-                        >
-                          {ATTEMPT_STATUSES.map((attemptStatus) => (
-                            <option key={attemptStatus} value={attemptStatus}>
-                              {attemptStatus}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <motion.div {...buttonInteraction}>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="secondary"
-                          disabled={
-                            setStatusMutation.isPending ||
-                            draftStatus === a.status
-                          }
-                          onClick={() => {
-                            const feedback =
-                              draftStatus === "REJECTED"
-                                ? prompt("Reason (optional)") ?? "Manually rejected by admin."
-                                : undefined;
-                            setStatusMutation.mutate({
-                              attemptId: a.id,
-                              status: draftStatus,
-                              ...(feedback ? { feedback } : {}),
-                            });
-                          }}
-                        >
-                          Set status
-                        </Button>
-                      </motion.div>
-                    </div>
-
-                    <div className="pt-2 flex flex-wrap gap-2">
-                      <motion.div {...buttonInteraction}>
-                        <Button
-                          size="sm"
-                          disabled={a.status === "APPROVED" || approveMutation.isPending}
-                          onClick={() => approveMutation.mutate({ attemptId: a.id })}
-                        >
-                          Approve
-                        </Button>
-                      </motion.div>
-                      <motion.div {...buttonInteraction}>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={a.status === "REJECTED" || rejectMutation.isPending}
-                          onClick={() => {
-                            const feedback =
-                              prompt("Reason (optional)") ?? "Manually rejected by admin.";
-                            rejectMutation.mutate({ attemptId: a.id, feedback });
-                          }}
-                        >
-                          Reject
-                        </Button>
-                      </motion.div>
-                      <motion.div {...buttonInteraction}>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          disabled={deleteMutation.isPending}
-                          onClick={() => openDeleteDialog([a.id])}
-                        >
-                          <Trash2 className="size-3.5" />
-                          Delete
-                        </Button>
-                      </motion.div>
-                    </div>
-                    </div>
-                  </Card>
+                  <AttemptTile
+                    attempt={a}
+                    selected={selectedIds.has(a.id)}
+                    onSelectedChange={(checked) => toggleSelected(a.id, checked)}
+                    onOpen={() => setReviewingAttemptId(a.id)}
+                  />
                 </motion.div>
-              );
-            })}
+              ))}
+            </div>
           </AnimatePresence>
         </motion.div>
       )}
+      <AttemptReviewDialog
+        attempt={reviewingAttempt}
+        draftStatus={reviewingDraftStatus}
+        approvePending={approveMutation.isPending}
+        rejectPending={rejectMutation.isPending}
+        setStatusPending={setStatusMutation.isPending}
+        deletePending={deleteMutation.isPending}
+        onOpenChange={(open) => {
+          if (!open) {
+            setReviewingAttemptId(null);
+          }
+        }}
+        onDraftStatusChange={(status) => {
+          if (!reviewingAttempt) return;
+          setStatusDrafts((current) => ({
+            ...current,
+            [reviewingAttempt.id]: status,
+          }));
+        }}
+        onSetStatus={() => {
+          if (!reviewingAttempt) return;
+          const feedback =
+            reviewingDraftStatus === "REJECTED"
+              ? prompt("Reason (optional)") ?? "Manually rejected by admin."
+              : undefined;
+          setStatusMutation.mutate({
+            attemptId: reviewingAttempt.id,
+            status: reviewingDraftStatus,
+            ...(feedback ? { feedback } : {}),
+          });
+        }}
+        onApprove={() => {
+          if (!reviewingAttempt) return;
+          approveMutation.mutate({ attemptId: reviewingAttempt.id });
+        }}
+        onReject={() => {
+          if (!reviewingAttempt) return;
+          const feedback = prompt("Reason (optional)") ?? "Manually rejected by admin.";
+          rejectMutation.mutate({ attemptId: reviewingAttempt.id, feedback });
+        }}
+        onDelete={() => {
+          if (!reviewingAttempt) return;
+          const attemptId = reviewingAttempt.id;
+          setReviewingAttemptId(null);
+          openDeleteDialog([attemptId]);
+        }}
+      />
       <Dialog
         open={deleteTarget !== null}
         onOpenChange={(open) => {
