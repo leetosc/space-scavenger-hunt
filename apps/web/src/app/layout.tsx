@@ -63,7 +63,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-svh bg-background text-foreground relative overflow-x-hidden`}>
         <Providers>
           <div className="relative min-h-svh w-full overflow-hidden flex flex-col z-0">

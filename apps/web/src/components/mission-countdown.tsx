@@ -2,7 +2,7 @@
 
 import { cn } from "@space-scavenger-hunt/ui/lib/utils";
 import { Clock } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 type MissionCountdownProps = {
   status?: string | null;
@@ -31,23 +31,27 @@ export function MissionCountdown({
 }: MissionCountdownProps) {
   const deadlineMs = toTime(deadlineAt);
   const serverNowMs = toTime(serverNow);
-  const clientOffsetMs = useMemo(() => {
-    if (!serverNowMs) return 0;
-    return serverNowMs - Date.now();
-  }, [serverNowMs]);
-  const [nowMs, setNowMs] = useState(() => Date.now());
+  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
 
   useEffect(() => {
-    const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
+    if (status !== "ACTIVE" || !deadlineMs) {
+      setRemainingSeconds(null);
+      return;
+    }
+
+    const clientOffsetMs = serverNowMs ? serverNowMs - Date.now() : 0;
+    const calculateRemainingSeconds = () =>
+      Math.max(0, Math.ceil((deadlineMs - (Date.now() + clientOffsetMs)) / 1000));
+
+    setRemainingSeconds(calculateRemainingSeconds());
+    const timer = window.setInterval(() => {
+      setRemainingSeconds(calculateRemainingSeconds());
+    }, 1000);
+
     return () => window.clearInterval(timer);
-  }, []);
+  }, [deadlineMs, serverNowMs, status]);
 
-  if (status !== "ACTIVE" || !deadlineMs) return null;
-
-  const remainingSeconds = Math.max(
-    0,
-    Math.ceil((deadlineMs - (nowMs + clientOffsetMs)) / 1000),
-  );
+  if (remainingSeconds === null) return null;
 
   return (
     <div

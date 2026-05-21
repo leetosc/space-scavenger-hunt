@@ -80,6 +80,7 @@ Create `apps/web/.env` (Next.js):
 
 ```env
 NEXT_PUBLIC_SERVER_URL=https://your-domain.com
+NEXT_PUBLIC_IMAGE_REMOTE_HOSTS=myaccount.blob.core.windows.net
 ```
 
 Push schema and build:

@@ -12,6 +12,7 @@ import { Skeleton } from "@space-scavenger-hunt/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { User, UserCircle } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -62,9 +63,11 @@ export default function UserMenu() {
             transition={springTransition}
           >
             {userImage ? (
-              <img
+              <Image
                 src={userImage}
                 alt={session.user.name}
+                width={36}
+                height={36}
                 className="size-full object-cover"
               />
             ) : AvatarIcon ? (

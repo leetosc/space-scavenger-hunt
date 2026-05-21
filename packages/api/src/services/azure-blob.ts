@@ -65,24 +65,35 @@ export async function uploadImage(input: UploadImageInput): Promise<{ url: strin
   return { url: blobClient.url };
 }
 
+const sasUrlCache = new Map<string, { url: string; expiresAt: number }>();
+
 export function getReadSasUrl(blobName: string, ttlMinutes = 15): string {
+  const now = Date.now();
+  const cached = sasUrlCache.get(blobName);
+  // Reuse cached URLs so polling endpoints don't invalidate browser/image caches.
+  if (cached && cached.expiresAt > now + 2 * 60 * 1000) {
+    return cached.url;
+  }
+
   const credential = getSharedKeyCredential();
   const containerClient = getContainerClient();
   const blobClient = containerClient.getBlobClient(blobName);
-  const now = new Date();
-  const expiresOn = new Date(now.getTime() + ttlMinutes * 60 * 1000);
+  const startsOn = new Date(now - 5 * 60 * 1000);
+  const expiresOn = new Date(now + ttlMinutes * 60 * 1000);
   const sas = generateBlobSASQueryParameters(
     {
       containerName: env.AZURE_STORAGE_CONTAINER_NAME,
       blobName,
       permissions: BlobSASPermissions.parse("r"),
-      startsOn: new Date(now.getTime() - 5 * 60 * 1000),
+      startsOn,
       expiresOn,
       protocol: undefined,
     },
     credential,
   ).toString();
-  return `${blobClient.url}?${sas}`;
+  const url = `${blobClient.url}?${sas}`;
+  sasUrlCache.set(blobName, { url, expiresAt: expiresOn.getTime() });
+  return url;
 }
 
 export function buildBlobName({

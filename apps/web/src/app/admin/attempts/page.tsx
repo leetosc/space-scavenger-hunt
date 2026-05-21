@@ -5,6 +5,7 @@ import { Card } from "@space-scavenger-hunt/ui/components/card";
 import { Label } from "@space-scavenger-hunt/ui/components/label";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
+import Image from "next/image";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -36,7 +37,7 @@ const ATTEMPT_STATUSES = [
 
 export default function AdminAttemptsPage() {
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<(typeof STATUS_FILTERS)[number]["id"]>("SUBMITTED");
+  const [filter, setFilter] = useState<(typeof STATUS_FILTERS)[number]["id"]>("all");
   const [statusDrafts, setStatusDrafts] = useState<
     Record<string, (typeof ATTEMPT_STATUSES)[number]>
   >({});
@@ -151,15 +152,22 @@ export default function AdminAttemptsPage() {
                   <Card className="p-4 grid grid-cols-1 md:grid-cols-[180px_1fr] gap-4">
                     <div>
                       {a.previewUrl ? (
-                        <motion.img
-                          src={a.previewUrl}
-                          alt="Submission"
-                          className="w-full rounded border"
-                          referrerPolicy="no-referrer"
+                        <motion.div
+                          className="relative aspect-square w-full overflow-hidden rounded border bg-muted/20"
                           variants={scaleIn}
                           initial="hidden"
                           animate="visible"
-                        />
+                        >
+                          <Image
+                            src={a.previewUrl}
+                            alt="Submission"
+                            fill
+                            sizes="(min-width: 768px) 180px, 100vw"
+                            className="object-cover"
+                            referrerPolicy="no-referrer"
+                            unoptimized
+                          />
+                        </motion.div>
                       ) : (
                         <div className="aspect-square rounded border bg-muted/30 flex items-center justify-center text-xs text-muted-foreground">
                           No photo
