@@ -2,6 +2,14 @@
 
 import { Button } from "@space-scavenger-hunt/ui/components/button";
 import { Card } from "@space-scavenger-hunt/ui/components/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@space-scavenger-hunt/ui/components/dialog";
 import { Input } from "@space-scavenger-hunt/ui/components/input";
 import { Label } from "@space-scavenger-hunt/ui/components/label";
 import {
@@ -53,14 +61,12 @@ type Astronaut = {
 };
 
 type ColumnCallbacks = {
-  teams: TeamInfo[];
   appBaseUrl: string;
   onCopyUrl: (scanUrl: string) => void;
   onRegenerateCode: (id: string) => void;
   onToggleActive: (id: string) => void;
   onDelete: (id: string, name: string) => void;
-  onAssign: (astronautId: string, teamId: string) => void;
-  onUnassign: (astronautId: string, teamId: string) => void;
+  onEditAssignment: (astronaut: Astronaut) => void;
 };
 
 function IconActionButton({
@@ -114,6 +120,97 @@ function TeamBadge({ team }: { team: TeamInfo }) {
       </span>
       <span className="text-xs truncate">{team.name}</span>
     </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Assign team dialog
+// ---------------------------------------------------------------------------
+
+function AssignTeamDialog({
+  astronaut,
+  teams,
+  open,
+  onOpenChange,
+  onAssign,
+  onUnassign,
+  isPending,
+}: {
+  astronaut: Astronaut;
+  teams: TeamInfo[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onAssign: (astronautId: string, teamId: string) => void;
+  onUnassign: (astronautId: string, teamId: string) => void;
+  isPending: boolean;
+}) {
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(
+    astronaut.assignedTeam?.id ?? null,
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Assign team</DialogTitle>
+          <DialogDescription>
+            Choose a team for {astronaut.name}.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => setSelectedTeamId(null)}
+            className={cn(
+              "flex w-full items-center rounded-md border px-3 py-2 text-left text-xs transition-colors hover:bg-muted/50",
+              selectedTeamId === null
+                ? "border-ring ring-1 ring-ring/50 bg-muted/30"
+                : "border-border/60",
+            )}
+          >
+            <span className="text-muted-foreground">Unassigned</span>
+          </button>
+          {teams.map((team) => (
+            <button
+              key={team.id}
+              type="button"
+              onClick={() => setSelectedTeamId(team.id)}
+              className={cn(
+                "flex w-full items-center rounded-md border px-3 py-2 text-left transition-colors hover:bg-muted/50",
+                selectedTeamId === team.id
+                  ? "border-ring ring-1 ring-ring/50 bg-muted/30"
+                  : "border-border/60",
+              )}
+            >
+              <TeamBadge team={team} />
+            </button>
+          ))}
+        </div>
+
+        <DialogFooter>
+          <Button
+            size="sm"
+            disabled={isPending}
+            onClick={() => {
+              const currentTeamId = astronaut.assignedTeam?.id ?? null;
+              if (selectedTeamId === currentTeamId) {
+                onOpenChange(false);
+                return;
+              }
+              if (selectedTeamId) {
+                onAssign(astronaut.id, selectedTeamId);
+              } else if (currentTeamId) {
+                onUnassign(astronaut.id, currentTeamId);
+              }
+              onOpenChange(false);
+            }}
+          >
+            Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -190,25 +287,17 @@ function useColumns(callbacks: ColumnCallbacks) {
         cell: ({ row }) => {
           const a = row.original;
           return (
-            <select
-              value={a.assignedTeam?.id ?? ""}
-              onChange={(e) => {
-                const teamId = e.target.value;
-                if (teamId) {
-                  callbacks.onAssign(a.id, teamId);
-                } else if (a.assignedTeam) {
-                  callbacks.onUnassign(a.id, a.assignedTeam.id);
-                }
-              }}
-              className="h-7 w-full min-w-[120px] border border-input bg-transparent px-2 py-1 text-xs outline-none focus:border-ring focus:ring-1 focus:ring-ring/50 dark:bg-input/30"
+            <button
+              type="button"
+              onClick={() => callbacks.onEditAssignment(a)}
+              className="inline-flex min-w-[120px] max-w-full items-center rounded-md border border-transparent px-2 py-1 text-left transition-colors hover:border-border/60 hover:bg-muted/50"
             >
-              <option value="">Unassigned</option>
-              {callbacks.teams.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+              {a.assignedTeam ? (
+                <TeamBadge team={a.assignedTeam} />
+              ) : (
+                <span className="text-xs text-muted-foreground">Unassigned</span>
+              )}
+            </button>
           );
         },
       },
@@ -357,6 +446,7 @@ export default function AdminAstronautsPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [hint, setHint] = useState("");
+  const [editingAssignment, setEditingAssignment] = useState<Astronaut | null>(null);
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: trpc.astronaut.list.queryKey() });
@@ -438,7 +528,6 @@ export default function AdminAstronautsPage() {
 
   const callbacks = useMemo<ColumnCallbacks>(
     () => ({
-      teams,
       appBaseUrl,
       onCopyUrl: (scanUrl) => {
         navigator.clipboard.writeText(scanUrl);
@@ -451,11 +540,10 @@ export default function AdminAstronautsPage() {
           deleteMutation.mutate({ id });
         }
       },
-      onAssign: (astronautId, teamId) => assignMutation.mutate({ astronautId, teamId }),
-      onUnassign: (astronautId, teamId) => unassignMutation.mutate({ astronautId, teamId }),
+      onEditAssignment: setEditingAssignment,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [appBaseUrl, teams],
+    [appBaseUrl],
   );
 
   return (
@@ -517,6 +605,21 @@ export default function AdminAstronautsPage() {
           <DataTable data={astronauts} callbacks={callbacks} />
         )}
       </Card>
+
+      {editingAssignment && (
+        <AssignTeamDialog
+          key={editingAssignment.id}
+          astronaut={editingAssignment}
+          teams={teams}
+          open={!!editingAssignment}
+          onOpenChange={(open) => {
+            if (!open) setEditingAssignment(null);
+          }}
+          onAssign={(astronautId, teamId) => assignMutation.mutate({ astronautId, teamId })}
+          onUnassign={(astronautId, teamId) => unassignMutation.mutate({ astronautId, teamId })}
+          isPending={assignMutation.isPending || unassignMutation.isPending}
+        />
+      )}
     </div>
   );
 }
