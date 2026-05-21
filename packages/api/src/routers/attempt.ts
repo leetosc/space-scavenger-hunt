@@ -2,7 +2,9 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import { adminProcedure, playerProcedure, router } from "../index";
+import { generateTaskPrompt } from "../services/ai/generate-task";
 import { getAttemptPhotoPreviewPath } from "../services/attempt-photo-url";
+import { deleteBlob } from "../services/azure-blob";
 import { approveClaim } from "../services/claims/approve-claim";
 import { rejectClaim } from "../services/claims/reject-claim";
 
@@ -42,6 +44,54 @@ export const attemptRouter = router({
     });
   }),
 
+  regenerateTask: playerProcedure
+    .input(z.object({ attemptId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const attempt = await ctx.prisma.claimAttempt.findUnique({
+        where: { id: input.attemptId },
+        include: { claim: true },
+      });
+
+      if (!attempt) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Attempt not found." });
+      }
+      if (attempt.teamId !== ctx.player.teamId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Not your team's attempt." });
+      }
+      if (attempt.claim) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "You can't regenerate a task after the astronaut has been claimed.",
+        });
+      }
+      if (attempt.status !== "PENDING_PHOTO" && attempt.status !== "REJECTED") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "You can only regenerate tasks before submission or after rejection.",
+        });
+      }
+
+      const taskPrompt = await generateTaskPrompt();
+
+      return ctx.prisma.claimAttempt.update({
+        where: { id: attempt.id },
+        data: {
+          taskPrompt,
+          status: "PENDING_PHOTO",
+          imageUrl: null,
+          imageBlobName: null,
+          imageMimeType: null,
+          imageSizeBytes: null,
+          aiPassed: null,
+          aiConfidence: null,
+          aiFeedback: null,
+          aiRawResponse: null,
+          submittedAt: null,
+          reviewedAt: null,
+        },
+      });
+    }),
+
   adminList: adminProcedure
     .input(z.object({ status: z.string().optional() }).optional())
     .query(async ({ ctx, input }) => {
@@ -74,6 +124,16 @@ export const attemptRouter = router({
   adminDelete: adminProcedure
     .input(z.object({ attemptIds: z.array(z.string().min(1)).min(1) }))
     .mutation(async ({ ctx, input }) => {
+      const attempts = await ctx.prisma.claimAttempt.findMany({
+        where: { id: { in: input.attemptIds } },
+        select: { imageBlobName: true },
+      });
+
+      const blobNames = attempts
+        .map((a) => a.imageBlobName)
+        .filter((name): name is string => name != null);
+      await Promise.all(blobNames.map((blobName) => deleteBlob(blobName)));
+
       const result = await ctx.prisma.claimAttempt.deleteMany({
         where: { id: { in: input.attemptIds } },
       });

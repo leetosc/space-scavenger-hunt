@@ -67,15 +67,15 @@ export default function AstronautPage({
   if (!astronaut) {
     return (
       <div className="mx-auto max-w-lg px-6 py-10">
-        <motion.div
-          variants={shake}
-          initial="idle"
-          animate="shake"
-        >
+        <motion.div variants={shake} initial="idle" animate="shake">
           <Card className="p-6 text-center space-y-3">
             <h1 className="text-2xl font-bold">Astronaut not found</h1>
             <p className="text-sm text-muted-foreground">
-              No astronaut matches the code <code className="bg-muted px-1.5 py-0.5 rounded">{code.toUpperCase()}</code>.
+              No astronaut matches the code{" "}
+              <code className="bg-muted px-1.5 py-0.5 rounded">
+                {code.toUpperCase()}
+              </code>
+              .
             </p>
             <Link href="/" className="text-sm text-cyan-400 hover:underline">
               Back to home
@@ -183,7 +183,9 @@ export default function AstronautPage({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
             >
-              <p className="text-xs font-medium text-muted-foreground mb-1">Hint</p>
+              <p className="text-xs font-medium text-muted-foreground mb-1">
+                Hint
+              </p>
               <p className="text-sm">{astronaut.hint}</p>
             </motion.div>
           )}
@@ -255,7 +257,11 @@ export default function AstronautPage({
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.2, ...bounceTransition }}
                     >
-                      <Link href={`/attempt/${scanMutation.data.attemptId}` as Route}>
+                      <Link
+                        href={
+                          `/attempt/${scanMutation.data.attemptId}` as Route
+                        }
+                      >
                         <motion.div {...buttonInteraction}>
                           <Button size="sm">Go to challenge</Button>
                         </motion.div>
@@ -270,7 +276,9 @@ export default function AstronautPage({
                   initial="idle"
                   animate="shake"
                 >
-                  <p className="text-sm text-red-400">{scanMutation.error.message}</p>
+                  <p className="text-sm text-red-400">
+                    {scanMutation.error.message}
+                  </p>
                 </motion.div>
               ) : (
                 <motion.div
@@ -285,7 +293,11 @@ export default function AstronautPage({
                       astronaut.active && !scanMutation.isPending
                         ? {
                             scale: [1, 1.02, 1],
-                            transition: { duration: 2, repeat: Infinity, ease: "easeInOut" },
+                            transition: {
+                              duration: 2,
+                              repeat: Infinity,
+                              ease: "easeInOut",
+                            },
                           }
                         : undefined
                     }
@@ -296,9 +308,9 @@ export default function AstronautPage({
                       className="w-full"
                     >
                       {scanMutation.isPending
-                        ? "Scanning..."
+                        ? "Loading..."
                         : astronaut.active
-                          ? "Claim this astronaut"
+                          ? "Save this astronaut"
                           : "Astronaut is inactive"}
                     </Button>
                   </motion.div>

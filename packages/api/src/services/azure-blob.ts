@@ -110,6 +110,12 @@ export function buildBlobName({
   return `claims/${teamId}/${attemptId}/${ts}.${safeExt}`;
 }
 
+export async function deleteBlob(blobName: string): Promise<void> {
+  const blobClient = getContainerClient().getBlobClient(blobName);
+  await blobClient.deleteIfExists();
+  sasUrlCache.delete(blobName);
+}
+
 export async function openBlobReadStream(blobName: string) {
   const blobClient = getContainerClient().getBlobClient(blobName);
   const download = await blobClient.download(0);

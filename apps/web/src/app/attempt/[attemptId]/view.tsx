@@ -4,7 +4,7 @@ import { Button } from "@space-scavenger-hunt/ui/components/button";
 import { Card } from "@space-scavenger-hunt/ui/components/card";
 import { FileUpload } from "@space-scavenger-hunt/ui/components/ui/file-upload";
 import { env } from "@space-scavenger-hunt/env/web";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import confetti from "canvas-confetti";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -14,6 +14,8 @@ import {
   BrainCircuit,
   ShieldCheck,
   Sparkles,
+  RefreshCw,
+  XCircle,
 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
@@ -35,17 +37,50 @@ const STATUS_COPY: Record<
   { label: string; tone: "info" | "warn" | "success" | "error" }
 > = {
   PENDING_PHOTO: { label: "Awaiting photo", tone: "info" },
-  SUBMITTED: { label: "Submitted - judging", tone: "info" },
-  APPROVED: { label: "Approved!", tone: "success" },
+  SUBMITTED: { label: "Judging", tone: "info" },
+  APPROVED: { label: "Approved", tone: "success" },
   REJECTED: { label: "Rejected", tone: "error" },
   EXPIRED: { label: "Expired", tone: "warn" },
 };
 
-const statusToneClasses = {
-  success: "bg-green-500/15 text-green-700",
-  error: "bg-red-500/15 text-red-700",
-  warn: "bg-amber-500/15 text-amber-700",
-  info: "bg-blue-500/15 text-blue-700",
+const STATUS_BADGE_STYLES: Record<
+  "info" | "warn" | "success" | "error",
+  {
+    border: string;
+    bg: string;
+    text: string;
+    glow: string;
+    pulse: boolean;
+  }
+> = {
+  success: {
+    border: "border-emerald-500/35",
+    bg: "bg-emerald-500/10",
+    text: "text-emerald-400",
+    glow: "shadow-[0_0_14px_rgba(16,185,129,0.25)]",
+    pulse: true,
+  },
+  error: {
+    border: "border-red-500/35",
+    bg: "bg-red-500/10",
+    text: "text-red-400",
+    glow: "shadow-[0_0_14px_rgba(239,68,68,0.25)]",
+    pulse: true,
+  },
+  warn: {
+    border: "border-amber-500/30",
+    bg: "bg-amber-500/10",
+    text: "text-amber-400",
+    glow: "shadow-[0_0_10px_rgba(245,158,11,0.15)]",
+    pulse: false,
+  },
+  info: {
+    border: "border-cyan-500/30",
+    bg: "bg-cyan-500/10",
+    text: "text-cyan-400",
+    glow: "shadow-[0_0_10px_rgba(34,211,238,0.15)]",
+    pulse: false,
+  },
 };
 
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -67,6 +102,14 @@ const JUDGING_MESSAGES = [
   "Verifying crew identification...",
   "Running pattern recognition...",
   "Checking authorization codes...",
+];
+
+const TASK_REGEN_MESSAGES = [
+  "Raiding the cosmic challenge vault...",
+  "Shuffling rescue protocols...",
+  "Retuning the astronaut mission matrix...",
+  "Spinning up a fresh objective...",
+  "Recalibrating adventure telemetry...",
 ];
 
 function useRotatingMessage(messages: string[], intervalMs = 2400) {
@@ -169,7 +212,6 @@ function JudgingOverlay() {
       transition={springTransition}
     >
       <Card className="p-5 border-indigo-500/20 bg-indigo-950/20 overflow-hidden relative">
-        {/* animated scan line across the card */}
         <motion.div
           className="absolute inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-400/60 to-transparent"
           animate={{ top: ["0%", "100%", "0%"] }}
@@ -324,6 +366,254 @@ function UploadingOverlay() {
   );
 }
 
+function TaskRegeneratingOverlay() {
+  const message = useRotatingMessage(TASK_REGEN_MESSAGES, 1450);
+
+  return (
+    <motion.div
+      className="relative w-full min-h-[7rem] overflow-hidden rounded-xl border border-cyan-500/20 bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.18),_transparent_45%),linear-gradient(135deg,rgba(8,47,73,0.9),rgba(15,23,42,0.95))] px-4 py-5"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={springTransition}
+    >
+      <motion.div
+        className="pointer-events-none absolute inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-300/80 to-transparent"
+        animate={{ top: ["8%", "86%", "8%"] }}
+        transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
+      />
+
+      <div className="flex items-center gap-4">
+        <div className="relative h-14 w-14 shrink-0">
+          <motion.div
+            className="absolute inset-0 rounded-full border-2 border-cyan-400/30"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 7, repeat: Infinity, ease: "linear" }}
+          />
+          <motion.div
+            className="absolute inset-2 rounded-full border border-dashed border-fuchsia-300/40"
+            animate={{ rotate: -360 }}
+            transition={{ duration: 9, repeat: Infinity, ease: "linear" }}
+          />
+          <motion.div
+            className="absolute inset-0 flex items-center justify-center"
+            animate={{ scale: [1, 1.08, 1], rotate: [0, 8, -8, 0] }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <Sparkles className="size-7 text-cyan-300" />
+          </motion.div>
+          <motion.div
+            className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2.8, repeat: Infinity, ease: "linear" }}
+            style={{ transformOrigin: "50% calc(50% + 28px)" }}
+          >
+            <div className="h-2.5 w-2.5 rounded-full bg-fuchsia-300 shadow-[0_0_16px_rgba(244,114,182,0.7)]" />
+          </motion.div>
+        </div>
+
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex items-center gap-2">
+            <h3 className="font-mono text-xs font-bold uppercase tracking-[0.25em] text-cyan-300">
+              New Task Incoming
+            </h3>
+            <div className="flex gap-1">
+              {[0, 1, 2].map((i) => (
+                <motion.div
+                  key={i}
+                  className="h-1.5 w-1.5 rounded-full bg-cyan-300"
+                  animate={{ opacity: [0.25, 1, 0.25], y: [0, -2, 0] }}
+                  transition={{
+                    duration: 0.9,
+                    repeat: Infinity,
+                    delay: i * 0.15,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <AnimatePresence mode="wait">
+            <motion.p
+              key={message}
+              className="text-sm font-mono text-cyan-50/90"
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              transition={{ duration: 0.22 }}
+            >
+              {message}
+            </motion.p>
+          </AnimatePresence>
+
+          <div className="flex flex-wrap items-center gap-3 text-[11px] font-mono uppercase tracking-wide text-cyan-200/70">
+            {["Brainstorm", "Remix", "Deploy"].map((step, index) => (
+              <motion.span
+                key={step}
+                animate={{
+                  opacity: [0.35, 1, 0.35],
+                  color: [
+                    "rgb(165 243 252 / 0.7)",
+                    "rgb(255 255 255 / 0.95)",
+                    "rgb(165 243 252 / 0.7)",
+                  ],
+                }}
+                transition={{
+                  duration: 1.8,
+                  repeat: Infinity,
+                  delay: index * 0.3,
+                  ease: "easeInOut",
+                }}
+              >
+                {step}
+              </motion.span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ========================================================================= */
+/*  MissionStatusBadge - space-themed attempt status under the name          */
+/* ========================================================================= */
+function MissionStatusBadge({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: "info" | "warn" | "success" | "error";
+}) {
+  const style = STATUS_BADGE_STYLES[tone];
+
+  return (
+    <motion.span
+      className={`inline-flex mt-2 rounded-md border px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-widest ${style.border} ${style.bg} ${style.text} ${style.glow}`}
+      initial={{ opacity: 0, scale: 0.85 }}
+      animate={{
+        opacity: 1,
+        scale: 1,
+        ...(style.pulse
+          ? {
+              boxShadow: [
+                style.glow,
+                tone === "success"
+                  ? "0 0 18px rgba(16, 185, 129, 0.35)"
+                  : "0 0 18px rgba(239, 68, 68, 0.35)",
+                style.glow,
+              ],
+            }
+          : {}),
+      }}
+      exit={{ opacity: 0, scale: 0.85 }}
+      transition={
+        style.pulse
+          ? { ...bounceTransition, boxShadow: { duration: 2, repeat: Infinity } }
+          : bounceTransition
+      }
+    >
+      {label}
+    </motion.span>
+  );
+}
+
+/* ========================================================================= */
+/*  AiVerdictCard - space-themed AI judgement result                         */
+/* ========================================================================= */
+function getAiVerdict(
+  status: string,
+  aiPassed: boolean | null | undefined,
+): boolean | null {
+  if (status === "APPROVED") return true;
+  if (status === "REJECTED") return false;
+  if (aiPassed === true) return true;
+  if (aiPassed === false) return false;
+  return null;
+}
+
+function AiVerdictCard({
+  approved,
+  feedback,
+}: {
+  approved: boolean;
+  feedback: string;
+}) {
+  const theme = approved
+    ? {
+        border: "border-emerald-500/25",
+        bg: "bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.18),_transparent_48%),linear-gradient(135deg,rgba(6,30,24,0.95),rgba(15,23,42,0.98))]",
+        header: "text-emerald-300",
+        verdict: "Approved",
+        verdictClass: "text-emerald-400",
+        glowOff: "rgba(16, 185, 129, 0)",
+        glowOn: "rgba(16, 185, 129, 0.35)",
+        icon: ShieldCheck,
+        iconBox: "border-emerald-500/25 bg-emerald-500/10",
+        iconColor: "text-emerald-400",
+      }
+    : {
+        border: "border-red-500/25",
+        bg: "bg-[radial-gradient(circle_at_top,_rgba(239,68,68,0.14),_transparent_48%),linear-gradient(135deg,rgba(36,12,18,0.95),rgba(15,23,42,0.98))]",
+        header: "text-red-300",
+        verdict: "Rejected",
+        verdictClass: "text-red-400",
+        glowOff: "rgba(239, 68, 68, 0)",
+        glowOn: "rgba(239, 68, 68, 0.35)",
+        icon: XCircle,
+        iconBox: "border-red-500/25 bg-red-500/10",
+        iconColor: "text-red-400",
+      };
+
+  const Icon = theme.icon;
+
+  return (
+    <Card className={`p-5 gap-3 ${theme.border} ${theme.bg}`}>
+      <div className="flex items-start gap-4">
+        <div className="relative shrink-0">
+          <motion.div
+            className={`h-12 w-12 rounded-lg border flex items-center justify-center ${theme.iconBox}`}
+            animate={{
+              boxShadow: [
+                `0 0 0 0 ${theme.glowOff}`,
+                `0 0 18px 2px ${theme.glowOn}`,
+                `0 0 0 0 ${theme.glowOff}`,
+              ],
+            }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <Icon className={`size-6 ${theme.iconColor}`} />
+          </motion.div>
+        </div>
+
+        <div className="flex-1 space-y-2 min-w-0">
+          <p
+            className={`font-mono text-xs tracking-widest uppercase font-bold ${theme.header}`}
+          >
+            Mission Verdict
+          </p>
+
+          <motion.p
+            className={`text-2xl font-bold tracking-tight ${theme.verdictClass}`}
+            animate={{
+              textShadow: [
+                `0 0 0px ${theme.glowOff}`,
+                `0 0 16px ${theme.glowOn}`,
+                `0 0 0px ${theme.glowOff}`,
+              ],
+            }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            {theme.verdict}
+          </motion.p>
+
+          <p className="text-sm text-slate-300/90 leading-relaxed">{feedback}</p>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 /* ========================================================================= */
 /*  Main component                                                           */
 /* ========================================================================= */
@@ -340,6 +630,19 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
   const activity = useQuery({
     ...trpc.activity.getState.queryOptions(),
     refetchInterval: 5000,
+  });
+  const regenerateTaskMutation = useMutation({
+    ...trpc.attempt.regenerateTask.mutationOptions(),
+    onSuccess: async () => {
+      clearPendingPhoto();
+      await queryClient.invalidateQueries({
+        queryKey: trpc.attempt.getById.queryKey({ id: attemptId }),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: trpc.attempt.getForCurrentPlayer.queryKey(),
+      });
+      toast.success("Task regenerated");
+    },
   });
 
   const [uploading, setUploading] = useState(false);
@@ -400,7 +703,7 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.message ?? `Upload failed (${res.status})`);
       }
-      toast.success("Photo uploaded - AI is judging now.");
+      toast.success("Photo uploaded - judging...");
       clearPendingPhoto();
       queryClient.invalidateQueries({
         queryKey: trpc.attempt.getById.queryKey({ id: attemptId }),
@@ -415,6 +718,10 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
 
   const canUpload =
     attempt.status === "PENDING_PHOTO" || attempt.status === "REJECTED";
+  const canRegenerateTask =
+    !uploading &&
+    (attempt.status === "PENDING_PHOTO" || attempt.status === "REJECTED");
+  const aiVerdict = getAiVerdict(attempt.status, attempt.aiPassed);
 
   function clearPendingPhoto() {
     if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
@@ -452,27 +759,66 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
       />
 
       <header>
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">
+        <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-cyan-200/50">
           Challenge
         </p>
-        <h1 className="text-3xl font-bold">{attempt.astronaut.name}</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{attempt.astronaut.name}</h1>
         <AnimatePresence mode="wait">
-          <motion.span
+          <MissionStatusBadge
             key={attempt.status}
-            className={`inline-block mt-2 rounded px-2 py-0.5 text-xs font-medium ${statusToneClasses[status.tone]}`}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            transition={bounceTransition}
-          >
-            {status.label}
-          </motion.span>
+            label={status.label}
+            tone={status.tone}
+          />
         </AnimatePresence>
       </header>
 
-      <Card className="p-4 gap-2">
-        <h2 className="font-bold">Your task</h2>
-        <p className="text-sm">{attempt.taskPrompt}</p>
+      <Card className="p-5 gap-4 border-cyan-500/20 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.12),transparent_48%),linear-gradient(135deg,rgba(8,47,73,0.85),rgba(15,23,42,0.98))]">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-cyan-500/25 bg-cyan-500/10">
+              <Satellite className="size-4 text-cyan-400" />
+            </div>
+            <h2 className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-cyan-300">
+              Mission Brief
+            </h2>
+          </div>
+          {canRegenerateTask ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-cyan-500/30 bg-slate-950/40 font-mono text-[11px] uppercase tracking-wide text-cyan-200 hover:bg-cyan-500/10 hover:text-cyan-100"
+              onClick={() => regenerateTaskMutation.mutate({ attemptId })}
+              disabled={regenerateTaskMutation.isPending}
+            >
+              <RefreshCw
+                className={`mr-2 size-4 ${regenerateTaskMutation.isPending ? "animate-spin" : ""}`}
+              />
+              Get new task
+            </Button>
+          ) : null}
+        </div>
+
+        <div className="relative w-full min-h-[7rem]">
+          <AnimatePresence mode="wait" initial={false}>
+            {regenerateTaskMutation.isPending ? (
+              <TaskRegeneratingOverlay key="regenerating-task" />
+            ) : (
+              <motion.div
+                key={attempt.taskPrompt}
+                className="rounded-lg border border-cyan-500/10 bg-slate-950/30 px-4 py-4"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.22 }}
+              >
+                <p className="w-full text-sm leading-relaxed text-cyan-50/90">
+                  {attempt.taskPrompt}
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </Card>
 
       <AnimatePresence>
@@ -501,8 +847,7 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
                   priority
                 />
               </motion.div>
-              {/* scan line overlay when judging */}
-              {attempt.status === "SUBMITTED" && (
+              {attempt.status === "SUBMITTED" && !attempt.aiFeedback ? (
                 <motion.div
                   className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent pointer-events-none"
                   animate={{ top: ["0%", "100%", "0%"] }}
@@ -512,7 +857,7 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
                     ease: "easeInOut",
                   }}
                 />
-              )}
+              ) : null}
             </Card>
           </motion.div>
         ) : null}
@@ -534,33 +879,16 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
             exit={{ opacity: 0, y: -10 }}
             transition={springTransition}
           >
-            <Card className="p-4 gap-1">
-              <h2 className="font-bold">Reasoning</h2>
-              <p className="text-sm">{attempt.aiFeedback}</p>
-              {typeof attempt.aiConfidence === "number" ? (
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">
-                    Confidence: {Math.round(attempt.aiConfidence * 100)}%
-                  </p>
-                  <div className="h-1.5 w-full rounded bg-muted overflow-hidden">
-                    <motion.div
-                      className={`h-full rounded ${
-                        attempt.aiConfidence > 0.7
-                          ? "bg-green-500"
-                          : attempt.aiConfidence > 0.4
-                            ? "bg-amber-500"
-                            : "bg-red-500"
-                      }`}
-                      initial={{ width: 0 }}
-                      animate={{
-                        width: `${Math.round(attempt.aiConfidence * 100)}%`,
-                      }}
-                      transition={{ ...springTransition, delay: 0.2 }}
-                    />
-                  </div>
-                </div>
-              ) : null}
-            </Card>
+            {aiVerdict !== null ? (
+              <AiVerdictCard approved={aiVerdict} feedback={attempt.aiFeedback} />
+            ) : (
+              <Card className="p-5 gap-2 border-indigo-500/20 bg-indigo-950/20">
+                <p className="font-mono text-xs tracking-widest text-indigo-300 uppercase font-bold">
+                  Mission Control
+                </p>
+                <p className="text-sm text-slate-300/90">{attempt.aiFeedback}</p>
+              </Card>
+            )}
           </motion.div>
         ) : null}
       </AnimatePresence>
@@ -612,7 +940,7 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
                   </div>
                 </div>
               ) : (
-                <div className="w-full min-h-80 rounded-lg border border-dashed border-neutral-200 bg-white dark:border-neutral-800 dark:bg-black">
+                <div className="w-full min-h-80 rounded-lg border border-dashed border-cyan-500/20 bg-slate-950/50 overflow-hidden">
                   <FileUpload onChange={handleFileSelect} />
                 </div>
               )}
