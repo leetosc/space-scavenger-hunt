@@ -7,7 +7,6 @@ export const leaderboardRouter = router({
       ctx.prisma.team.findMany({
         include: {
           claims: { orderBy: { claimedAt: "desc" } },
-          attempts: { where: { status: "REJECTED" } },
           assignments: true,
         },
       }),
@@ -34,7 +33,6 @@ export const leaderboardRouter = router({
         icon: t.icon,
         claimedCount: t.claims.length,
         assignedCount: t.assignments.length,
-        rejectedCount: t.attempts.length,
         latestClaimAt: latestClaim?.claimedAt ?? null,
         latestClaimElapsedSeconds: latestClaim ? elapsedSecondsForClaim(latestClaim) : null,
       };
@@ -45,7 +43,6 @@ export const leaderboardRouter = router({
       const aLatest = a.latestClaimElapsedSeconds ?? Number.POSITIVE_INFINITY;
       const bLatest = b.latestClaimElapsedSeconds ?? Number.POSITIVE_INFINITY;
       if (aLatest !== bLatest) return aLatest - bLatest;
-      if (a.rejectedCount !== b.rejectedCount) return a.rejectedCount - b.rejectedCount;
       return a.teamName.localeCompare(b.teamName);
     });
 
