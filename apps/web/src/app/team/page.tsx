@@ -5,7 +5,16 @@ import { Card } from "@space-scavenger-hunt/ui/components/card";
 import { Input } from "@space-scavenger-hunt/ui/components/input";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Images, Pencil, Radar, Trophy, X, Zap } from "lucide-react";
+import {
+  Check,
+  Images,
+  Pencil,
+  Radar,
+  Trophy,
+  UsersRound,
+  X,
+  Zap,
+} from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -30,7 +39,10 @@ import {
 import { trpc } from "@/utils/trpc";
 
 function filterAstronautCode(value: string): string {
-  return value.replace(/[^A-Za-z]/g, "").toUpperCase().slice(0, 4);
+  return value
+    .replace(/[^A-Za-z]/g, "")
+    .toUpperCase()
+    .slice(0, 4);
 }
 
 export default function TeamPage() {
@@ -53,8 +65,12 @@ export default function TeamPage() {
   const updateTeam = useMutation({
     ...trpc.team.updateMine.mutationOptions(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: trpc.team.getDashboard.queryKey() });
-      queryClient.invalidateQueries({ queryKey: trpc.leaderboard.getCurrent.queryKey() });
+      queryClient.invalidateQueries({
+        queryKey: trpc.team.getDashboard.queryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.leaderboard.getCurrent.queryKey(),
+      });
       setIsEditingTeam(false);
       toast.success("Team updated");
     },
@@ -69,7 +85,10 @@ export default function TeamPage() {
   }, [isPending, session, router]);
 
   useEffect(() => {
-    if (activity.data?.status === "SETUP" || activity.data?.status === "TEAM_ASSIGNMENT") {
+    if (
+      activity.data?.status === "SETUP" ||
+      activity.data?.status === "TEAM_ASSIGNMENT"
+    ) {
       router.push("/waiting" as Route);
     }
   }, [activity.data?.status, router]);
@@ -88,7 +107,8 @@ export default function TeamPage() {
     );
   }
 
-  const { team, players, assignedCount, claimedCount, progress, claims } = dashboard.data;
+  const { team, players, assignedCount, claimedCount, progress, claims } =
+    dashboard.data;
 
   return (
     <motion.div
@@ -99,19 +119,25 @@ export default function TeamPage() {
     >
       {/* Team header */}
       <motion.header
-        className="rounded-xl p-6 text-white"
-        style={{ background: team.color ? `linear-gradient(135deg, ${team.color}, #000)` : "#1f2937" }}
+        className="rounded-xl p-4 text-white sm:p-5"
+        style={{
+          background: team.color
+            ? `linear-gradient(135deg, ${team.color}, #000)`
+            : "#1f2937",
+        }}
         variants={fadeInUp}
       >
         <p className="text-xs uppercase tracking-wide opacity-70">Your team</p>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
+        <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
           <TeamIcon
             icon={team.icon}
             color={team.color}
             name={team.name}
-            className="h-10 w-10 bg-white/15 text-sm font-bold ring-1 ring-white/20"
+            className="h-8 w-8 bg-white/15 text-xs font-bold ring-1 ring-white/20"
           />
-          <h1 className="min-w-0 flex-1 text-3xl font-bold leading-tight">{team.name}</h1>
+          <h1 className="min-w-0 flex-1 text-2xl font-bold leading-tight">
+            {team.name}
+          </h1>
           <Button
             type="button"
             variant="ghost"
@@ -131,7 +157,7 @@ export default function TeamPage() {
         <AnimatePresence>
           {isEditingTeam ? (
             <motion.form
-              className="mt-4 flex flex-wrap items-center gap-2 rounded-lg border border-white/15 bg-black/15 p-2"
+              className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-white/15 bg-black/15 p-2"
               initial={{ opacity: 0, height: 0, y: -6 }}
               animate={{ opacity: 1, height: "auto", y: 0 }}
               exit={{ opacity: 0, height: 0, y: -6 }}
@@ -183,13 +209,14 @@ export default function TeamPage() {
         <p className="mt-2 text-sm">
           {claimedCount} / {assignedCount} astronauts claimed
         </p>
-        <div className="mt-3 inline-flex items-center gap-2 rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-sm">
+        <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-white/15 bg-black/20 px-2.5 py-1 text-xs sm:text-sm">
           <Zap className="size-4 text-cyan-200" />
           <span className="font-mono font-semibold">
-            {team.signalBoostBalance} Signal Boost{team.signalBoostBalance === 1 ? "" : "s"}
+            {team.signalBoostBalance} Signal Boost
+            {team.signalBoostBalance === 1 ? "" : "s"}
           </span>
         </div>
-        <div className="mt-3 h-2 w-full overflow-hidden rounded bg-white/20">
+        <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded bg-white/20">
           <motion.div
             className="h-full rounded bg-white"
             initial={{ width: 0 }}
@@ -198,6 +225,33 @@ export default function TeamPage() {
           />
         </div>
       </motion.header>
+
+      <motion.div
+        className="flex flex-wrap justify-center gap-3"
+        variants={fadeIn}
+      >
+        <Link
+          href="/hints"
+          className="inline-flex h-9 items-center justify-center gap-1.5 border border-emerald-400/25 bg-emerald-400/10 px-3 font-mono text-xs font-semibold uppercase tracking-[0.16em] text-emerald-100 transition-colors hover:bg-emerald-400/15"
+        >
+          <Radar className="size-4" />
+          Hints
+        </Link>
+        <Link
+          href="/leaderboard"
+          className="inline-flex h-9 items-center justify-center gap-1.5 border border-cyan-400/25 bg-cyan-400/10 px-3 font-mono text-xs font-semibold uppercase tracking-[0.16em] text-cyan-100 transition-colors hover:bg-cyan-400/15"
+        >
+          <Trophy className="size-4" />
+          Leaderboard
+        </Link>
+        <Link
+          href="/submissions"
+          className="inline-flex h-9 items-center justify-center gap-1.5 border border-indigo-400/25 bg-indigo-400/10 px-3 font-mono text-xs font-semibold uppercase tracking-[0.16em] text-indigo-100 transition-colors hover:bg-indigo-400/15"
+        >
+          <Images className="size-4" />
+          Submissions
+        </Link>
+      </motion.div>
 
       <motion.div variants={fadeInUp}>
         <MissionCountdown
@@ -209,7 +263,7 @@ export default function TeamPage() {
       </motion.div>
 
       {/* Manual code input */}
-      <motion.div variants={fadeInUp}>
+      {/* <motion.div variants={fadeInUp}>
         <Card className="p-6 border-cyan-500/20 bg-slate-950/40">
           <h2 className="font-mono text-xs tracking-widest text-cyan-400 uppercase mb-1">
             Manual Telemetry Uplink
@@ -252,21 +306,54 @@ export default function TeamPage() {
             </motion.div>
           </form>
         </Card>
-      </motion.div>
+      </motion.div> */}
 
       {/* Roster */}
       <motion.div variants={fadeInUp}>
-        <Card className="p-4">
-          <h2 className="font-bold mb-2">Roster</h2>
+        <Card className="relative overflow-hidden rounded-none border-cyan-400/20 bg-slate-950/55 p-0 shadow-[0_0_28px_rgba(34,211,238,0.07)]">
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(34,211,238,0.04)_1px,transparent_1px)] bg-[length:100%_12px]" />
+          <div className="relative flex items-center justify-between gap-3 border-b border-cyan-400/15 px-4 py-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center border border-cyan-400/30 bg-cyan-400/10 text-cyan-200">
+                <UsersRound className="size-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-cyan-300/80">
+                  Crew manifest
+                </p>
+                <h2 className="truncate text-sm font-bold uppercase tracking-wide text-slate-100">
+                  Roster
+                </h2>
+              </div>
+            </div>
+            <span className="shrink-0 border border-cyan-400/20 bg-slate-900/70 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-200">
+              {players.length} aboard
+            </span>
+          </div>
           <motion.ul
-            className="grid grid-cols-2 gap-1 text-sm"
+            className="relative grid gap-2 p-4 sm:grid-cols-2"
             variants={staggerContainer}
             initial="hidden"
             animate="visible"
           >
-            {players.map((p) => (
-              <motion.li key={p.id} variants={slideInLeft}>
-                {p.name}
+            {players.map((p, idx) => (
+              <motion.li
+                key={p.id}
+                className="flex min-w-0 items-center gap-2 border border-cyan-400/10 bg-slate-900/60 px-3 py-2 shadow-[inset_0_0_16px_rgba(15,23,42,0.6)]"
+                variants={slideInLeft}
+              >
+                <span
+                  className="flex size-8 shrink-0 items-center justify-center rounded text-xs font-black text-white shadow-[0_0_16px_rgba(255,255,255,0.08)]"
+                  style={{ backgroundColor: team.color ?? "#0891b2" }}
+                >
+                  {p.name.slice(0, 1).toUpperCase()}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-100">
+                  {p.name}
+                </span>
+                <span className="shrink-0 font-mono text-[10px] text-cyan-300/60">
+                  {String(idx + 1).padStart(2, "0")}
+                </span>
               </motion.li>
             ))}
           </motion.ul>
@@ -278,7 +365,9 @@ export default function TeamPage() {
         <Card className="p-4">
           <h2 className="font-bold mb-2">Successful attempts</h2>
           {claims.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No successful attempts yet. Get scanning!</p>
+            <p className="text-sm text-muted-foreground">
+              No successful attempts yet. Get scanning!
+            </p>
           ) : (
             <ul className="divide-y">
               <AnimatePresence>
@@ -307,30 +396,6 @@ export default function TeamPage() {
             </ul>
           )}
         </Card>
-      </motion.div>
-
-      <motion.div className="flex flex-wrap justify-center gap-3" variants={fadeIn}>
-        <Link
-          href="/hints"
-          className="inline-flex h-9 items-center justify-center gap-1.5 border border-emerald-400/25 bg-emerald-400/10 px-3 font-mono text-xs font-semibold uppercase tracking-[0.16em] text-emerald-100 transition-colors hover:bg-emerald-400/15"
-        >
-          <Radar className="size-4" />
-          Hints
-        </Link>
-        <Link
-          href="/leaderboard"
-          className="inline-flex h-9 items-center justify-center gap-1.5 border border-cyan-400/25 bg-cyan-400/10 px-3 font-mono text-xs font-semibold uppercase tracking-[0.16em] text-cyan-100 transition-colors hover:bg-cyan-400/15"
-        >
-          <Trophy className="size-4" />
-          Leaderboard
-        </Link>
-        <Link
-          href="/submissions"
-          className="inline-flex h-9 items-center justify-center gap-1.5 border border-indigo-400/25 bg-indigo-400/10 px-3 font-mono text-xs font-semibold uppercase tracking-[0.16em] text-indigo-100 transition-colors hover:bg-indigo-400/15"
-        >
-          <Images className="size-4" />
-          Submissions
-        </Link>
       </motion.div>
     </motion.div>
   );

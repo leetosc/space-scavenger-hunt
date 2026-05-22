@@ -18,11 +18,12 @@ import {
   RefreshCw,
   Satellite,
   Trash2,
+  X,
   Upload,
   Zap,
 } from "lucide-react";
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -39,6 +40,16 @@ import { trpc } from "@/utils/trpc";
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type Hint = RouterOutputs["hint"]["adminList"]["hints"][number];
 type Team = RouterOutputs["hint"]["adminList"]["teams"][number];
+type PendingHintUpload = {
+  id: string;
+  file: File;
+  previewUrl: string;
+  title: string;
+  description: string;
+  sortOrder: string;
+};
+
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function formatDelta(delta: number) {
   return delta > 0 ? `+${delta}` : String(delta);
@@ -372,12 +383,81 @@ function TeamBoostControls({
   );
 }
 
+function PendingUploadCard({
+  item,
+  onChange,
+  onRemove,
+}: {
+  item: PendingHintUpload;
+  onChange: (id: string, patch: Partial<Omit<PendingHintUpload, "id" | "file" | "previewUrl">>) => void;
+  onRemove: (id: string) => void;
+}) {
+  return (
+    <li className="overflow-hidden border border-cyan-400/15 bg-slate-900/55">
+      <div className="relative aspect-[4/3] bg-slate-950">
+        <Image
+          src={item.previewUrl}
+          alt={item.title || item.file.name}
+          fill
+          sizes="(min-width: 1280px) 260px, (min-width: 768px) 33vw, 100vw"
+          className="object-cover"
+          unoptimized
+        />
+        <Button
+          type="button"
+          size="icon-sm"
+          variant="destructive"
+          className="absolute right-2 top-2"
+          aria-label={`Remove ${item.file.name}`}
+          onClick={() => onRemove(item.id)}
+        >
+          <X className="size-3.5" />
+        </Button>
+      </div>
+      <div className="grid gap-3 p-3 sm:grid-cols-[1fr_88px]">
+        <div>
+          <Label htmlFor={`pending-title-${item.id}`}>Title (optional)</Label>
+          <Input
+            id={`pending-title-${item.id}`}
+            value={item.title}
+            onChange={(event) => onChange(item.id, { title: event.target.value })}
+            placeholder="Optional label"
+          />
+        </div>
+        <div>
+          <Label htmlFor={`pending-sort-${item.id}`}>Sort</Label>
+          <Input
+            id={`pending-sort-${item.id}`}
+            type="number"
+            inputMode="numeric"
+            value={item.sortOrder}
+            onChange={(event) => onChange(item.id, { sortOrder: event.target.value })}
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <Label htmlFor={`pending-description-${item.id}`}>Description (optional)</Label>
+          <Textarea
+            id={`pending-description-${item.id}`}
+            value={item.description}
+            rows={2}
+            onChange={(event) => onChange(item.id, { description: event.target.value })}
+            placeholder="Optional admin/team note"
+          />
+        </div>
+        <p className="truncate font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground sm:col-span-2">
+          {item.file.name} · {(item.file.size / (1024 * 1024)).toFixed(2)} MB
+        </p>
+      </div>
+    </li>
+  );
+}
+
 export default function AdminHintsPage() {
   const queryClient = useQueryClient();
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [sortOrder, setSortOrder] = useState("0");
-  const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingUploadsRef = useRef<PendingHintUpload[]>([]);
+  const [pendingUploads, setPendingUploads] = useState<PendingHintUpload[]>([]);
+  const [isDragActive, setIsDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [replacingId, setReplacingId] = useState<string | null>(null);
 
@@ -442,45 +522,129 @@ export default function AdminHintsPage() {
       : Math.max(...hints.map((hint) => hint.sortOrder)) + 1;
   }, [hintsQuery.data?.hints]);
 
-  async function uploadNewHint() {
-    if (!file) {
-      toast.error("Choose a location photo first.");
-      return;
+  useEffect(() => {
+    pendingUploadsRef.current = pendingUploads;
+  }, [pendingUploads]);
+
+  useEffect(() => {
+    return () => {
+      for (const item of pendingUploadsRef.current) {
+        URL.revokeObjectURL(item.previewUrl);
+      }
+    };
+  }, []);
+
+  function addPendingFiles(files: File[]) {
+    const validFiles = files.filter((file) => {
+      if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+        toast.error(`${file.name} is not a JPG, PNG, or WebP image.`);
+        return false;
+      }
+      return true;
+    });
+    if (validFiles.length === 0) return;
+
+    setPendingUploads((current) => {
+      const pendingSortOrders = current
+        .map((item) => Number(item.sortOrder))
+        .filter(Number.isInteger);
+      const baseSortOrder = Math.max(
+        nextSortOrder,
+        ...pendingSortOrders.map((value) => value + 1),
+      );
+      const nextItems = validFiles.map((file, index) => ({
+        id: `${file.name}-${file.lastModified}-${crypto.randomUUID()}`,
+        file,
+        previewUrl: URL.createObjectURL(file),
+        title: "",
+        description: "",
+        sortOrder: String(baseSortOrder + index),
+      }));
+      return [...current, ...nextItems];
+    });
+  }
+
+  function updatePendingUpload(
+    id: string,
+    patch: Partial<Omit<PendingHintUpload, "id" | "file" | "previewUrl">>,
+  ) {
+    setPendingUploads((current) =>
+      current.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+    );
+  }
+
+  function removePendingUpload(id: string) {
+    setPendingUploads((current) => {
+      const item = current.find((pending) => pending.id === id);
+      if (item) URL.revokeObjectURL(item.previewUrl);
+      return current.filter((pending) => pending.id !== id);
+    });
+  }
+
+  function clearPendingUploads() {
+    for (const item of pendingUploads) {
+      URL.revokeObjectURL(item.previewUrl);
     }
-    const nextTitle = title.trim();
-    const nextSort = Number(sortOrder);
-    if (!Number.isInteger(nextSort)) {
-      toast.error("Sort order must be a whole number.");
+    setPendingUploads([]);
+  }
+
+  async function uploadPendingHints() {
+    if (pendingUploads.length === 0) {
+      toast.error("Drop or select location photos first.");
       return;
     }
 
-    setUploading(true);
-    try {
-      const form = new FormData();
-      form.append("image", file);
-      form.append("title", nextTitle);
-      form.append("description", description);
-      form.append("sortOrder", String(nextSort));
-      const res = await fetch(
-        `${env.NEXT_PUBLIC_SERVER_URL}/api/location-hints/upload`,
-        {
-          method: "POST",
-          body: form,
-          credentials: "include",
-        },
-      );
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.message ?? `Upload failed (${res.status})`);
+    for (const item of pendingUploads) {
+      if (!Number.isInteger(Number(item.sortOrder))) {
+        toast.error(`Sort order for ${item.file.name} must be a whole number.`);
+        return;
       }
-      toast.success("Location hint uploaded");
-      setTitle("");
-      setDescription("");
-      setSortOrder(String(nextSort + 1));
-      setFile(null);
+    }
+
+    setUploading(true);
+    let uploaded = 0;
+    const uploadedIds = new Set<string>();
+    try {
+      for (const item of pendingUploads) {
+        const form = new FormData();
+        form.append("image", item.file);
+        form.append("title", item.title.trim());
+        form.append("description", item.description);
+        form.append("sortOrder", String(Number(item.sortOrder)));
+        const res = await fetch(
+          `${env.NEXT_PUBLIC_SERVER_URL}/api/location-hints/upload`,
+          {
+            method: "POST",
+            body: form,
+            credentials: "include",
+          },
+        );
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.message ?? `Upload failed for ${item.file.name} (${res.status})`);
+        }
+        uploaded += 1;
+        uploadedIds.add(item.id);
+      }
+      toast.success(
+        uploaded === 1
+          ? "Location hint uploaded"
+          : `${uploaded} location hints uploaded`,
+      );
+      clearPendingUploads();
       invalidate();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Upload failed");
+      if (uploaded > 0) {
+        setPendingUploads((current) => {
+          const remaining = current.filter((item) => !uploadedIds.has(item.id));
+          for (const item of current) {
+            if (uploadedIds.has(item.id)) URL.revokeObjectURL(item.previewUrl);
+          }
+          return remaining;
+        });
+        invalidate();
+      }
     } finally {
       setUploading(false);
     }
@@ -539,62 +703,115 @@ export default function AdminHintsPage() {
         <Card className="overflow-hidden rounded-none border-cyan-400/25 bg-slate-950/55 p-0">
           <div className="border-b border-cyan-400/15 px-4 py-3">
             <h2 className="font-mono text-sm font-bold uppercase tracking-[0.18em] text-slate-100">
-              Upload location photo
+              Upload location photos
             </h2>
           </div>
-          <div className="grid gap-4 p-4 lg:grid-cols-[1fr_1fr_96px_1fr_auto] lg:items-end">
-            <div>
-              <Label htmlFor="new-hint-title">Title (optional)</Label>
-              <Input
-                id="new-hint-title"
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="Optional label"
-              />
-            </div>
-            <div>
-              <Label htmlFor="new-hint-description">
-                Description (optional)
-              </Label>
-              <Input
-                id="new-hint-description"
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder="Optional admin/team note"
-              />
-            </div>
-            <div>
-              <Label htmlFor="new-hint-sort">Sort</Label>
-              <Input
-                id="new-hint-sort"
-                type="number"
-                value={sortOrder}
-                onFocus={() => {
-                  if (sortOrder === "0" && nextSortOrder !== 0)
-                    setSortOrder(String(nextSortOrder));
-                }}
-                onChange={(event) => setSortOrder(event.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="new-hint-file">Photo</Label>
-              <Input
-                id="new-hint-file"
+          <div className="space-y-4 p-4">
+            <div
+              role="button"
+              tabIndex={0}
+              className={cn(
+                "relative overflow-hidden rounded-lg border border-dashed border-cyan-500/25 bg-slate-950/60 p-8 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60",
+                isDragActive
+                  ? "border-cyan-300 bg-cyan-400/10"
+                  : "hover:border-cyan-400/45 hover:bg-slate-900/60",
+              )}
+              onClick={() => fileInputRef.current?.click()}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              onDragEnter={(event) => {
+                event.preventDefault();
+                setIsDragActive(true);
+              }}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setIsDragActive(true);
+              }}
+              onDragLeave={(event) => {
+                event.preventDefault();
+                if (event.currentTarget === event.target) {
+                  setIsDragActive(false);
+                }
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                setIsDragActive(false);
+                addPendingFiles(Array.from(event.dataTransfer.files));
+              }}
+            >
+              <input
+                ref={fileInputRef}
                 type="file"
+                multiple
                 accept="image/jpeg,image/png,image/webp"
-                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                className="hidden"
+                onChange={(event) => {
+                  addPendingFiles(Array.from(event.target.files ?? []));
+                  event.currentTarget.value = "";
+                }}
               />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-cyan-500/5 via-transparent to-indigo-500/5" />
+              <div className="relative flex flex-col items-center gap-3">
+                <div className="flex size-12 items-center justify-center rounded-md border border-cyan-400/25 bg-cyan-400/10 text-cyan-200">
+                  <Upload className="size-5" />
+                </div>
+                <div>
+                  <p className="font-mono text-sm font-bold uppercase tracking-[0.18em] text-cyan-200">
+                    Drop location photos
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Drag multiple JPG, PNG, or WebP files here, or click to select.
+                  </p>
+                </div>
+              </div>
             </div>
-            <motion.div {...buttonInteraction}>
-              <Button
-                type="button"
-                disabled={uploading}
-                onClick={uploadNewHint}
-              >
-                <Upload data-icon="inline-start" className="size-4" />
-                {uploading ? "Uploading..." : "Upload"}
-              </Button>
-            </motion.div>
+
+            {pendingUploads.length > 0 ? (
+              <div className="space-y-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="font-mono text-xs uppercase tracking-[0.18em] text-cyan-300">
+                    {pendingUploads.length} pending transmission
+                    {pendingUploads.length === 1 ? "" : "s"}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={uploading}
+                      onClick={clearPendingUploads}
+                    >
+                      Clear
+                    </Button>
+                    <motion.div {...buttonInteraction}>
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={uploading}
+                        onClick={uploadPendingHints}
+                      >
+                        <Upload data-icon="inline-start" className="size-4" />
+                        {uploading ? "Uploading..." : "Upload all"}
+                      </Button>
+                    </motion.div>
+                  </div>
+                </div>
+                <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {pendingUploads.map((item) => (
+                    <PendingUploadCard
+                      key={item.id}
+                      item={item}
+                      onChange={updatePendingUpload}
+                      onRemove={removePendingUpload}
+                    />
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
         </Card>
       </motion.div>

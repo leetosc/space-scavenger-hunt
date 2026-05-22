@@ -13,9 +13,9 @@ export const HINT_DISTORTION_BY_LEVEL = [
     scale: 1.08,
     contrast: 0.75,
     saturate: 0.75,
-    sliceOpacity: 0.28,
-    gridOpacity: 0.2,
-    maskOpacity: 0.42,
+    sliceOpacity: 0.22,
+    gridOpacity: 0.15,
+    maskOpacity: 0.32,
   },
   {
     blur: 7,

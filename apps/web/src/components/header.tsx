@@ -62,8 +62,8 @@ export default function Header() {
 
   return (
     <div className="backdrop-blur-md bg-background/25 border-b border-border/40 relative z-20">
-      <div className="flex flex-row items-center justify-between px-4 sm:px-6 py-2.5">
-        <div className="flex min-w-0 items-center gap-3 sm:gap-6">
+      <div className="flex flex-row items-center justify-between px-4 py-2.5 sm:px-6">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-6">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <button
               onClick={() => setMobileOpen(true)}
@@ -101,7 +101,7 @@ export default function Header() {
 
           <Link
             href="/"
-            className="flex shrink-0 items-center transition-opacity hover:opacity-80"
+            className="flex min-w-0 shrink items-center gap-2 transition-opacity hover:opacity-80 sm:gap-3"
             aria-label="Space Scavenger Hunt home"
           >
             <motion.div
@@ -114,10 +114,18 @@ export default function Header() {
                 alt="Space Scavenger Hunt"
                 width={36}
                 height={36}
-                className="size-9"
+                className="size-8 sm:size-9"
                 priority
               />
             </motion.div>
+            <div className="min-w-0">
+              <span className="block text-[0.65rem] leading-none font-semibold tracking-[0.28em] text-cyan-400 uppercase sm:text-xs">
+                SPACE
+              </span>
+              <span className="block text-[0.72rem] leading-tight tracking-[0.08em] text-foreground/90 sm:text-sm sm:tracking-[0.16em] sm:uppercase whitespace-nowrap">
+                Scavenger Hunt
+              </span>
+            </div>
           </Link>
 
           <motion.nav

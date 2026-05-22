@@ -8,8 +8,9 @@ import { cn } from "@space-scavenger-hunt/ui/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { inferRouterOutputs } from "@trpc/server";
 import { motion } from "framer-motion";
-import { ImageOff, Radar, Satellite, Zap } from "lucide-react";
+import { ArrowLeft, ImageOff, Radar, Satellite, Zap } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { toast } from "sonner";
@@ -207,28 +208,36 @@ export default function HintsPage() {
 
   return (
     <motion.div
-      className="mx-auto w-full max-w-6xl space-y-6 px-6 py-10"
+      className="relative mx-auto w-full max-w-6xl space-y-6 px-6 py-10"
       variants={staggerContainer}
       initial="hidden"
       animate="visible"
     >
+      <motion.div
+        className="sticky top-3 z-30 ml-auto flex w-fit items-center gap-2 border border-emerald-400/30 bg-slate-950/90 px-3 py-2 font-mono text-xs font-bold text-emerald-100 shadow-[0_0_24px_rgba(52,211,153,0.16)] backdrop-blur-md sm:text-sm"
+        variants={fadeInUp}
+      >
+        <Zap className="size-4" />
+        {data?.balance ?? 0} Signal Boost{data?.balance === 1 ? "" : "s"}
+      </motion.div>
+
       <motion.header
         className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
         variants={fadeInUp}
       >
         <div>
-          <div className="mb-2 inline-flex items-center gap-2 border border-cyan-400/25 bg-cyan-400/10 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-cyan-300">
-            <Satellite className="size-3.5" />
-            Location signal array
-          </div>
+          <Link
+            href="/team"
+            className="mb-3 inline-flex h-8 items-center gap-1.5 border border-cyan-400/20 bg-cyan-400/10 px-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100 transition-colors hover:bg-cyan-400/15"
+          >
+            <ArrowLeft className="size-3.5" />
+            Team
+          </Link>
+
           <h1 className="text-2xl font-bold tracking-tight">Hints</h1>
           <p className="text-sm text-muted-foreground">
-            Spend Signal Boosts to sharpen shared location photos.
+            Spend Signal Boosts to sharpen location photos.
           </p>
-        </div>
-        <div className="inline-flex items-center gap-2 border border-emerald-400/25 bg-emerald-400/10 px-4 py-3 font-mono text-sm font-bold text-emerald-100">
-          <Zap className="size-4" />
-          {data?.balance ?? 0} Signal Boost{data?.balance === 1 ? "" : "s"}
         </div>
       </motion.header>
 
