@@ -61,6 +61,30 @@ export const teamRouter = router({
     };
   }),
 
+  updateMine: playerProcedure
+    .input(
+      z.object({
+        name: z.string().trim().min(1).max(60),
+        icon: z.string().max(40),
+      }),
+    )
+    .mutation(({ ctx, input }) => {
+      if (!ctx.player.teamId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "You are not assigned to a team.",
+        });
+      }
+
+      return ctx.prisma.team.update({
+        where: { id: ctx.player.teamId },
+        data: {
+          name: input.name,
+          icon: input.icon,
+        },
+      });
+    }),
+
   create: adminProcedure
     .input(
       z.object({

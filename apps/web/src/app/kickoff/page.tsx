@@ -1,9 +1,12 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@space-scavenger-hunt/ui/components/button";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import confetti from "canvas-confetti";
 import { AnimatePresence, motion } from "framer-motion";
+import { Loader2, Shuffle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import NameWheel, { type WheelPhase } from "@/components/kickoff/name-wheel";
 import StarfieldBackground from "@/components/starfield-background";
@@ -49,6 +52,15 @@ export default function KickoffDisplayPage() {
   const state = useQuery({
     ...trpc.kickoff.getDisplayState.queryOptions(),
     refetchInterval: 1500,
+  });
+  const spinNextPlayer = useMutation({
+    ...trpc.kickoff.spinNextPlayer.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.kickoff.getDisplayState.queryKey(),
+      });
+    },
+    onError: (err) => toast.error(err.message),
   });
 
   const [phase, setPhase] = useState<PagePhase>("idle");
@@ -279,6 +291,11 @@ export default function KickoffDisplayPage() {
   const teams = frozenTeams ?? state.data.teams;
   const wheelPhase: WheelPhase =
     phase === "landed" ? "idle" : phase;
+  const canSpinNextPlayer =
+    state.data.status === "TEAM_ASSIGNMENT" &&
+    state.data.unassignedPlayers.length > 0 &&
+    phase === "idle" &&
+    !spinNextPlayer.isPending;
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-slate-900 to-slate-950 text-white overflow-hidden relative">
@@ -302,7 +319,7 @@ export default function KickoffDisplayPage() {
         }
       >
         {/* Header */}
-        <header className="text-center">
+        <header className="relative text-center">
           <h1 className="text-4xl md:text-6xl font-black tracking-tight">
             Mission Crew Assignment
           </h1>
@@ -310,7 +327,34 @@ export default function KickoffDisplayPage() {
             {state.data.assignedCount} / {state.data.totalPlayers} astronauts
             deployed
           </p>
+          <Button
+            className="absolute right-0 top-1/2 hidden -translate-y-1/2 border-white/20 bg-white/10 text-white shadow-[0_0_24px_rgba(34,211,238,0.2)] backdrop-blur hover:bg-white/20 lg:inline-flex"
+            disabled={!canSpinNextPlayer}
+            onClick={() => spinNextPlayer.mutate()}
+            size="lg"
+          >
+            {spinNextPlayer.isPending ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <Shuffle />
+            )}
+            Spin next player
+          </Button>
         </header>
+
+        <Button
+          className="mx-auto border-white/20 bg-white/10 text-white shadow-[0_0_24px_rgba(34,211,238,0.2)] backdrop-blur hover:bg-white/20 lg:hidden"
+          disabled={!canSpinNextPlayer}
+          onClick={() => spinNextPlayer.mutate()}
+          size="lg"
+        >
+          {spinNextPlayer.isPending ? (
+            <Loader2 className="animate-spin" />
+          ) : (
+            <Shuffle />
+          )}
+          Spin next player
+        </Button>
 
         {/* Wheel */}
         <section

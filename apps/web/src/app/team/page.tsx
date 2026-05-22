@@ -3,15 +3,19 @@
 import { Button } from "@space-scavenger-hunt/ui/components/button";
 import { Card } from "@space-scavenger-hunt/ui/components/card";
 import { Input } from "@space-scavenger-hunt/ui/components/input";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
+import { Check, Pencil, X } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { authClient } from "@/lib/auth-client";
+import { IconPicker } from "@/components/icon-picker";
 import { MissionCountdown } from "@/components/mission-countdown";
+import { TeamIcon } from "@/components/team-icon";
 import {
   staggerContainer,
   staggerContainerSlow,
@@ -31,7 +35,11 @@ function filterAstronautCode(value: string): string {
 
 export default function TeamPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [manualCode, setManualCode] = useState("");
+  const [isEditingTeam, setIsEditingTeam] = useState(false);
+  const [teamName, setTeamName] = useState("");
+  const [teamIcon, setTeamIcon] = useState("Rocket");
   const { data: session, isPending } = authClient.useSession();
   const activity = useQuery({
     ...trpc.activity.getState.queryOptions(),
@@ -41,6 +49,18 @@ export default function TeamPage() {
     ...trpc.team.getDashboard.queryOptions(),
     refetchInterval: 4000,
     enabled: !!session,
+  });
+  const updateTeam = useMutation({
+    ...trpc.team.updateMine.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: trpc.team.getDashboard.queryKey() });
+      queryClient.invalidateQueries({ queryKey: trpc.leaderboard.getCurrent.queryKey() });
+      setIsEditingTeam(false);
+      toast.success("Team updated");
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
   });
 
   useEffect(() => {
@@ -53,6 +73,12 @@ export default function TeamPage() {
       router.push("/waiting" as Route);
     }
   }, [activity.data?.status, router]);
+
+  useEffect(() => {
+    if (!dashboard.data || isEditingTeam) return;
+    setTeamName(dashboard.data.team.name);
+    setTeamIcon(dashboard.data.team.icon ?? "Rocket");
+  }, [dashboard.data, isEditingTeam]);
 
   if (!dashboard.data) {
     return (
@@ -78,7 +104,82 @@ export default function TeamPage() {
         variants={fadeInUp}
       >
         <p className="text-xs uppercase tracking-wide opacity-70">Your team</p>
-        <h1 className="text-3xl font-bold">{team.name}</h1>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <TeamIcon
+            icon={team.icon}
+            color={team.color}
+            name={team.name}
+            className="h-10 w-10 bg-white/15 text-sm font-bold ring-1 ring-white/20"
+          />
+          <h1 className="min-w-0 flex-1 text-3xl font-bold leading-tight">{team.name}</h1>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="text-white/65 hover:bg-white/10 hover:text-white"
+            aria-label="Edit team name and icon"
+            title="Edit team"
+            onClick={() => {
+              setTeamName(team.name);
+              setTeamIcon(team.icon ?? "Rocket");
+              setIsEditingTeam((value) => !value);
+            }}
+          >
+            <Pencil className="size-3.5" />
+          </Button>
+        </div>
+        <AnimatePresence>
+          {isEditingTeam ? (
+            <motion.form
+              className="mt-4 flex flex-wrap items-center gap-2 rounded-lg border border-white/15 bg-black/15 p-2"
+              initial={{ opacity: 0, height: 0, y: -6 }}
+              animate={{ opacity: 1, height: "auto", y: 0 }}
+              exit={{ opacity: 0, height: 0, y: -6 }}
+              onSubmit={(e) => {
+                e.preventDefault();
+                const nextName = teamName.trim();
+                if (!nextName) return;
+                updateTeam.mutate({ name: nextName, icon: teamIcon });
+              }}
+            >
+              <IconPicker value={teamIcon} onChange={setTeamIcon} />
+              <Input
+                value={teamName}
+                onChange={(e) => setTeamName(e.target.value)}
+                maxLength={60}
+                aria-label="Team name"
+                className="h-8 min-w-0 flex-1 border-white/20 bg-white/10 text-white placeholder:text-white/40 focus-visible:border-white/50 focus-visible:ring-white/20"
+              />
+              <Button
+                type="submit"
+                size="icon-sm"
+                variant="ghost"
+                className="text-white/70 hover:bg-white/10 hover:text-white"
+                disabled={updateTeam.isPending || !teamName.trim()}
+                aria-label="Save team changes"
+                title="Save"
+              >
+                <Check className="size-4" />
+              </Button>
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                className="text-white/70 hover:bg-white/10 hover:text-white"
+                disabled={updateTeam.isPending}
+                aria-label="Cancel team edit"
+                title="Cancel"
+                onClick={() => {
+                  setTeamName(team.name);
+                  setTeamIcon(team.icon ?? "Rocket");
+                  setIsEditingTeam(false);
+                }}
+              >
+                <X className="size-4" />
+              </Button>
+            </motion.form>
+          ) : null}
+        </AnimatePresence>
         <p className="mt-2 text-sm">
           {claimedCount} / {assignedCount} astronauts claimed
         </p>
