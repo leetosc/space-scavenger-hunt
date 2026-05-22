@@ -11,7 +11,7 @@ import {
 import { Skeleton } from "@space-scavenger-hunt/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { User, UserCircle } from "lucide-react";
+import { Rocket, Shield, User, UserCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -33,6 +33,7 @@ export default function UserMenu() {
   const playerIcon = meQuery.data?.player?.icon;
   const AvatarIcon = playerIcon ? ICON_MAP[playerIcon] : null;
   const userImage = meQuery.data?.user?.image;
+  const isAdmin = meQuery.data?.user?.role === "ADMIN";
 
   if (isPending) {
     return <Skeleton className="size-9" />;
@@ -89,6 +90,19 @@ export default function UserMenu() {
             <UserCircle className="size-4" />
             Profile
           </DropdownMenuItem>
+          {isAdmin && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => router.push("/admin")}>
+                <Shield className="size-4" />
+                Admin
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/admin/kickoff")}>
+                <Rocket className="size-4" />
+                Kickoff
+              </DropdownMenuItem>
+            </>
+          )}
           <DropdownMenuItem
             variant="destructive"
             onClick={() => {
