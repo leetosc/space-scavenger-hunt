@@ -4,12 +4,18 @@ Team-based office scavenger hunt where players find hidden astronauts by scannin
 
 Built with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack): Next.js + Express + tRPC + Better Auth + Prisma (SQLite/libsql) + Bun + Turborepo.
 
+## Before you open-source it
+
+This repo is close, but it still needs an explicit license before you publish it
+publicly. Without one, other people can read the code on GitHub but do not have
+clear permission to reuse or modify it.
+
 ## Quick start
 
 ```bash
 bun install
 cp apps/server/.env.example apps/server/.env   # fill in admin + Azure secrets
-echo 'NEXT_PUBLIC_SERVER_URL=http://localhost:3000' > apps/web/.env
+cp apps/web/.env.example apps/web/.env
 bun run db:push                                # create SQLite tables
 bun run dev                                    # starts server (:3000) + web (:3001)
 ```
@@ -19,6 +25,18 @@ On first server boot, an admin user is auto-created from `ADMIN_USERNAME` /
 credentials, then create teams, players, astronauts, and run the kickoff.
 
 For production deployment, see [DEPLOYMENT.md](./DEPLOYMENT.md).
+
+## Required services
+
+The app depends on a few external services:
+
+- Azure AI Foundry/OpenAI-compatible deployment for challenge generation and
+  image judging
+- Azure Blob Storage for submitted photos
+- SQLite or libsql/Turso for persistence
+
+If you want a completely self-contained local fork, you will need to replace
+the Azure-backed AI and storage services with local or alternative providers.
 
 ## Features
 
@@ -53,8 +71,10 @@ bun run db:local
 ```
 
 2. Update your `.env` file in the `apps/server` directory with the appropriate connection details if needed.
+3. Copy `apps/web/.env.example` to `apps/web/.env` and point
+   `NEXT_PUBLIC_SERVER_URL` at the API server.
 
-3. Apply the schema to your database:
+4. Apply the schema to your database:
 
 ```bash
 bun run db:push

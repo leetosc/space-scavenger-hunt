@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Sparkles,
   RefreshCw,
+  Lock,
   XCircle,
 } from "lucide-react";
 import Image from "next/image";
@@ -660,11 +661,11 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
     return <InitialLoader />;
   }
 
-  const { attempt, previewUrl } = attemptQuery.data;
+  const { attempt, previewUrl, canEdit } = attemptQuery.data;
   const status = STATUS_COPY[attempt.status] ?? STATUS_COPY.PENDING_PHOTO!;
 
   // Fire confetti on approval (once)
-  if (attempt.status === "APPROVED" && !celebratedRef.current) {
+  if (canEdit && attempt.status === "APPROVED" && !celebratedRef.current) {
     celebratedRef.current = true;
     setTimeout(() => {
       confetti({
@@ -677,7 +678,7 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
   }
 
   async function handleUpload(file: File) {
-    if (uploading) return;
+    if (uploading || !canEdit) return;
     if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
       toast.error("Only JPG, PNG, or WebP photos are allowed.");
       return;
@@ -716,9 +717,10 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
     }
   }
 
-  const canUpload =
+  const showUploadCard =
     attempt.status === "PENDING_PHOTO" || attempt.status === "REJECTED";
   const canRegenerateTask =
+    canEdit &&
     !uploading &&
     (attempt.status === "PENDING_PHOTO" || attempt.status === "REJECTED");
   const aiVerdict = getAiVerdict(attempt.status, attempt.aiPassed);
@@ -730,6 +732,7 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
   }
 
   function handleFileSelect(files: File[]) {
+    if (!canEdit) return;
     const file = files[0];
     if (!file) return;
     if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
@@ -759,6 +762,12 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
       />
 
       <header>
+        {!canEdit ? (
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-amber-300">
+            <Lock className="size-3.5" />
+            Read only
+          </div>
+        ) : null}
         <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-cyan-200/50">
           Challenge
         </p>
@@ -770,6 +779,12 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
             tone={status.tone}
           />
         </AnimatePresence>
+        {!canEdit ? (
+          <p className="mt-3 text-sm text-amber-100/80">
+            This attempt belongs to {attempt.team?.name ?? "another team"}. You can view the
+            mission details, but only that team can change the task or submit a photo.
+          </p>
+        ) : null}
       </header>
 
       <Card className="p-5 gap-4 border-cyan-500/20 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.12),transparent_48%),linear-gradient(135deg,rgba(8,47,73,0.85),rgba(15,23,42,0.98))]">
@@ -894,7 +909,7 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
       </AnimatePresence>
 
       <AnimatePresence>
-        {canUpload ? (
+        {showUploadCard ? (
           <motion.div
             key="upload"
             variants={fadeInUp}
@@ -908,6 +923,12 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
                 Capture a single photo that satisfies the task. JPG/PNG/WebP, up
                 to 8MB.
               </p>
+              {!canEdit ? (
+                <div className="inline-flex items-center gap-2 rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-200/90">
+                  <Lock className="size-3.5 shrink-0" />
+                  Submission is locked because this is not your team&apos;s attempt.
+                </div>
+              ) : null}
 
               {uploading ? (
                 <UploadingOverlay />
@@ -927,13 +948,13 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
                     {pendingFile.name}
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <Button onClick={handleConfirmUpload} disabled={uploading}>
+                    <Button onClick={handleConfirmUpload} disabled={uploading || !canEdit}>
                       Submit photo
                     </Button>
                     <Button
                       variant="outline"
                       onClick={clearPendingPhoto}
-                      disabled={uploading}
+                      disabled={uploading || !canEdit}
                     >
                       Choose another
                     </Button>
@@ -941,7 +962,7 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
                 </div>
               ) : (
                 <div className="w-full min-h-80 rounded-lg border border-dashed border-cyan-500/20 bg-slate-950/50 overflow-hidden">
-                  <FileUpload onChange={handleFileSelect} />
+                  <FileUpload onChange={handleFileSelect} disabled={!canEdit} />
                 </div>
               )}
             </Card>
@@ -970,7 +991,9 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
                 }}
                 transition={{ duration: 2, repeat: Infinity }}
               >
-                Astronaut claimed for your team!
+                {canEdit
+                  ? "Astronaut claimed for your team!"
+                  : `Astronaut claimed by ${attempt.team?.name ?? "another team"}!`}
               </motion.p>
             </Card>
           </motion.div>

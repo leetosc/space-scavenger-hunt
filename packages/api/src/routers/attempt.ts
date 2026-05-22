@@ -25,14 +25,12 @@ export const attemptRouter = router({
         include: { astronaut: true, team: true, claim: true },
       });
       if (!attempt) throw new TRPCError({ code: "NOT_FOUND", message: "Attempt not found." });
-      if (attempt.teamId !== ctx.player.teamId && ctx.user.role !== "ADMIN") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Not your team's attempt." });
-      }
+      const canEdit = attempt.teamId === ctx.player.teamId || ctx.user.role === "ADMIN";
       let previewUrl: string | undefined;
       if (attempt.imageBlobName) {
         previewUrl = getAttemptPhotoPreviewPath(attempt.id);
       }
-      return { attempt, previewUrl };
+      return { attempt, previewUrl, canEdit };
     }),
 
   getForCurrentPlayer: playerProcedure.query(({ ctx }) => {
