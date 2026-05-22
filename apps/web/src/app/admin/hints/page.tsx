@@ -201,7 +201,9 @@ function HintEditor({
     () => new Map(hint.reveals.map((reveal) => [reveal.team.id, reveal])),
     [hint.reveals],
   );
-  const revealedTeamCount = hint.reveals.filter((reveal) => reveal.revealLevel > 0).length;
+  const revealedTeamCount = hint.reveals.filter(
+    (reveal) => reveal.revealLevel > 0,
+  ).length;
 
   function saveDetails() {
     const nextSort = Number(sortOrder);
@@ -226,7 +228,7 @@ function HintEditor({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate text-sm font-bold text-slate-100">
-                {hint.title || "Untitled location photo"}
+                {hint.title || ""}
               </p>
               <div className="mt-1 flex flex-wrap gap-1.5">
                 <Badge
@@ -351,7 +353,9 @@ function HintEditor({
                 />
               </div>
               <div className="sm:col-span-2">
-                <Label htmlFor={`hint-description-${hint.id}`}>Description</Label>
+                <Label htmlFor={`hint-description-${hint.id}`}>
+                  Description
+                </Label>
                 <Textarea
                   id={`hint-description-${hint.id}`}
                   value={description}
@@ -370,7 +374,12 @@ function HintEditor({
               </label>
             </div>
             <DialogFooter>
-              <Button type="button" size="sm" disabled={saving} onClick={saveDetails}>
+              <Button
+                type="button"
+                size="sm"
+                disabled={saving}
+                onClick={saveDetails}
+              >
                 <Pencil className="size-3.5" />
                 {saving ? "Saving..." : "Save"}
               </Button>
@@ -404,25 +413,32 @@ function HintEditor({
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
-                      {Array.from({ length: maxRevealLevel + 1 }, (_, level) => (
-                        <Button
-                          key={level}
-                          type="button"
-                          size="sm"
-                          variant={currentRevealLevel === level ? "default" : "outline"}
-                          className="h-7 min-w-8 px-2 text-xs"
-                          disabled={updatingReveal}
-                          onClick={() =>
-                            onSetRevealLevel({
-                              teamId: team.id,
-                              locationHintId: hint.id,
-                              revealLevel: level,
-                            })
-                          }
-                        >
-                          {level}
-                        </Button>
-                      ))}
+                      {Array.from(
+                        { length: maxRevealLevel + 1 },
+                        (_, level) => (
+                          <Button
+                            key={level}
+                            type="button"
+                            size="sm"
+                            variant={
+                              currentRevealLevel === level
+                                ? "default"
+                                : "outline"
+                            }
+                            className="h-7 min-w-8 px-2 text-xs"
+                            disabled={updatingReveal}
+                            onClick={() =>
+                              onSetRevealLevel({
+                                teamId: team.id,
+                                locationHintId: hint.id,
+                                revealLevel: level,
+                              })
+                            }
+                          >
+                            {level}
+                          </Button>
+                        ),
+                      )}
                     </div>
                   </li>
                 );
@@ -524,7 +540,10 @@ function PendingUploadCard({
   onRemove,
 }: {
   item: PendingHintUpload;
-  onChange: (id: string, patch: Partial<Omit<PendingHintUpload, "id" | "file" | "previewUrl">>) => void;
+  onChange: (
+    id: string,
+    patch: Partial<Omit<PendingHintUpload, "id" | "file" | "previewUrl">>,
+  ) => void;
   onRemove: (id: string) => void;
 }) {
   return (
@@ -555,7 +574,9 @@ function PendingUploadCard({
           <Input
             id={`pending-title-${item.id}`}
             value={item.title}
-            onChange={(event) => onChange(item.id, { title: event.target.value })}
+            onChange={(event) =>
+              onChange(item.id, { title: event.target.value })
+            }
             placeholder="Optional label"
           />
         </div>
@@ -566,16 +587,22 @@ function PendingUploadCard({
             type="number"
             inputMode="numeric"
             value={item.sortOrder}
-            onChange={(event) => onChange(item.id, { sortOrder: event.target.value })}
+            onChange={(event) =>
+              onChange(item.id, { sortOrder: event.target.value })
+            }
           />
         </div>
         <div className="sm:col-span-2">
-          <Label htmlFor={`pending-description-${item.id}`}>Description (optional)</Label>
+          <Label htmlFor={`pending-description-${item.id}`}>
+            Description (optional)
+          </Label>
           <Textarea
             id={`pending-description-${item.id}`}
             value={item.description}
             rows={2}
-            onChange={(event) => onChange(item.id, { description: event.target.value })}
+            onChange={(event) =>
+              onChange(item.id, { description: event.target.value })
+            }
             placeholder="Optional admin/team note"
           />
         </div>
@@ -778,7 +805,10 @@ export default function AdminHintsPage() {
         );
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          throw new Error(body.message ?? `Upload failed for ${item.file.name} (${res.status})`);
+          throw new Error(
+            body.message ??
+              `Upload failed for ${item.file.name} (${res.status})`,
+          );
         }
         uploaded += 1;
         uploadedIds.add(item.id);
@@ -921,7 +951,8 @@ export default function AdminHintsPage() {
                     Drop location photos
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Drag multiple JPG, PNG, or WebP files here, or click to select.
+                    Drag multiple JPG, PNG, or WebP files here, or click to
+                    select.
                   </p>
                 </div>
               </div>
@@ -999,7 +1030,9 @@ export default function AdminHintsPage() {
                   onSave={(input) => updateMutation.mutate(input)}
                   onDelete={(id) => deleteMutation.mutate({ id })}
                   onReplace={replaceHintPhoto}
-                  onSetRevealLevel={(input) => setRevealLevelMutation.mutate(input)}
+                  onSetRevealLevel={(input) =>
+                    setRevealLevelMutation.mutate(input)
+                  }
                 />
               ))}
             </AnimatePresence>
@@ -1040,7 +1073,9 @@ export default function AdminHintsPage() {
               size="sm"
               variant="destructive"
               disabled={
-                clearLedgerMutation.isPending || !ledgerQuery.data || ledgerQuery.data.length === 0
+                clearLedgerMutation.isPending ||
+                !ledgerQuery.data ||
+                ledgerQuery.data.length === 0
               }
               onClick={() => setClearLedgerOpen(true)}
             >
@@ -1104,8 +1139,8 @@ export default function AdminHintsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Clear ledger history?</AlertDialogTitle>
             <AlertDialogDescription>
-              This removes all Signal Boost ledger entries from the admin hints page.
-              Team balances and hint reveal progress will stay as-is.
+              This removes all Signal Boost ledger entries from the admin hints
+              page. Team balances and hint reveal progress will stay as-is.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

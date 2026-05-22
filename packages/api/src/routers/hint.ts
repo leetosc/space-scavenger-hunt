@@ -6,12 +6,16 @@ import { deleteBlob } from "../services/azure-blob";
 import { getHintPhotoPreviewPath } from "../services/hint-photo-url";
 
 export const MAX_HINT_REVEAL_LEVEL = 3;
-const INITIAL_SIGNAL_BOOSTS = 2;
+const INITIAL_SIGNAL_BOOSTS = 3;
 
-function withPreviewUrl<T extends { id: string; imageBlobName: string | null }>(hint: T) {
+function withPreviewUrl<T extends { id: string; imageBlobName: string | null }>(
+  hint: T,
+) {
   return {
     ...hint,
-    previewUrl: hint.imageBlobName ? getHintPhotoPreviewPath(hint.id) : undefined,
+    previewUrl: hint.imageBlobName
+      ? getHintPhotoPreviewPath(hint.id)
+      : undefined,
   };
 }
 
@@ -46,7 +50,9 @@ export const hintRouter = router({
       throw new TRPCError({ code: "NOT_FOUND", message: "Team not found." });
     }
 
-    const revealByHintId = new Map(reveals.map((reveal) => [reveal.locationHintId, reveal]));
+    const revealByHintId = new Map(
+      reveals.map((reveal) => [reveal.locationHintId, reveal]),
+    );
     return {
       balance: team.signalBoostBalance,
       maxRevealLevel: MAX_HINT_REVEAL_LEVEL,
@@ -78,7 +84,10 @@ export const hintRouter = router({
           select: { id: true, active: true },
         });
         if (!hint?.active) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Hint not found." });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Hint not found.",
+          });
         }
 
         const existingReveal = await tx.teamLocationHintReveal.findUnique({
@@ -158,14 +167,24 @@ export const hintRouter = router({
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
         include: {
           reveals: {
-            include: { team: { select: { id: true, name: true, color: true, icon: true } } },
+            include: {
+              team: {
+                select: { id: true, name: true, color: true, icon: true },
+              },
+            },
             orderBy: { updatedAt: "desc" },
           },
         },
       }),
       ctx.prisma.team.findMany({
         orderBy: { name: "asc" },
-        select: { id: true, name: true, color: true, icon: true, signalBoostBalance: true },
+        select: {
+          id: true,
+          name: true,
+          color: true,
+          icon: true,
+          signalBoostBalance: true,
+        },
       }),
     ]);
 
@@ -183,7 +202,11 @@ export const hintRouter = router({
   }),
 
   adminLedger: adminProcedure
-    .input(z.object({ limit: z.number().int().min(1).max(100).default(40) }).optional())
+    .input(
+      z
+        .object({ limit: z.number().int().min(1).max(100).default(40) })
+        .optional(),
+    )
     .query(({ ctx, input }) => {
       return ctx.prisma.signalBoostLedger.findMany({
         take: input?.limit ?? 40,
@@ -275,8 +298,9 @@ export const hintRouter = router({
     .mutation(async ({ ctx, input }) => {
       const sortOrder =
         input.sortOrder ??
-        ((await ctx.prisma.locationHint.aggregate({ _max: { sortOrder: true } }))._max
-          .sortOrder ?? 0) + 1;
+        ((
+          await ctx.prisma.locationHint.aggregate({ _max: { sortOrder: true } })
+        )._max.sortOrder ?? 0) + 1;
       return ctx.prisma.locationHint.create({
         data: {
           title: input.title || null,
@@ -328,13 +352,19 @@ export const hintRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       if (input.delta === 0) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Adjustment cannot be zero." });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Adjustment cannot be zero.",
+        });
       }
 
       return ctx.prisma.$transaction(async (tx) => {
         if (input.delta < 0) {
           const updated = await tx.team.updateMany({
-            where: { id: input.teamId, signalBoostBalance: { gte: Math.abs(input.delta) } },
+            where: {
+              id: input.teamId,
+              signalBoostBalance: { gte: Math.abs(input.delta) },
+            },
             data: { signalBoostBalance: { increment: input.delta } },
           });
           if (updated.count !== 1) {
