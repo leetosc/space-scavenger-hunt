@@ -227,7 +227,7 @@ export default function HintsPage() {
       >
         <div>
           <Link
-            href="/team"
+            href="/dashboard"
             className="mb-3 inline-flex h-8 items-center gap-1.5 border border-cyan-400/20 bg-cyan-400/10 px-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100 transition-colors hover:bg-cyan-400/15"
           >
             <ArrowLeft className="size-3.5" />

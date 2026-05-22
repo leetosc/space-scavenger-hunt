@@ -14,11 +14,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { authClient } from "@/lib/auth-client";
-import {
-  staggerContainer,
-  fadeInUp,
-  springTransition,
-} from "@/lib/animations";
+import { staggerContainer, fadeInUp, springTransition } from "@/lib/animations";
 
 import UserMenu from "./user-menu";
 
@@ -37,13 +33,10 @@ export default function Header() {
     { to: "/leaderboard" as const, label: "Leaderboard" },
   ];
   const playerLinks = [
-    { to: "/team" as const, label: "My Team" },
+    { to: "/dashboard" as const, label: "Dashboard" },
     { to: "/submissions" as const, label: "Submissions" },
   ];
-  const links = [
-    ...baseLinks,
-    ...(session ? playerLinks : []),
-  ];
+  const links = [...baseLinks, ...(session ? playerLinks : [])];
 
   return (
     <div className="backdrop-blur-md bg-background/25 border-b border-border/40 relative z-20">
@@ -110,7 +103,10 @@ export default function Header() {
           </div>
         </div>
 
-        <SheetContent side="right" className="bg-background/95 backdrop-blur-md border-border/40">
+        <SheetContent
+          side="right"
+          className="bg-background/95 backdrop-blur-md border-border/40"
+        >
           <SheetHeader>
             <SheetTitle className="text-xs font-mono tracking-widest text-cyan-400 uppercase font-bold">
               Menu

@@ -54,7 +54,7 @@ export default function WaitingPage() {
   }, [isPending, session, router]);
 
   useEffect(() => {
-    if (activity.data?.status === "ACTIVE") router.push("/team");
+    if (activity.data?.status === "ACTIVE") router.push("/dashboard");
     if (activity.data?.status === "FINISHED") router.push("/leaderboard");
   }, [activity.data?.status, router]);
 

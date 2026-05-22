@@ -67,7 +67,7 @@ export default function Home() {
     }
     const status = activity.data.status;
     if (status === "ACTIVE" || status === "FINISHED") {
-      router.push("/team" as Route);
+      router.push("/dashboard" as Route);
     } else {
       router.push("/waiting" as Route);
     }
