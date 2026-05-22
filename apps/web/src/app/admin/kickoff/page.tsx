@@ -106,6 +106,9 @@ export default function AdminKickoffPage() {
   const state = stateQuery.data;
   if (!state) return <p className="text-sm text-muted-foreground">Loading kickoff state...</p>;
 
+  const assignmentPercent =
+    state.totalPlayers > 0 ? Math.round((state.assignedCount / state.totalPlayers) * 100) : 0;
+
   const controlButtons: {
     label: string;
     icon: LucideIcon;
@@ -152,46 +155,72 @@ export default function AdminKickoffPage() {
 
   return (
     <motion.div
-      className="space-y-6 max-w-4xl"
+      className="space-y-6 max-w-6xl"
       variants={staggerContainer}
       initial="hidden"
       animate="visible"
     >
-      <motion.header className="flex items-center justify-between" variants={fadeInUp}>
+      <motion.header
+        className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
+        variants={fadeInUp}
+      >
         <div>
-          <h1 className="text-2xl font-bold">Kickoff Controls</h1>
+          <div className="mb-2 inline-flex items-center gap-2 border border-cyan-400/25 bg-cyan-400/10 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-cyan-300">
+            <span className="size-1.5 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,0.9)]" />
+            Orbital admin uplink
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">Kickoff Controls</h1>
           <p className="text-sm text-muted-foreground">
-            Activity status: <span className="font-mono">{state.status}</span> · {state.assignedCount}
-            / {state.totalPlayers} players assigned
+            Mission state <span className="font-mono text-cyan-300">{state.status}</span> / assignment
+            matrix <span className="font-mono text-foreground">{state.assignedCount}</span> of{" "}
+            <span className="font-mono text-foreground">{state.totalPlayers}</span>
           </p>
         </div>
-        <a
-          href="/kickoff"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1.5 rounded-none border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted dark:border-input dark:bg-input/30 dark:hover:bg-input/50"
-        >
-          <ExternalLink className="size-3.5" />
-          Open kickoff display
-        </a>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="grid grid-cols-3 border border-cyan-400/20 bg-slate-950/50 text-center shadow-[0_0_24px_rgba(34,211,238,0.08)]">
+            {[
+              ["Status", state.status],
+              ["Assigned", `${state.assignedCount}/${state.totalPlayers}`],
+              ["Queue", state.unassignedPlayers.length.toString()],
+            ].map(([label, value]) => (
+              <div key={label} className="min-w-24 border-r border-cyan-400/15 px-3 py-2 last:border-r-0">
+                <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-cyan-300/70">
+                  {label}
+                </div>
+                <div className="mt-1 truncate font-mono text-xs font-bold text-slate-100">{value}</div>
+              </div>
+            ))}
+          </div>
+          <a
+            href="/kickoff"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex h-10 items-center justify-center gap-1.5 border border-cyan-400/30 bg-cyan-400/10 px-3 text-xs font-bold uppercase tracking-wide text-cyan-100 transition-colors hover:bg-cyan-400/20"
+          >
+            <ExternalLink className="size-3.5" />
+            Open display
+          </a>
+        </div>
       </motion.header>
 
       <motion.div variants={fadeInUp}>
-        <Card className="overflow-hidden border-cyan-400/20 bg-background/80 p-0 shadow-sm">
-          <div className="border-b border-border/60 bg-muted/30 px-4 py-3">
+        <Card className="overflow-hidden border-cyan-400/25 bg-slate-950/55 p-0 shadow-[0_0_30px_rgba(34,211,238,0.08)] backdrop-blur">
+          <div className="border-b border-cyan-400/15 bg-[linear-gradient(90deg,rgba(34,211,238,0.14),rgba(15,23,42,0.6),rgba(132,204,22,0.08))] px-4 py-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex size-9 items-center justify-center rounded-md border border-cyan-400/30 bg-cyan-400/10 text-cyan-300">
+                <div className="flex size-9 items-center justify-center border border-cyan-400/35 bg-cyan-400/10 text-cyan-300 shadow-[inset_0_0_18px_rgba(34,211,238,0.12)]">
                   <UsersRound className="size-4" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-bold uppercase tracking-wide">Assignment Command</h2>
+                  <h2 className="font-mono text-sm font-bold uppercase tracking-[0.18em] text-slate-100">
+                    Assignment Command
+                  </h2>
                   <p className="text-xs text-muted-foreground">
                     Live team kickoff controls for the display board.
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 rounded-md border border-border/70 bg-background px-2.5 py-1.5 text-xs">
+              <div className="flex items-center gap-2 border border-cyan-400/20 bg-slate-950/70 px-2.5 py-1.5 text-xs">
                 <span className="text-muted-foreground">Status</span>
                 <span className="font-mono font-semibold text-cyan-300">{state.status}</span>
               </div>
@@ -199,7 +228,7 @@ export default function AdminKickoffPage() {
           </div>
 
           <div className="grid gap-4 p-4 lg:grid-cols-[minmax(180px,240px)_1fr]">
-            <div className="flex flex-col gap-2 rounded-md border border-border/70 bg-muted/20 p-3">
+            <div className="flex flex-col gap-2 border border-cyan-400/15 bg-slate-900/45 p-3 shadow-[inset_0_0_18px_rgba(15,23,42,0.8)]">
               <label
                 htmlFor="time-limit-minutes"
                 className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
@@ -252,6 +281,9 @@ export default function AdminKickoffPage() {
                   Remaining:{" "}
                   <span className="font-mono text-foreground">{state.unassignedPlayers.length}</span>
                 </span>
+                <span>
+                  Sync: <span className="font-mono text-cyan-300">{assignmentPercent}%</span>
+                </span>
               </div>
             </div>
           </div>
@@ -259,26 +291,47 @@ export default function AdminKickoffPage() {
       </motion.div>
 
       <motion.div className="space-y-4" variants={fadeInUp}>
-        <Card className="p-4 min-h-[120px]">
-          <h2 className="font-bold mb-2">Unassigned ({state.unassignedPlayers.length})</h2>
+        <Card className="relative min-h-[120px] overflow-hidden border-cyan-400/20 bg-slate-950/50 p-0 shadow-[0_0_28px_rgba(34,211,238,0.07)]">
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(34,211,238,0.05)_1px,transparent_1px)] bg-[length:100%_12px]" />
+          <div className="relative flex flex-col gap-3 border-b border-cyan-400/15 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-cyan-300/75">
+                Holding pattern
+              </p>
+              <h2 className="mt-1 text-sm font-bold uppercase tracking-wide">
+                Unassigned crew ({state.unassignedPlayers.length})
+              </h2>
+            </div>
+            <div className="h-1.5 w-full overflow-hidden bg-slate-800 sm:w-56">
+              <div
+                className="h-full bg-[linear-gradient(90deg,#22d3ee,#84cc16)] shadow-[0_0_14px_rgba(34,211,238,0.55)]"
+                style={{ width: `${assignmentPercent}%` }}
+              />
+            </div>
+          </div>
           {state.unassignedPlayers.length === 0 ? (
-            <p className="text-sm text-muted-foreground">All players assigned.</p>
+            <p className="relative px-4 py-5 font-mono text-xs uppercase tracking-[0.18em] text-emerald-300">
+              All crew signals locked to teams.
+            </p>
           ) : (
             <motion.ul
-              className="text-sm space-y-1"
+              className="relative grid gap-2 p-4 text-sm sm:grid-cols-2 lg:grid-cols-3"
               variants={staggerContainer}
               initial="hidden"
               animate="visible"
             >
               <AnimatePresence>
-                {state.unassignedPlayers.map((p) => (
+                {state.unassignedPlayers.map((p, index) => (
                   <motion.li
                     key={p.id}
                     variants={slideInLeft}
                     exit={{ opacity: 0, x: 20 }}
                     transition={springTransition}
+                    className="flex items-center gap-2 border border-cyan-400/15 bg-slate-900/55 px-3 py-2 font-mono text-xs text-slate-200"
                   >
-                    {p.name}
+                    <span className="text-cyan-300/70">{String(index + 1).padStart(2, "0")}</span>
+                    <span className="size-1.5 rounded-full bg-amber-300 shadow-[0_0_8px_rgba(252,211,77,0.8)]" />
+                    <span className="truncate">{p.name}</span>
                   </motion.li>
                 ))}
               </AnimatePresence>
@@ -287,34 +340,72 @@ export default function AdminKickoffPage() {
         </Card>
 
         <motion.div
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
           variants={staggerContainer}
           initial="hidden"
           animate="visible"
         >
           {state.teams.map((team) => (
             <motion.div key={team.id} variants={fadeInUp}>
-              <Card className="p-4 min-h-[120px]">
-                <div className="flex items-center gap-2 mb-2 min-w-0">
-                  <TeamIcon icon={team.icon} color={team.color} name={team.name} />
-                  <h2 className="font-bold truncate">
-                    {team.name} ({team.players.length})
-                  </h2>
+              <Card
+                className="min-h-[180px] overflow-hidden border-cyan-400/15 bg-slate-950/50 p-0 shadow-[0_0_24px_rgba(15,23,42,0.4)]"
+                style={{
+                  borderColor: team.color ? `${team.color}55` : undefined,
+                  boxShadow: team.color ? `0 0 24px ${team.color}18` : undefined,
+                }}
+              >
+                <div className="border-b border-white/10 bg-slate-900/60 px-3 py-3">
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <TeamIcon icon={team.icon} color={team.color} name={team.name} />
+                      <div className="min-w-0">
+                        <h2 className="truncate text-sm font-bold uppercase tracking-wide">{team.name}</h2>
+                        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                          Team vector
+                        </p>
+                      </div>
+                    </div>
+                    <div className="border border-white/10 bg-black/25 px-2 py-1 text-right font-mono">
+                      <div className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground">Crew</div>
+                      <div className="text-sm font-bold text-slate-100">{team.players.length}</div>
+                    </div>
+                  </div>
+                  <div className="h-1 overflow-hidden bg-slate-800">
+                    <div
+                      className="h-full bg-cyan-300"
+                      style={{
+                        width: `${
+                          state.totalPlayers > 0
+                            ? Math.round((team.players.length / state.totalPlayers) * 100)
+                            : 0
+                        }%`,
+                        backgroundColor: team.color ?? undefined,
+                      }}
+                    />
+                  </div>
                 </div>
                 {team.players.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No players yet.</p>
+                  <p className="px-3 py-4 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                    Awaiting crew lock.
+                  </p>
                 ) : (
-                  <ul className="text-sm space-y-1">
+                  <ul className="space-y-2 p-3 text-sm">
                     <AnimatePresence>
-                      {team.players.map((p) => (
+                      {team.players.map((p, index) => (
                         <motion.li
                           key={p.id}
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: 10 }}
                           transition={springTransition}
+                          className="flex items-center gap-2 border border-white/10 bg-slate-900/55 px-2.5 py-2 font-mono text-xs text-slate-200"
                         >
-                          {p.name}
+                          <span className="text-muted-foreground">{String(index + 1).padStart(2, "0")}</span>
+                          <span
+                            className="size-1.5 rounded-full bg-cyan-300"
+                            style={{ backgroundColor: team.color ?? undefined }}
+                          />
+                          <span className="truncate">{p.name}</span>
                         </motion.li>
                       ))}
                     </AnimatePresence>

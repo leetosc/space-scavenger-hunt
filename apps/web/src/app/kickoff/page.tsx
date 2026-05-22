@@ -319,7 +319,7 @@ export default function KickoffDisplayPage() {
         }
       >
         {/* Header */}
-        <header className="relative text-center">
+        <header className="text-center">
           <h1 className="text-4xl md:text-6xl font-black tracking-tight">
             Mission Crew Assignment
           </h1>
@@ -327,23 +327,10 @@ export default function KickoffDisplayPage() {
             {state.data.assignedCount} / {state.data.totalPlayers} astronauts
             deployed
           </p>
-          <Button
-            className="absolute right-0 top-1/2 hidden -translate-y-1/2 border-white/20 bg-white/10 text-white shadow-[0_0_24px_rgba(34,211,238,0.2)] backdrop-blur hover:bg-white/20 lg:inline-flex"
-            disabled={!canSpinNextPlayer}
-            onClick={() => spinNextPlayer.mutate()}
-            size="lg"
-          >
-            {spinNextPlayer.isPending ? (
-              <Loader2 className="animate-spin" />
-            ) : (
-              <Shuffle />
-            )}
-            Spin next player
-          </Button>
         </header>
 
         <Button
-          className="mx-auto border-white/20 bg-white/10 text-white shadow-[0_0_24px_rgba(34,211,238,0.2)] backdrop-blur hover:bg-white/20 lg:hidden"
+          className="mx-auto border-white/20 bg-white/10 text-white shadow-[0_0_24px_rgba(34,211,238,0.2)] backdrop-blur hover:bg-white/20"
           disabled={!canSpinNextPlayer}
           onClick={() => spinNextPlayer.mutate()}
           size="lg"

@@ -25,7 +25,7 @@ import { Label } from "@space-scavenger-hunt/ui/components/label";
 import { cn } from "@space-scavenger-hunt/ui/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { Pencil } from "lucide-react";
+import { Orbit, Pencil, Plus, RadioTower, ShieldCheck, Sparkles, UsersRound } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -286,47 +286,95 @@ export default function AdminTeamsPage() {
 
   const teams = listQuery.data ?? [];
   const canCreate = teams.length < 4;
+  const totalPlayers = teams.reduce((sum, team) => sum + team._count.players, 0);
+  const totalAssignments = teams.reduce((sum, team) => sum + team._count.assignments, 0);
+  const totalClaims = teams.reduce((sum, team) => sum + team._count.claims, 0);
+  const setupPercent = Math.round((teams.length / 4) * 100);
 
   return (
     <motion.div
-      className="space-y-6 max-w-3xl"
+      className="space-y-6 max-w-6xl"
       variants={staggerContainer}
       initial="hidden"
       animate="visible"
     >
       <motion.header
-        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+        className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
         variants={fadeInUp}
       >
         <div>
-          <h1 className="text-2xl font-bold">Teams</h1>
+          <div className="mb-2 inline-flex items-center gap-2 border border-cyan-400/25 bg-cyan-400/10 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-cyan-300">
+            <span className="size-1.5 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,0.9)]" />
+            Team grid command
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">Teams</h1>
           <p className="text-sm text-muted-foreground">
-            Exactly 4 teams are required. Players are assigned during kickoff.
+            Fleet configuration requires <span className="font-mono text-cyan-300">4</span> teams before
+            kickoff assignment.
           </p>
         </div>
-        {teams.length < 4 ? (
-          <motion.div {...buttonInteraction}>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={createMutation.isPending}
-              onClick={async () => {
-                for (const t of DEFAULT_TEAMS.slice(teams.length, 4)) {
-                  await createMutation.mutateAsync({ name: t.name, color: t.color, icon: t.icon });
-                }
-                toast.success("Seeded default teams");
-              }}
-            >
-              Seed default teams
-            </Button>
-          </motion.div>
-        ) : null}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="grid grid-cols-3 border border-cyan-400/20 bg-slate-950/50 text-center shadow-[0_0_24px_rgba(34,211,238,0.08)]">
+            {[
+              ["Teams", `${teams.length}/4`],
+              ["Crew", totalPlayers.toString()],
+              ["Claims", totalClaims.toString()],
+            ].map(([label, value]) => (
+              <div key={label} className="min-w-24 border-r border-cyan-400/15 px-3 py-2 last:border-r-0">
+                <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-cyan-300/70">
+                  {label}
+                </div>
+                <div className="mt-1 truncate font-mono text-xs font-bold text-slate-100">{value}</div>
+              </div>
+            ))}
+          </div>
+          {teams.length < 4 ? (
+            <motion.div {...buttonInteraction}>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={createMutation.isPending}
+                className="h-10 border-cyan-400/30 bg-cyan-400/10 text-xs font-bold uppercase tracking-wide text-cyan-100 hover:bg-cyan-400/20"
+                onClick={async () => {
+                  for (const t of DEFAULT_TEAMS.slice(teams.length, 4)) {
+                    await createMutation.mutateAsync({ name: t.name, color: t.color, icon: t.icon });
+                  }
+                  toast.success("Seeded default teams");
+                }}
+              >
+                <Sparkles data-icon="inline-start" className="size-4" />
+                Seed defaults
+              </Button>
+            </motion.div>
+          ) : null}
+        </div>
       </motion.header>
 
       <motion.div variants={scaleIn}>
-        <Card className="p-4">
+        <Card className="overflow-hidden border-cyan-400/25 bg-slate-950/55 p-0 shadow-[0_0_30px_rgba(34,211,238,0.08)] backdrop-blur">
+          <div className="border-b border-cyan-400/15 bg-[linear-gradient(90deg,rgba(34,211,238,0.14),rgba(15,23,42,0.6),rgba(132,204,22,0.08))] px-4 py-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 items-center justify-center border border-cyan-400/35 bg-cyan-400/10 text-cyan-300 shadow-[inset_0_0_18px_rgba(34,211,238,0.12)]">
+                  <RadioTower className="size-4" />
+                </div>
+                <div>
+                  <h2 className="font-mono text-sm font-bold uppercase tracking-[0.18em] text-slate-100">
+                    Team Configuration
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    Register team identity, symbol, and beacon color.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 border border-cyan-400/20 bg-slate-950/70 px-2.5 py-1.5 text-xs">
+                <span className="text-muted-foreground">Grid sync</span>
+                <span className="font-mono font-semibold text-cyan-300">{setupPercent}%</span>
+              </div>
+            </div>
+          </div>
           <form
-            className="space-y-4"
+            className="grid gap-4 p-4 lg:grid-cols-[1fr_1fr] xl:grid-cols-[1fr_1.15fr_1fr_auto]"
             onSubmit={(e) => {
               e.preventDefault();
               if (!canCreate) return;
@@ -334,25 +382,38 @@ export default function AdminTeamsPage() {
               setNewName("");
             }}
           >
-            <div>
-              <Label htmlFor="name">Name</Label>
+            <div className="border border-cyan-400/15 bg-slate-900/45 p-3 shadow-[inset_0_0_18px_rgba(15,23,42,0.8)]">
+              <Label htmlFor="name" className="font-mono text-[10px] uppercase tracking-[0.18em] text-cyan-300/75">
+                Team name
+              </Label>
               <Input
                 id="name"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 required
+                placeholder="Enter call sign"
+                className="mt-2 font-mono"
               />
             </div>
-            <div>
-              <Label className="mb-1.5 block">Icon</Label>
+            <div className="border border-cyan-400/15 bg-slate-900/45 p-3 shadow-[inset_0_0_18px_rgba(15,23,42,0.8)]">
+              <Label className="mb-2 block font-mono text-[10px] uppercase tracking-[0.18em] text-cyan-300/75">
+                Signal icon
+              </Label>
               <IconPicker value={newIcon} onChange={setNewIcon} />
             </div>
-            <div>
-              <Label className="mb-1.5 block">Color</Label>
+            <div className="border border-cyan-400/15 bg-slate-900/45 p-3 shadow-[inset_0_0_18px_rgba(15,23,42,0.8)]">
+              <Label className="mb-2 block font-mono text-[10px] uppercase tracking-[0.18em] text-cyan-300/75">
+                Beacon color
+              </Label>
               <ColorPicker id="color" value={newColor} onChange={setNewColor} />
             </div>
-            <motion.div {...buttonInteraction}>
-              <Button type="submit" disabled={!canCreate || createMutation.isPending} className="w-full">
+            <motion.div className="flex items-end" {...buttonInteraction}>
+              <Button
+                type="submit"
+                disabled={!canCreate || createMutation.isPending}
+                className="h-10 w-full justify-center"
+              >
+                <Plus data-icon="inline-start" className="size-4" />
                 {canCreate ? "Create team" : "4 / 4"}
               </Button>
             </motion.div>
@@ -361,40 +422,106 @@ export default function AdminTeamsPage() {
       </motion.div>
 
       <motion.div variants={fadeInUp}>
-        <Card className="p-4">
-          <h2 className="font-bold mb-2">Existing teams</h2>
+        <Card className="relative overflow-hidden border-cyan-400/20 bg-slate-950/50 p-0 shadow-[0_0_28px_rgba(34,211,238,0.07)]">
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(34,211,238,0.05)_1px,transparent_1px)] bg-[length:100%_12px]" />
+          <div className="relative flex flex-col gap-3 border-b border-cyan-400/15 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-cyan-300/75">
+                Fleet roster
+              </p>
+              <h2 className="mt-1 text-sm font-bold uppercase tracking-wide">Existing teams</h2>
+            </div>
+            <div className="flex flex-wrap gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+              <span className="border border-cyan-400/15 bg-slate-900/60 px-2 py-1">
+                {totalAssignments} astronauts
+              </span>
+              <span className="border border-cyan-400/15 bg-slate-900/60 px-2 py-1">
+                {setupPercent}% ready
+              </span>
+            </div>
+          </div>
           {teams.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No teams yet.</p>
+            <p className="relative px-4 py-5 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
+              No team beacons registered.
+            </p>
           ) : (
-            <ul className="divide-y">
+            <ul className="relative grid gap-3 p-4 lg:grid-cols-2">
               <AnimatePresence>
                 {teams.map((team, idx) => (
                   <motion.li
                     key={team.id}
-                    className="flex items-center justify-between gap-3 py-3"
+                    className="overflow-hidden border border-cyan-400/15 bg-slate-900/55 shadow-[0_0_24px_rgba(15,23,42,0.4)]"
+                    style={{
+                      borderColor: team.color ? `${team.color}55` : undefined,
+                      boxShadow: team.color ? `0 0 24px ${team.color}18` : undefined,
+                    }}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}
                     transition={{ ...springTransition, delay: idx * 0.05 }}
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <TeamIcon icon={team.icon} color={team.color} name={team.name} />
-                      <div className="min-w-0">
-                        <p className="font-medium truncate">{team.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {team._count.players} players · {team._count.assignments} astronauts · {team._count.claims} claims
-                        </p>
+                    <div className="border-b border-white/10 bg-slate-950/50 px-3 py-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <TeamIcon
+                            icon={team.icon}
+                            color={team.color}
+                            name={team.name}
+                            className="h-10 w-10 text-sm shadow-[0_0_18px_rgba(255,255,255,0.08)]"
+                          />
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-bold uppercase tracking-wide text-slate-100">
+                              {team.name}
+                            </p>
+                            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                              Team vector {String(idx + 1).padStart(2, "0")}
+                            </p>
+                          </div>
+                        </div>
+                        <motion.div {...iconButtonInteraction}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setEditingTeam(team)}
+                            className="text-cyan-200 hover:bg-cyan-400/10 hover:text-cyan-100"
+                            aria-label={`Edit ${team.name}`}
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                        </motion.div>
                       </div>
                     </div>
-                    <motion.div {...iconButtonInteraction}>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setEditingTeam(team)}
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
-                    </motion.div>
+                    <div className="grid grid-cols-3 divide-x divide-white/10">
+                      {[
+                        ["Crew", team._count.players, UsersRound],
+                        ["Astronauts", team._count.assignments, Orbit],
+                        ["Claims", team._count.claims, ShieldCheck],
+                      ].map(([label, value, Icon]) => {
+                        const StatIcon = Icon as typeof UsersRound;
+                        return (
+                          <div key={label as string} className="px-3 py-3">
+                            <div className="mb-1 flex items-center gap-1.5 text-cyan-300/70">
+                              <StatIcon className="size-3.5" />
+                              <span className="font-mono text-[9px] uppercase tracking-[0.16em]">
+                                {label as string}
+                              </span>
+                            </div>
+                            <div className="font-mono text-lg font-bold text-slate-100">
+                              {value as number}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="h-1 bg-slate-800">
+                      <div
+                        className="h-full bg-cyan-300"
+                        style={{
+                          width: `${Math.min(100, team._count.players * 20)}%`,
+                          backgroundColor: team.color ?? undefined,
+                        }}
+                      />
+                    </div>
                   </motion.li>
                 ))}
               </AnimatePresence>
