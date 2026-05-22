@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { Context } from "../context";
 import { adminProcedure, publicProcedure, router } from "../index";
 import { generateAstronautProfile } from "../services/ai/generate-astronaut";
+import { getAttemptPhotoPreviewPath } from "../services/attempt-photo-url";
 
 const CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const generateFourLetterCode = customAlphabet(CODE_ALPHABET, 4);
@@ -40,6 +41,13 @@ export const astronautRouter = router({
             select: {
               team: { select: { id: true, name: true, color: true, icon: true } },
               claimedAt: true,
+              claimAttempt: {
+                select: {
+                  id: true,
+                  taskPrompt: true,
+                  imageBlobName: true,
+                },
+              },
             },
           },
         },
@@ -47,6 +55,7 @@ export const astronautRouter = router({
       if (!astronaut) return null;
       const claimedBy = astronaut.claims[0]?.team ?? null;
       const claimedAt = astronaut.claims[0]?.claimedAt ?? null;
+      const claimAttempt = astronaut.claims[0]?.claimAttempt ?? null;
       return {
         id: astronaut.id,
         name: astronaut.name,
@@ -56,6 +65,15 @@ export const astronautRouter = router({
         active: astronaut.active,
         claimedBy,
         claimedAt,
+        claimedAttempt: claimAttempt
+          ? {
+              id: claimAttempt.id,
+              taskPrompt: claimAttempt.taskPrompt,
+              previewUrl: claimAttempt.imageBlobName
+                ? getAttemptPhotoPreviewPath(claimAttempt.id)
+                : undefined,
+            }
+          : null,
       };
     }),
 

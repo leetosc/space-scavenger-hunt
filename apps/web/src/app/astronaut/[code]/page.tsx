@@ -6,6 +6,7 @@ import { cn } from "@space-scavenger-hunt/ui/lib/utils";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import type { Route } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useRef } from "react";
@@ -110,6 +111,7 @@ export default function AstronautPage({
   }
 
   const claimedBy = astronaut.claimedBy;
+  const claimedAttempt = astronaut.claimedAttempt;
   const ClaimedTeamIcon = claimedBy?.icon ? ICON_MAP[claimedBy.icon] : null;
 
   return (
@@ -213,6 +215,37 @@ export default function AstronautPage({
               <span className="text-sm">
                 Claimed by <span className="font-medium">{claimedBy.name}</span>
               </span>
+            </motion.div>
+          )}
+
+          {claimedAttempt && (
+            <motion.div
+              className="space-y-3 rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-3"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <div>
+                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-cyan-300">
+                  Completed task
+                </p>
+                <p className="text-sm leading-relaxed text-foreground/90">
+                  {claimedAttempt.taskPrompt}
+                </p>
+              </div>
+
+              {claimedAttempt.previewUrl && (
+                <div className="relative aspect-[4/3] w-full overflow-hidden rounded bg-muted/20">
+                  <Image
+                    src={claimedAttempt.previewUrl}
+                    alt={`Submitted photo for ${astronaut.name}`}
+                    fill
+                    sizes="(min-width: 640px) 464px, calc(100vw - 72px)"
+                    className="object-contain"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+              )}
             </motion.div>
           )}
         </Card>
