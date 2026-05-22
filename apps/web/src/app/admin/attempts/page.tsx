@@ -581,10 +581,6 @@ export default function AdminAttemptsPage() {
         >
           Loading...
         </motion.p>
-      ) : attempts.length === 0 ? (
-        <motion.div variants={fadeInUp}>
-          <Card className="p-6 text-center text-sm text-muted-foreground">No attempts match.</Card>
-        </motion.div>
       ) : (
         <motion.div
           className="space-y-3"
@@ -604,25 +600,33 @@ export default function AdminAttemptsPage() {
             onDeleteSelected={() => openDeleteDialog([...selectedIds])}
           />
 
-          <AnimatePresence>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-              {attempts.map((a) => (
-                <motion.div
-                  key={a.id}
-                  variants={fadeInUp}
-                  exit={{ opacity: 0, y: -10 }}
-                  layout
-                >
-                  <AttemptTile
-                    attempt={a}
-                    selected={selectedIds.has(a.id)}
-                    onSelectedChange={(checked) => toggleSelected(a.id, checked)}
-                    onOpen={() => setReviewingAttemptId(a.id)}
-                  />
-                </motion.div>
-              ))}
-            </div>
-          </AnimatePresence>
+          {attempts.length === 0 ? (
+            <motion.div variants={fadeInUp}>
+              <Card className="p-6 text-center text-sm text-muted-foreground">
+                No attempts match.
+              </Card>
+            </motion.div>
+          ) : (
+            <AnimatePresence>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                {attempts.map((a) => (
+                  <motion.div
+                    key={a.id}
+                    variants={fadeInUp}
+                    exit={{ opacity: 0, y: -10 }}
+                    layout
+                  >
+                    <AttemptTile
+                      attempt={a}
+                      selected={selectedIds.has(a.id)}
+                      onSelectedChange={(checked) => toggleSelected(a.id, checked)}
+                      onOpen={() => setReviewingAttemptId(a.id)}
+                    />
+                  </motion.div>
+                ))}
+              </div>
+            </AnimatePresence>
+          )}
         </motion.div>
       )}
       <AttemptReviewDialog

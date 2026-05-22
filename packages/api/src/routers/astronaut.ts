@@ -124,15 +124,6 @@ export const astronautRouter = router({
       });
     }),
 
-  generateCode: adminProcedure
-    .input(z.object({ id: z.string().min(1) }))
-    .mutation(async ({ ctx, input }) => {
-      return ctx.prisma.astronaut.update({
-        where: { id: input.id },
-        data: { code: await generateUniqueCode(ctx.prisma) },
-      });
-    }),
-
   delete: adminProcedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {

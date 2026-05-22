@@ -37,7 +37,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { motion } from "framer-motion";
-import { ArrowUpDown, Power, RefreshCw, Trash2 } from "lucide-react";
+import { ArrowUpDown, Power, Trash2 } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -72,7 +72,6 @@ type Astronaut = {
 type ColumnCallbacks = {
   appBaseUrl: string;
   onCopyUrl: (scanUrl: string) => void;
-  onRegenerateCode: (id: string) => void;
   onToggleActive: (id: string) => void;
   onDelete: (id: string, name: string) => void;
   onEditAssignment: (astronaut: Astronaut) => void;
@@ -369,12 +368,6 @@ function useColumns(callbacks: ColumnCallbacks) {
           return (
             <div className="flex items-center gap-0.5">
               <IconActionButton
-                label="New code"
-                onClick={() => callbacks.onRegenerateCode(a.id)}
-              >
-                <RefreshCw className="size-3.5" />
-              </IconActionButton>
-              <IconActionButton
                 label={a.active ? "Deactivate" : "Activate"}
                 onClick={() => callbacks.onToggleActive(a.id)}
               >
@@ -499,15 +492,6 @@ export default function AdminAstronautsPage() {
     onError: (err) => toast.error(err.message),
   });
 
-  const regenerateMutation = useMutation({
-    ...trpc.astronaut.generateCode.mutationOptions(),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: trpc.astronaut.list.queryKey() });
-      toast.success("Code regenerated");
-    },
-    onError: (err) => toast.error(err.message),
-  });
-
   const toggleActiveMutation = useMutation({
     ...trpc.astronaut.toggleActive.mutationOptions(),
     onSuccess: () =>
@@ -569,7 +553,6 @@ export default function AdminAstronautsPage() {
         navigator.clipboard.writeText(scanUrl);
         toast.success("URL copied");
       },
-      onRegenerateCode: (id) => regenerateMutation.mutate({ id }),
       onToggleActive: (id) => toggleActiveMutation.mutate({ id }),
       onDelete: (id, astronautName) => setDeleteTarget({ id, name: astronautName }),
       onEditAssignment: setEditingAssignment,
