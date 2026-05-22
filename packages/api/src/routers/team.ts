@@ -48,6 +48,7 @@ export const teamRouter = router({
         name: team.name,
         color: team.color,
         icon: team.icon,
+        signalBoostBalance: team.signalBoostBalance,
       },
       players: team.players.map((p) => ({ id: p.id, name: p.name })),
       assignedCount,
@@ -101,13 +102,26 @@ export const teamRouter = router({
           message: "There are already 4 teams.",
         });
       }
-      return ctx.prisma.team.create({
-        data: {
-          name: input.name,
-          color: input.color,
-          icon: input.icon,
-          joinCode: nanoid(10),
-        },
+      return ctx.prisma.$transaction(async (tx) => {
+        const team = await tx.team.create({
+          data: {
+            name: input.name,
+            color: input.color,
+            icon: input.icon,
+            signalBoostBalance: 2,
+            joinCode: nanoid(10),
+          },
+        });
+        await tx.signalBoostLedger.create({
+          data: {
+            teamId: team.id,
+            type: "INITIAL_GRANT",
+            delta: 2,
+            balanceAfter: team.signalBoostBalance,
+            note: "Starting Signal Boosts",
+          },
+        });
+        return team;
       });
     }),
 

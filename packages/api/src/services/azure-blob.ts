@@ -110,6 +110,18 @@ export function buildBlobName({
   return `claims/${teamId}/${attemptId}/${ts}.${safeExt}`;
 }
 
+export function buildHintBlobName({
+  hintId,
+  extension,
+}: {
+  hintId: string;
+  extension: string;
+}) {
+  const ts = new Date().toISOString().replace(/[:.]/g, "-");
+  const safeExt = extension.replace(/[^a-z0-9]/gi, "").toLowerCase() || "bin";
+  return `hints/${hintId}/${ts}.${safeExt}`;
+}
+
 export async function deleteBlob(blobName: string): Promise<void> {
   const blobClient = getContainerClient().getBlobClient(blobName);
   await blobClient.deleteIfExists();

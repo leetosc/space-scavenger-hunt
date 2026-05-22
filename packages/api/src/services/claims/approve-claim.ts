@@ -54,6 +54,22 @@ export async function approveClaim(attemptId: string): Promise<ApproveClaimResul
         },
       });
       claimId = created.id;
+
+      const team = await tx.team.update({
+        where: { id: attempt.teamId },
+        data: { signalBoostBalance: { increment: 1 } },
+        select: { signalBoostBalance: true },
+      });
+      await tx.signalBoostLedger.create({
+        data: {
+          teamId: attempt.teamId,
+          claimId,
+          type: "CLAIM_REWARD",
+          delta: 1,
+          balanceAfter: team.signalBoostBalance,
+          note: "Successful astronaut claim",
+        },
+      });
     }
 
     await tx.claimAttempt.update({

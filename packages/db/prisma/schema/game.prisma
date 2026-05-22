@@ -30,17 +30,20 @@ model Player {
 }
 
 model Team {
-  id          String                    @id @default(cuid())
-  name        String                    @unique
-  joinCode    String                    @unique
-  color       String?
-  icon        String?
-  players     Player[]
-  assignments TeamAstronautAssignment[]
-  attempts    ClaimAttempt[]
-  claims      TeamClaim[]
-  createdAt   DateTime                  @default(now())
-  updatedAt   DateTime                  @updatedAt
+  id                 String                    @id @default(cuid())
+  name               String                    @unique
+  joinCode           String                    @unique
+  color              String?
+  icon               String?
+  signalBoostBalance Int                       @default(2)
+  players            Player[]
+  assignments        TeamAstronautAssignment[]
+  attempts           ClaimAttempt[]
+  claims             TeamClaim[]
+  hintReveals        TeamLocationHintReveal[]
+  signalBoostLedger  SignalBoostLedger[]
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
 
   @@map("team")
 }
@@ -124,4 +127,61 @@ model TeamClaim {
   @@index([teamId])
   @@index([astronautId])
   @@map("team_claim")
+}
+
+model LocationHint {
+  id             String                   @id @default(cuid())
+  title          String?
+  description    String?
+  active         Boolean                  @default(true)
+  sortOrder      Int                      @default(0)
+  imageUrl       String?
+  imageBlobName  String?
+  imageMimeType  String?
+  imageSizeBytes Int?
+  reveals        TeamLocationHintReveal[]
+  ledgerEntries  SignalBoostLedger[]
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+
+  @@index([active])
+  @@index([sortOrder])
+  @@map("location_hint")
+}
+
+model TeamLocationHintReveal {
+  id             String       @id @default(cuid())
+  teamId         String
+  team           Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  locationHintId String
+  locationHint   LocationHint @relation(fields: [locationHintId], references: [id], onDelete: Cascade)
+  revealLevel    Int          @default(0)
+  lastSpentAt    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([teamId, locationHintId])
+  @@index([teamId])
+  @@index([locationHintId])
+  @@map("team_location_hint_reveal")
+}
+
+model SignalBoostLedger {
+  id             String        @id @default(cuid())
+  teamId         String
+  team           Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  locationHintId String?
+  locationHint   LocationHint? @relation(fields: [locationHintId], references: [id], onDelete: SetNull)
+  claimId        String?
+  type           String
+  delta          Int
+  balanceAfter   Int
+  note           String?
+  createdAt      DateTime      @default(now())
+
+  @@index([teamId])
+  @@index([locationHintId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("signal_boost_ledger")
 }

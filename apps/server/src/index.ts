@@ -8,6 +8,11 @@ import cors from "cors";
 import express from "express";
 
 import { bootstrapAdmin } from "./lib/bootstrap-admin";
+import {
+  getLocationHintPhoto,
+  replaceLocationHintPhoto,
+  uploadLocationHintPhoto,
+} from "./routes/hint-photo";
 import { getAttemptPhoto } from "./routes/attempt-photo";
 import { uploadAttemptPhoto, uploadMiddleware } from "./routes/upload";
 
@@ -49,6 +54,17 @@ app.post(
 );
 
 app.get("/api/attempts/:attemptId/photo/:token", getAttemptPhoto);
+app.post(
+  "/api/location-hints/upload",
+  uploadMiddleware.single("image"),
+  uploadLocationHintPhoto,
+);
+app.post(
+  "/api/location-hints/:hintId/upload",
+  uploadMiddleware.single("image"),
+  replaceLocationHintPhoto,
+);
+app.get("/api/location-hints/:hintId/photo/:token", getLocationHintPhoto);
 
 app.use(express.json());
 

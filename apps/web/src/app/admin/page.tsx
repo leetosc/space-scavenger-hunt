@@ -14,6 +14,7 @@ import {
   Rocket,
   Save,
   ShieldCheck,
+  Sparkles,
   Timer,
   UserRoundX,
   UsersRound,
@@ -169,12 +170,14 @@ export default function AdminOverviewPage() {
         </div>
       </motion.header>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
         <Stat label="Teams" value={counts.teams} icon={ShieldCheck} idx={0} />
         <Stat label="Players" value={counts.players} icon={UsersRound} idx={1} />
         <Stat label="Unassigned" value={counts.unassignedPlayers} icon={UserRoundX} idx={2} />
         <Stat label="Astronauts" value={counts.astronauts} icon={Rocket} idx={3} />
         <Stat label="Assignments" value={counts.assignments} icon={Orbit} idx={4} />
+        <Stat label="Hints" value={counts.activeHints} icon={Sparkles} idx={5} />
+        <Stat label="Boosts" value={counts.signalBoosts} icon={RadioTower} idx={6} />
       </div>
 
       <motion.div variants={fadeInUp}>

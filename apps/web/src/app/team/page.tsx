@@ -5,7 +5,7 @@ import { Card } from "@space-scavenger-hunt/ui/components/card";
 import { Input } from "@space-scavenger-hunt/ui/components/input";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Images, Pencil, Trophy, X } from "lucide-react";
+import { Check, Images, Pencil, Radar, Trophy, X, Zap } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -183,6 +183,12 @@ export default function TeamPage() {
         <p className="mt-2 text-sm">
           {claimedCount} / {assignedCount} astronauts claimed
         </p>
+        <div className="mt-3 inline-flex items-center gap-2 rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-sm">
+          <Zap className="size-4 text-cyan-200" />
+          <span className="font-mono font-semibold">
+            {team.signalBoostBalance} Signal Boost{team.signalBoostBalance === 1 ? "" : "s"}
+          </span>
+        </div>
         <div className="mt-3 h-2 w-full overflow-hidden rounded bg-white/20">
           <motion.div
             className="h-full rounded bg-white"
@@ -304,6 +310,13 @@ export default function TeamPage() {
       </motion.div>
 
       <motion.div className="flex flex-wrap justify-center gap-3" variants={fadeIn}>
+        <Link
+          href="/hints"
+          className="inline-flex h-9 items-center justify-center gap-1.5 border border-emerald-400/25 bg-emerald-400/10 px-3 font-mono text-xs font-semibold uppercase tracking-[0.16em] text-emerald-100 transition-colors hover:bg-emerald-400/15"
+        >
+          <Radar className="size-4" />
+          Hints
+        </Link>
         <Link
           href="/leaderboard"
           className="inline-flex h-9 items-center justify-center gap-1.5 border border-cyan-400/25 bg-cyan-400/10 px-3 font-mono text-xs font-semibold uppercase tracking-[0.16em] text-cyan-100 transition-colors hover:bg-cyan-400/15"

@@ -112,6 +112,22 @@ export default function WaitingPage() {
               {copy.body}
             </motion.p>
 
+            {activity.data.status === "TEAM_ASSIGNMENT" ? (
+              <motion.div
+                className="mt-4 rounded-md border border-cyan-500/15 bg-cyan-500/5 px-4 py-3 text-left"
+                variants={fadeInUp}
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300">
+                  Rules summary
+                </p>
+                <ul className="mt-2 space-y-1 text-xs leading-5 text-muted-foreground">
+                  <li>- Search for hidden astronauts</li>
+                  <li>- Scan an astronaut with your phone</li>
+                  <li>- Complete the task to rescue the astronaut</li>
+                </ul>
+              </motion.div>
+            ) : null}
+
             {me.data.player ? (
               <motion.p
                 className="text-xs text-muted-foreground mt-4"

@@ -42,6 +42,10 @@ const nextConfig: NextConfig = {
         source: "/attempt-photos/:attemptId/:token",
         destination: `${serverUrl}/api/attempts/:attemptId/photo/:token`,
       },
+      {
+        source: "/hint-photos/:hintId/:token",
+        destination: `${serverUrl}/api/location-hints/:hintId/photo/:token`,
+      },
     ];
   },
 };

@@ -24,7 +24,16 @@ export const activityRouter = router({
   }),
 
   validateSetup: adminProcedure.query(async ({ ctx }) => {
-    const [activity, teams, players, astronauts, assignments, unassignedPlayers] = await Promise.all(
+    const [
+      activity,
+      teams,
+      players,
+      astronauts,
+      assignments,
+      unassignedPlayers,
+      activeHints,
+      signalBoosts,
+    ] = await Promise.all(
       [
         getOrCreateActivity(),
         ctx.prisma.team.count(),
@@ -34,6 +43,8 @@ export const activityRouter = router({
           select: { astronautId: true, teamId: true },
         }),
         ctx.prisma.player.count({ where: { teamId: null } }),
+        ctx.prisma.locationHint.count({ where: { active: true } }),
+        ctx.prisma.team.aggregate({ _sum: { signalBoostBalance: true } }),
       ],
     );
 
@@ -67,6 +78,8 @@ export const activityRouter = router({
         unassignedPlayers,
         astronauts: astronauts.length,
         assignments: assignments.length,
+        activeHints,
+        signalBoosts: signalBoosts._sum.signalBoostBalance ?? 0,
       },
       issues,
       ready: issues.length === 0,
