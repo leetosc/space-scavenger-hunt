@@ -4,12 +4,6 @@ Team-based office scavenger hunt where players find hidden astronauts by scannin
 
 Built with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack): Next.js + Express + tRPC + Better Auth + Prisma (SQLite/libsql) + Bun + Turborepo.
 
-## Before you open-source it
-
-This repo is close, but it still needs an explicit license before you publish it
-publicly. Without one, other people can read the code on GitHub but do not have
-clear permission to reuse or modify it.
-
 ## Quick start
 
 ```bash
