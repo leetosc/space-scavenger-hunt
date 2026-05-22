@@ -2,9 +2,27 @@
 
 import type { AppRouter } from "@space-scavenger-hunt/api/routers/index";
 import { env } from "@space-scavenger-hunt/env/web";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@space-scavenger-hunt/ui/components/alert-dialog";
 import { Badge } from "@space-scavenger-hunt/ui/components/badge";
 import { Button } from "@space-scavenger-hunt/ui/components/button";
 import { Card } from "@space-scavenger-hunt/ui/components/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@space-scavenger-hunt/ui/components/dialog";
 import { Input } from "@space-scavenger-hunt/ui/components/input";
 import { Label } from "@space-scavenger-hunt/ui/components/label";
 import { Textarea } from "@space-scavenger-hunt/ui/components/textarea";
@@ -139,19 +157,24 @@ function HintPreview({ hint, level }: { hint: Hint; level: number }) {
 
 function HintEditor({
   hint,
+  teams,
   maxRevealLevel,
   saving,
   deleting,
   replacing,
+  updatingReveal,
   onSave,
   onDelete,
   onReplace,
+  onSetRevealLevel,
 }: {
   hint: Hint;
+  teams: Team[];
   maxRevealLevel: number;
   saving: boolean;
   deleting: boolean;
   replacing: boolean;
+  updatingReveal: boolean;
   onSave: (input: {
     id: string;
     title: string | null;
@@ -161,111 +184,115 @@ function HintEditor({
   }) => void;
   onDelete: (id: string) => void;
   onReplace: (id: string, file: File) => void;
+  onSetRevealLevel: (input: {
+    teamId: string;
+    locationHintId: string;
+    revealLevel: number;
+  }) => void;
 }) {
   const [title, setTitle] = useState(hint.title ?? "");
   const [description, setDescription] = useState(hint.description ?? "");
   const [sortOrder, setSortOrder] = useState(String(hint.sortOrder));
   const [active, setActive] = useState(hint.active);
   const [previewLevel, setPreviewLevel] = useState(0);
+  const [editOpen, setEditOpen] = useState(false);
+  const [revealOpen, setRevealOpen] = useState(false);
+  const revealByTeamId = useMemo(
+    () => new Map(hint.reveals.map((reveal) => [reveal.team.id, reveal])),
+    [hint.reveals],
+  );
+  const revealedTeamCount = hint.reveals.filter((reveal) => reveal.revealLevel > 0).length;
+
+  function saveDetails() {
+    const nextSort = Number(sortOrder);
+    if (!Number.isInteger(nextSort)) {
+      toast.error("Sort order must be a whole number.");
+      return;
+    }
+    onSave({
+      id: hint.id,
+      title: title.trim() || null,
+      description: description.trim() || null,
+      sortOrder: nextSort,
+      active,
+    });
+  }
 
   return (
     <motion.article variants={fadeInUp}>
       <Card className="overflow-hidden rounded-none border-cyan-400/20 bg-slate-950/65 p-0">
         <HintPreview hint={hint} level={previewLevel} />
-        <div className="space-y-4 p-4">
-          <div className="flex flex-wrap gap-1.5">
-            {Array.from({ length: maxRevealLevel + 1 }, (_, level) => (
-              <Button
-                key={level}
-                type="button"
-                size="sm"
-                variant={previewLevel === level ? "default" : "outline"}
-                className="h-7 px-2 text-xs"
-                onClick={() => setPreviewLevel(level)}
-              >
-                {level}
-              </Button>
-            ))}
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-[1fr_96px]">
-            <div>
-              <Label htmlFor={`hint-title-${hint.id}`}>Title</Label>
-              <Input
-                id={`hint-title-${hint.id}`}
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor={`hint-sort-${hint.id}`}>Sort</Label>
-              <Input
-                id={`hint-sort-${hint.id}`}
-                type="number"
-                inputMode="numeric"
-                value={sortOrder}
-                onChange={(event) => setSortOrder(event.target.value)}
-              />
-            </div>
-          </div>
-          <div>
-            <Label htmlFor={`hint-description-${hint.id}`}>Description</Label>
-            <Textarea
-              id={`hint-description-${hint.id}`}
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              rows={3}
-            />
-          </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={active}
-              onChange={(event) => setActive(event.target.checked)}
-              className="accent-cyan-400"
-            />
-            Active
-          </label>
-
-          {hint.reveals.length > 0 ? (
-            <div className="flex flex-wrap gap-1.5">
-              {hint.reveals.map((reveal) => (
+        <div className="space-y-3 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-bold text-slate-100">
+                {hint.title || "Untitled location photo"}
+              </p>
+              <div className="mt-1 flex flex-wrap gap-1.5">
                 <Badge
-                  key={reveal.id}
                   variant="outline"
-                  className="rounded-sm border-emerald-400/25 bg-emerald-400/10 text-emerald-200"
+                  className="rounded-sm border-cyan-400/25 bg-cyan-400/10 font-mono text-[10px] text-cyan-200"
                 >
-                  {reveal.team.name}: {reveal.revealLevel}/{maxRevealLevel}
+                  Sort {hint.sortOrder}
                 </Badge>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "rounded-sm font-mono text-[10px]",
+                    hint.active
+                      ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-200"
+                      : "border-slate-400/20 bg-slate-400/10 text-slate-300",
+                  )}
+                >
+                  {hint.active ? "Active" : "Inactive"}
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="rounded-sm border-amber-400/25 bg-amber-400/10 font-mono text-[10px] text-amber-200"
+                >
+                  {revealedTeamCount}/{teams.length} teams
+                </Badge>
+              </div>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="shrink-0"
+              onClick={() => setEditOpen(true)}
+            >
+              <Pencil className="size-3.5" />
+              Edit
+            </Button>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-cyan-400/10 pt-3">
+            <div className="flex flex-wrap gap-1.5">
+              {Array.from({ length: maxRevealLevel + 1 }, (_, level) => (
+                <Button
+                  key={level}
+                  type="button"
+                  size="sm"
+                  variant={previewLevel === level ? "default" : "outline"}
+                  className="h-7 min-w-8 px-2 text-xs"
+                  onClick={() => setPreviewLevel(level)}
+                >
+                  {level}
+                </Button>
               ))}
             </div>
-          ) : null}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setRevealOpen(true)}
+            >
+              <Zap className="size-3.5" />
+              Reveals
+            </Button>
+          </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <motion.div {...buttonInteraction}>
-              <Button
-                type="button"
-                size="sm"
-                disabled={saving}
-                onClick={() => {
-                  const nextSort = Number(sortOrder);
-                  if (!Number.isInteger(nextSort)) {
-                    toast.error("Sort order must be a whole number.");
-                    return;
-                  }
-                  onSave({
-                    id: hint.id,
-                    title: title.trim() || null,
-                    description: description.trim() || null,
-                    sortOrder: nextSort,
-                    active,
-                  });
-                }}
-              >
-                <Pencil className="size-3.5" />
-                Save
-              </Button>
-            </motion.div>
+          <div className="flex flex-wrap items-center gap-2 border-t border-cyan-400/10 pt-3">
             <label className="inline-flex h-8 cursor-pointer items-center gap-1.5 border border-input bg-background px-2.5 text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground">
               <RefreshCw className="size-3.5" />
               {replacing ? "Replacing..." : "Replace"}
@@ -295,6 +322,114 @@ function HintEditor({
             </motion.div>
           </div>
         </div>
+
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent className="sm:max-w-xl">
+            <DialogHeader>
+              <DialogTitle>Edit location photo</DialogTitle>
+              <DialogDescription className="sr-only">
+                Update the title, description, sort order, and active state.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-3 sm:grid-cols-[1fr_96px]">
+              <div>
+                <Label htmlFor={`hint-title-${hint.id}`}>Title</Label>
+                <Input
+                  id={`hint-title-${hint.id}`}
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor={`hint-sort-${hint.id}`}>Sort</Label>
+                <Input
+                  id={`hint-sort-${hint.id}`}
+                  type="number"
+                  inputMode="numeric"
+                  value={sortOrder}
+                  onChange={(event) => setSortOrder(event.target.value)}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <Label htmlFor={`hint-description-${hint.id}`}>Description</Label>
+                <Textarea
+                  id={`hint-description-${hint.id}`}
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  rows={4}
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm sm:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={active}
+                  onChange={(event) => setActive(event.target.checked)}
+                  className="accent-cyan-400"
+                />
+                Active
+              </label>
+            </div>
+            <DialogFooter>
+              <Button type="button" size="sm" disabled={saving} onClick={saveDetails}>
+                <Pencil className="size-3.5" />
+                {saving ? "Saving..." : "Save"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={revealOpen} onOpenChange={setRevealOpen}>
+          <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Team reveal levels</DialogTitle>
+              <DialogDescription className="sr-only">
+                Set each team&apos;s reveal level for this photo.
+              </DialogDescription>
+            </DialogHeader>
+            <ul className="max-h-[60vh] space-y-2 overflow-y-auto pr-1">
+              {teams.map((team) => {
+                const reveal = revealByTeamId.get(team.id);
+                const currentRevealLevel = reveal?.revealLevel ?? 0;
+                return (
+                  <li
+                    key={team.id}
+                    className="grid gap-2 border border-cyan-400/10 bg-slate-950/55 p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-100">
+                        {team.name}
+                      </p>
+                      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                        Level {currentRevealLevel}/{maxRevealLevel}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Array.from({ length: maxRevealLevel + 1 }, (_, level) => (
+                        <Button
+                          key={level}
+                          type="button"
+                          size="sm"
+                          variant={currentRevealLevel === level ? "default" : "outline"}
+                          className="h-7 min-w-8 px-2 text-xs"
+                          disabled={updatingReveal}
+                          onClick={() =>
+                            onSetRevealLevel({
+                              teamId: team.id,
+                              locationHintId: hint.id,
+                              revealLevel: level,
+                            })
+                          }
+                        >
+                          {level}
+                        </Button>
+                      ))}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </DialogContent>
+        </Dialog>
       </Card>
     </motion.article>
   );
@@ -460,6 +595,7 @@ export default function AdminHintsPage() {
   const [isDragActive, setIsDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [replacingId, setReplacingId] = useState<string | null>(null);
+  const [clearLedgerOpen, setClearLedgerOpen] = useState(false);
 
   const hintsQuery = useQuery(trpc.hint.adminList.queryOptions());
   const ledgerQuery = useQuery(
@@ -510,6 +646,27 @@ export default function AdminHintsPage() {
     ...trpc.hint.adminGrantInitialToTeam.mutationOptions(),
     onSuccess: () => {
       toast.success("Signal Boosts reset");
+      invalidate();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const clearLedgerMutation = useMutation({
+    ...trpc.hint.adminClearLedger.mutationOptions(),
+    onSuccess: (data) => {
+      toast.success(
+        data.deletedCount === 1
+          ? "1 ledger entry cleared"
+          : `${data.deletedCount} ledger entries cleared`,
+      );
+      setClearLedgerOpen(false);
+      invalidate();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const setRevealLevelMutation = useMutation({
+    ...trpc.hint.adminSetTeamRevealLevel.mutationOptions(),
+    onSuccess: () => {
+      toast.success("Team reveal level updated");
       invalidate();
     },
     onError: (error) => toast.error(error.message),
@@ -833,13 +990,16 @@ export default function AdminHintsPage() {
                 <HintEditor
                   key={hint.id}
                   hint={hint}
+                  teams={hintsQuery.data.teams}
                   maxRevealLevel={hintsQuery.data.maxRevealLevel}
                   saving={updateMutation.isPending}
                   deleting={deleteMutation.isPending}
                   replacing={replacingId === hint.id}
+                  updatingReveal={setRevealLevelMutation.isPending}
                   onSave={(input) => updateMutation.mutate(input)}
                   onDelete={(id) => deleteMutation.mutate({ id })}
                   onReplace={replaceHintPhoto}
+                  onSetRevealLevel={(input) => setRevealLevelMutation.mutate(input)}
                 />
               ))}
             </AnimatePresence>
@@ -871,10 +1031,22 @@ export default function AdminHintsPage() {
         </Card>
 
         <Card className="rounded-none border-cyan-400/20 bg-slate-950/55 p-0">
-          <div className="border-b border-cyan-400/15 px-4 py-3">
+          <div className="flex items-center justify-between gap-3 border-b border-cyan-400/15 px-4 py-3">
             <h2 className="font-mono text-sm font-bold uppercase tracking-[0.18em] text-slate-100">
               Recent ledger
             </h2>
+            <Button
+              type="button"
+              size="sm"
+              variant="destructive"
+              disabled={
+                clearLedgerMutation.isPending || !ledgerQuery.data || ledgerQuery.data.length === 0
+              }
+              onClick={() => setClearLedgerOpen(true)}
+            >
+              <Trash2 className="size-3.5" />
+              Clear ledger
+            </Button>
           </div>
           <div className="max-h-[520px] overflow-y-auto p-4">
             {!ledgerQuery.data ? (
@@ -926,6 +1098,29 @@ export default function AdminHintsPage() {
           </div>
         </Card>
       </section>
+
+      <AlertDialog open={clearLedgerOpen} onOpenChange={setClearLedgerOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear ledger history?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes all Signal Boost ledger entries from the admin hints page.
+              Team balances and hint reveal progress will stay as-is.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={clearLedgerMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={clearLedgerMutation.isPending}
+              onClick={() => clearLedgerMutation.mutate()}
+            >
+              {clearLedgerMutation.isPending ? "Clearing..." : "Clear ledger"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.div>
   );
 }

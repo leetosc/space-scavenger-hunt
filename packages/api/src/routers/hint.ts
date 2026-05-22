@@ -195,6 +195,75 @@ export const hintRouter = router({
       });
     }),
 
+  adminClearLedger: adminProcedure.mutation(async ({ ctx }) => {
+    const result = await ctx.prisma.signalBoostLedger.deleteMany();
+    return { deletedCount: result.count };
+  }),
+
+  adminSetTeamRevealLevel: adminProcedure
+    .input(
+      z.object({
+        teamId: z.string().min(1),
+        locationHintId: z.string().min(1),
+        revealLevel: z.number().int().min(0).max(MAX_HINT_REVEAL_LEVEL),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const hint = await ctx.prisma.locationHint.findUnique({
+        where: { id: input.locationHintId },
+        select: { id: true },
+      });
+      if (!hint) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Hint not found." });
+      }
+
+      const team = await ctx.prisma.team.findUnique({
+        where: { id: input.teamId },
+        select: { id: true },
+      });
+      if (!team) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Team not found." });
+      }
+
+      if (input.revealLevel === 0) {
+        await ctx.prisma.teamLocationHintReveal.deleteMany({
+          where: {
+            teamId: input.teamId,
+            locationHintId: input.locationHintId,
+          },
+        });
+
+        return {
+          teamId: input.teamId,
+          locationHintId: input.locationHintId,
+          revealLevel: 0,
+        };
+      }
+
+      const reveal = await ctx.prisma.teamLocationHintReveal.upsert({
+        where: {
+          teamId_locationHintId: {
+            teamId: input.teamId,
+            locationHintId: input.locationHintId,
+          },
+        },
+        create: {
+          teamId: input.teamId,
+          locationHintId: input.locationHintId,
+          revealLevel: input.revealLevel,
+        },
+        update: {
+          revealLevel: input.revealLevel,
+        },
+      });
+
+      return {
+        teamId: reveal.teamId,
+        locationHintId: reveal.locationHintId,
+        revealLevel: clampRevealLevel(reveal.revealLevel),
+      };
+    }),
+
   adminCreatePlaceholder: adminProcedure
     .input(
       z.object({
