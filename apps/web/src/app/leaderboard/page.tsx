@@ -2,7 +2,8 @@
 
 import { Card } from "@space-scavenger-hunt/ui/components/card";
 import { useQuery } from "@tanstack/react-query";
-import { Satellite, Sparkles } from "lucide-react";
+import { Images, Satellite, Sparkles } from "lucide-react";
+import Link from "next/link";
 
 import Loader from "@/components/loader";
 import { MissionCountdown } from "@/components/mission-countdown";
@@ -63,14 +64,23 @@ export default function LeaderboardPage() {
               <Satellite className="size-3.5" />
               Live rescue telemetry
             </div>
-            <div>
-              <h1 className="bg-gradient-to-r from-white via-cyan-100 to-indigo-200 bg-clip-text text-3xl font-black tracking-tight text-transparent sm:text-5xl">
-                Mission Leaderboard
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-                Teams are racing through the station map, rescuing stranded astronauts, and
-                climbing the command feed in real time.
-              </p>
+            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h1 className="bg-gradient-to-r from-white via-cyan-100 to-indigo-200 bg-clip-text text-3xl font-black tracking-tight text-transparent sm:text-5xl">
+                  Mission Leaderboard
+                </h1>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+                  Teams are racing through the station map, rescuing stranded astronauts, and
+                  climbing the command feed in real time.
+                </p>
+              </div>
+              <Link
+                href="/submissions"
+                className="inline-flex h-9 w-fit items-center justify-center gap-1.5 rounded-none border border-cyan-400/30 bg-cyan-400/10 px-3 font-mono text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100 transition-colors hover:bg-cyan-400/15"
+              >
+                <Images className="size-4" />
+                View submissions
+              </Link>
             </div>
           </div>
         </div>

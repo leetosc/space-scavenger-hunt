@@ -5,7 +5,7 @@ import { Card } from "@space-scavenger-hunt/ui/components/card";
 import { Input } from "@space-scavenger-hunt/ui/components/input";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Pencil, X } from "lucide-react";
+import { Check, Images, Pencil, Trophy, X } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -303,12 +303,20 @@ export default function TeamPage() {
         </Card>
       </motion.div>
 
-      <motion.div
-        className="text-center"
-        variants={fadeIn}
-      >
-        <Link href="/leaderboard" className="text-sm underline text-blue-600">
-          View leaderboard
+      <motion.div className="flex flex-wrap justify-center gap-3" variants={fadeIn}>
+        <Link
+          href="/leaderboard"
+          className="inline-flex h-9 items-center justify-center gap-1.5 border border-cyan-400/25 bg-cyan-400/10 px-3 font-mono text-xs font-semibold uppercase tracking-[0.16em] text-cyan-100 transition-colors hover:bg-cyan-400/15"
+        >
+          <Trophy className="size-4" />
+          Leaderboard
+        </Link>
+        <Link
+          href="/submissions"
+          className="inline-flex h-9 items-center justify-center gap-1.5 border border-indigo-400/25 bg-indigo-400/10 px-3 font-mono text-xs font-semibold uppercase tracking-[0.16em] text-indigo-100 transition-colors hover:bg-indigo-400/15"
+        >
+          <Images className="size-4" />
+          Submissions
         </Link>
       </motion.div>
     </motion.div>

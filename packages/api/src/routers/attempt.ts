@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { adminProcedure, playerProcedure, router } from "../index";
+import { adminProcedure, playerProcedure, protectedProcedure, router } from "../index";
 import { generateTaskPrompt } from "../services/ai/generate-task";
 import { getAttemptPhotoPreviewPath } from "../services/attempt-photo-url";
 import { deleteBlob } from "../services/azure-blob";
@@ -89,6 +89,22 @@ export const attemptRouter = router({
         },
       });
     }),
+
+  listCompleted: protectedProcedure.query(async ({ ctx }) => {
+    const attempts = await ctx.prisma.claimAttempt.findMany({
+      where: { status: { in: ["APPROVED", "REJECTED"] } },
+      include: { astronaut: true, team: true },
+      orderBy: [{ reviewedAt: "desc" }, { submittedAt: "desc" }, { createdAt: "desc" }],
+    });
+
+    return attempts.map((a) => {
+      let previewUrl: string | undefined;
+      if (a.imageBlobName) {
+        previewUrl = getAttemptPhotoPreviewPath(a.id);
+      }
+      return { ...a, previewUrl };
+    });
+  }),
 
   adminList: adminProcedure
     .input(z.object({ status: z.string().optional() }).optional())

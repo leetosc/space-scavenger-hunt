@@ -45,7 +45,10 @@ export default function Header() {
     { to: "/" as const, label: "Mission" },
     { to: "/leaderboard" as const, label: "Leaderboard" },
   ];
-  const playerLinks = [{ to: "/team" as const, label: "My Team" }];
+  const playerLinks = [
+    { to: "/team" as const, label: "My Team" },
+    { to: "/submissions" as const, label: "Submissions" },
+  ];
   const adminLinks = [
     { to: "/admin" as const, label: "Admin" },
     { to: "/admin/kickoff" as const, label: "Kickoff" },
