@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@space-scavenger-hunt/ui/components/dialog";
 import { Label } from "@space-scavenger-hunt/ui/components/label";
+import { Textarea } from "@space-scavenger-hunt/ui/components/textarea";
 import { cn } from "@space-scavenger-hunt/ui/lib/utils";
 import type { AppRouter } from "@space-scavenger-hunt/api/routers/index";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -50,6 +51,10 @@ type RouterOutputs = inferRouterOutputs<AppRouter>;
 type Attempt = RouterOutputs["attempt"]["adminList"][number];
 type AttemptStatus = (typeof ATTEMPT_STATUSES)[number];
 type StatusFilterId = (typeof STATUS_FILTERS)[number]["id"];
+type RejectTarget =
+  | { type: "reject"; attemptId: string; astronautName: string }
+  | { type: "setStatus"; attemptId: string; astronautName: string; status: AttemptStatus };
+type RejectTargetInput = { type: "reject" } | { type: "setStatus"; status: AttemptStatus };
 
 function formatStatus(status: string) {
   return status.replaceAll("_", " ").toLowerCase();
@@ -432,6 +437,86 @@ function AttemptReviewDialog({
   );
 }
 
+function RejectAttemptDialog({
+  target,
+  pending,
+  onCancel,
+  onConfirm,
+}: {
+  target: RejectTarget | null;
+  pending: boolean;
+  onCancel: () => void;
+  onConfirm: (feedback: string) => void;
+}) {
+  const [feedback, setFeedback] = useState("");
+
+  useEffect(() => {
+    if (target) {
+      setFeedback("");
+    }
+  }, [target]);
+
+  const submit = () => {
+    onConfirm(feedback.trim() || "Manually rejected by admin.");
+  };
+
+  return (
+    <Dialog
+      open={target !== null}
+      onOpenChange={(open) => {
+        if (!open && !pending) {
+          onCancel();
+        }
+      }}
+    >
+      <DialogContent className="sm:max-w-md" showCloseButton={!pending}>
+        <DialogHeader>
+          <DialogTitle>Reject attempt?</DialogTitle>
+          <DialogDescription>
+            {target
+              ? `Send ${target.astronautName}'s attempt back with optional feedback.`
+              : "Send this attempt back with optional feedback."}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="reject-feedback">Feedback</Label>
+          <Textarea
+            id="reject-feedback"
+            value={feedback}
+            maxLength={500}
+            rows={4}
+            disabled={pending}
+            placeholder="Manually rejected by admin."
+            onChange={(event) => setFeedback(event.target.value)}
+          />
+        </div>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={pending}
+            onClick={onCancel}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            disabled={pending}
+            onClick={submit}
+          >
+            {pending ? "Rejecting..." : "Reject"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function AdminAttemptsPage() {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<StatusFilterId>("all");
@@ -439,6 +524,7 @@ export default function AdminAttemptsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [reviewingAttemptId, setReviewingAttemptId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string[] | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<RejectTarget | null>(null);
 
   const attemptsQuery = useQuery({
     ...trpc.attempt.adminList.queryOptions(
@@ -548,6 +634,39 @@ export default function AdminAttemptsPage() {
     deleteMutation.mutate({ attemptIds: deleteTarget });
   };
 
+  const openRejectDialog = (attempt: Attempt, target: RejectTargetInput) => {
+    const attemptDetails = {
+      attemptId: attempt.id,
+      astronautName: attempt.astronaut.name,
+    };
+
+    setRejectTarget(
+      target.type === "setStatus"
+        ? { ...attemptDetails, type: "setStatus", status: target.status }
+        : { ...attemptDetails, type: "reject" },
+    );
+  };
+
+  const handleConfirmReject = (feedback: string) => {
+    if (!rejectTarget) return;
+    if (rejectTarget.type === "setStatus") {
+      setStatusMutation.mutate(
+        {
+          attemptId: rejectTarget.attemptId,
+          status: rejectTarget.status,
+          feedback,
+        },
+        { onSuccess: () => setRejectTarget(null) },
+      );
+      return;
+    }
+
+    rejectMutation.mutate(
+      { attemptId: rejectTarget.attemptId, feedback },
+      { onSuccess: () => setRejectTarget(null) },
+    );
+  };
+
   return (
     <motion.div
       className="w-full max-w-7xl space-y-4"
@@ -650,14 +769,16 @@ export default function AdminAttemptsPage() {
         }}
         onSetStatus={() => {
           if (!reviewingAttempt) return;
-          const feedback =
-            reviewingDraftStatus === "REJECTED"
-              ? prompt("Reason (optional)") ?? "Manually rejected by admin."
-              : undefined;
+          if (reviewingDraftStatus === "REJECTED") {
+            openRejectDialog(reviewingAttempt, {
+              type: "setStatus",
+              status: reviewingDraftStatus,
+            });
+            return;
+          }
           setStatusMutation.mutate({
             attemptId: reviewingAttempt.id,
             status: reviewingDraftStatus,
-            ...(feedback ? { feedback } : {}),
           });
         }}
         onApprove={() => {
@@ -666,8 +787,7 @@ export default function AdminAttemptsPage() {
         }}
         onReject={() => {
           if (!reviewingAttempt) return;
-          const feedback = prompt("Reason (optional)") ?? "Manually rejected by admin.";
-          rejectMutation.mutate({ attemptId: reviewingAttempt.id, feedback });
+          openRejectDialog(reviewingAttempt, { type: "reject" });
         }}
         onDelete={() => {
           if (!reviewingAttempt) return;
@@ -675,6 +795,12 @@ export default function AdminAttemptsPage() {
           setReviewingAttemptId(null);
           openDeleteDialog([attemptId]);
         }}
+      />
+      <RejectAttemptDialog
+        target={rejectTarget}
+        pending={rejectMutation.isPending || setStatusMutation.isPending}
+        onCancel={() => setRejectTarget(null)}
+        onConfirm={handleConfirmReject}
       />
       <Dialog
         open={deleteTarget !== null}

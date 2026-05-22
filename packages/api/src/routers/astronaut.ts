@@ -1,4 +1,5 @@
 import { env } from "@space-scavenger-hunt/env/server";
+import { TRPCError } from "@trpc/server";
 import { customAlphabet } from "nanoid";
 import { z } from "zod";
 
@@ -27,7 +28,8 @@ export const astronautRouter = router({
   getByCode: publicProcedure
     .input(z.object({ code: z.string().min(1).max(64) }))
     .query(async ({ ctx, input }) => {
-      const code = input.code.length === 4 ? input.code.toUpperCase() : input.code;
+      const code =
+        input.code.length === 4 ? input.code.toUpperCase() : input.code;
       const astronaut = await ctx.prisma.astronaut.findUnique({
         where: { code },
         select: {
@@ -38,8 +40,11 @@ export const astronautRouter = router({
           code: true,
           active: true,
           claims: {
+            orderBy: { claimedAt: "desc" },
             select: {
-              team: { select: { id: true, name: true, color: true, icon: true } },
+              team: {
+                select: { id: true, name: true, color: true, icon: true },
+              },
               claimedAt: true,
               claimAttempt: {
                 select: {
@@ -82,7 +87,7 @@ export const astronautRouter = router({
       orderBy: { createdAt: "asc" },
       include: {
         assignments: { include: { team: true } },
-        claims: { include: { team: true } },
+        claims: { orderBy: { claimedAt: "desc" }, include: { team: true } },
       },
     });
   }),
@@ -134,11 +139,139 @@ export const astronautRouter = router({
   toggleActive: adminProcedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      const current = await ctx.prisma.astronaut.findUnique({ where: { id: input.id } });
+      const current = await ctx.prisma.astronaut.findUnique({
+        where: { id: input.id },
+      });
       if (!current) throw new Error("Not found");
       return ctx.prisma.astronaut.update({
         where: { id: input.id },
         data: { active: !current.active },
+      });
+    }),
+
+  setClaimedByTeam: adminProcedure
+    .input(
+      z.object({ id: z.string().min(1), teamId: z.string().min(1).nullable() }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.prisma.$transaction(async (tx) => {
+        const astronaut = await tx.astronaut.findUnique({
+          where: { id: input.id },
+          select: { id: true },
+        });
+        if (!astronaut) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Astronaut not found.",
+          });
+        }
+
+        const existingClaims = await tx.teamClaim.findMany({
+          where: { astronautId: input.id },
+          select: {
+            claimAttempt: {
+              select: {
+                id: true,
+                imageBlobName: true,
+                imageUrl: true,
+                submittedAt: true,
+              },
+            },
+          },
+        });
+
+        await tx.teamClaim.deleteMany({ where: { astronautId: input.id } });
+
+        for (const claim of existingClaims) {
+          await tx.claimAttempt.update({
+            where: { id: claim.claimAttempt.id },
+            data: {
+              status:
+                claim.claimAttempt.submittedAt ||
+                claim.claimAttempt.imageBlobName ||
+                claim.claimAttempt.imageUrl
+                  ? "SUBMITTED"
+                  : "PENDING_PHOTO",
+              reviewedAt: null,
+            },
+          });
+        }
+
+        if (!input.teamId) {
+          return { claimed: false };
+        }
+
+        const team = await tx.team.findUnique({
+          where: { id: input.teamId },
+          select: { id: true },
+        });
+        if (!team) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Team not found.",
+          });
+        }
+
+        const player = await tx.player.findFirst({
+          where: { teamId: input.teamId },
+          orderBy: { createdAt: "asc" },
+          select: { id: true },
+        });
+        if (!player) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Add a player to this team before manually claiming an astronaut.",
+          });
+        }
+
+        const reviewedAt = new Date();
+        const attempt =
+          (await tx.claimAttempt.findFirst({
+            where: { teamId: input.teamId, astronautId: input.id },
+            orderBy: { createdAt: "desc" },
+            select: { id: true },
+          })) ??
+          (await tx.claimAttempt.create({
+            data: {
+              teamId: input.teamId,
+              astronautId: input.id,
+              scannedByPlayerId: player.id,
+              status: "APPROVED",
+              taskPrompt: "Manually claimed by admin.",
+              reviewedAt,
+            },
+            select: { id: true },
+          }));
+
+        await tx.claimAttempt.update({
+          where: { id: attempt.id },
+          data: { status: "APPROVED", reviewedAt },
+        });
+
+        const activity = await tx.activity.findFirst({
+          orderBy: { createdAt: "asc" },
+        });
+        const claimedElapsedSeconds = activity?.startedAt
+          ? Math.max(
+              0,
+              Math.floor(
+                (reviewedAt.getTime() - activity.startedAt.getTime()) / 1000,
+              ),
+            )
+          : null;
+
+        const claim = await tx.teamClaim.create({
+          data: {
+            teamId: input.teamId,
+            astronautId: input.id,
+            claimAttemptId: attempt.id,
+            claimedAt: reviewedAt,
+            claimedElapsedSeconds,
+          },
+        });
+
+        return { claimed: true, claimId: claim.id };
       });
     }),
 
@@ -152,8 +285,12 @@ export const astronautRouter = router({
   getScanUrl: adminProcedure
     .input(z.object({ id: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
-      const astronaut = await ctx.prisma.astronaut.findUnique({ where: { id: input.id } });
+      const astronaut = await ctx.prisma.astronaut.findUnique({
+        where: { id: input.id },
+      });
       if (!astronaut) throw new Error("Not found");
-      return { url: `${env.APP_BASE_URL.replace(/\/$/, "")}/astronaut/${astronaut.code}` };
+      return {
+        url: `${env.APP_BASE_URL.replace(/\/$/, "")}/astronaut/${astronaut.code}`,
+      };
     }),
 });

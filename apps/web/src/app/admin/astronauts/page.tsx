@@ -37,7 +37,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { motion } from "framer-motion";
-import { ArrowUpDown, Power, Trash2 } from "lucide-react";
+import { ArrowUpDown, Power, ShieldCheck, Trash2 } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -66,7 +66,7 @@ type Astronaut = {
   code: string;
   active: boolean;
   assignedTeam: TeamInfo | null;
-  claimedBy: string | null;
+  claimedTeam: TeamInfo | null;
 };
 
 type ColumnCallbacks = {
@@ -75,6 +75,7 @@ type ColumnCallbacks = {
   onToggleActive: (id: string) => void;
   onDelete: (id: string, name: string) => void;
   onEditAssignment: (astronaut: Astronaut) => void;
+  onEditClaim: (astronaut: Astronaut) => void;
 };
 
 function IconActionButton({
@@ -237,6 +238,98 @@ function AssignTeamDialog({
   );
 }
 
+function ClaimedStatusDialog({
+  astronaut,
+  teams,
+  open,
+  onOpenChange,
+  onSetClaimedByTeam,
+  isPending,
+}: {
+  astronaut: Astronaut;
+  teams: TeamInfo[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSetClaimedByTeam: (astronautId: string, teamId: string | null) => void;
+  isPending: boolean;
+}) {
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(
+    astronaut.claimedTeam?.id ?? null,
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Claimed status</DialogTitle>
+          <DialogDescription>
+            Choose which team has claimed {astronaut.name}, or clear the claim.
+          </DialogDescription>
+        </DialogHeader>
+
+        <motion.div
+          className="space-y-2"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+        >
+          <motion.button
+            type="button"
+            onClick={() => setSelectedTeamId(null)}
+            className={cn(
+              "flex w-full items-center rounded-md border px-3 py-2 text-left text-xs transition-colors hover:bg-muted/50",
+              selectedTeamId === null
+                ? "border-ring ring-1 ring-ring/50 bg-muted/30"
+                : "border-border/60",
+            )}
+            variants={fadeInUp}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+          >
+            <span className="text-muted-foreground">Unclaimed</span>
+          </motion.button>
+          {teams.map((team) => (
+            <motion.button
+              key={team.id}
+              type="button"
+              onClick={() => setSelectedTeamId(team.id)}
+              className={cn(
+                "flex w-full items-center rounded-md border px-3 py-2 text-left transition-colors hover:bg-muted/50",
+                selectedTeamId === team.id
+                  ? "border-ring ring-1 ring-ring/50 bg-muted/30"
+                  : "border-border/60",
+              )}
+              variants={fadeInUp}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+            >
+              <TeamBadge team={team} />
+            </motion.button>
+          ))}
+        </motion.div>
+
+        <DialogFooter>
+          <motion.div {...buttonInteraction}>
+            <Button
+              size="sm"
+              disabled={isPending}
+              onClick={() => {
+                const currentTeamId = astronaut.claimedTeam?.id ?? null;
+                if (selectedTeamId !== currentTeamId) {
+                  onSetClaimedByTeam(astronaut.id, selectedTeamId);
+                }
+                onOpenChange(false);
+              }}
+            >
+              Save
+            </Button>
+          </motion.div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Column definitions
 // ---------------------------------------------------------------------------
@@ -333,30 +426,50 @@ function useColumns(callbacks: ColumnCallbacks) {
           return (
             <div className="flex items-center gap-2">
               <code className="bg-muted px-2 py-0.5 rounded text-xs shrink-0">{a.code}</code>
-              <motion.div {...buttonInteraction}>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => callbacks.onCopyUrl(scanUrl)}
-                >
-                  Copy
-                </Button>
-              </motion.div>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <motion.div {...buttonInteraction}>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => callbacks.onCopyUrl(scanUrl)}
+                      >
+                        Copy
+                      </Button>
+                    </motion.div>
+                  }
+                />
+                <TooltipContent className="max-w-sm whitespace-normal break-all">
+                  {scanUrl}
+                </TooltipContent>
+              </Tooltip>
             </div>
           );
         },
       },
       {
-        accessorKey: "claimedBy",
+        accessorKey: "claimedTeam",
         header: "Claimed",
         cell: ({ row }) => {
-          const claimedBy = row.original.claimedBy;
-          if (!claimedBy) return <span className="text-muted-foreground">—</span>;
+          const astronaut = row.original;
+          const claimedTeam = astronaut.claimedTeam;
           return (
-            <span className="text-[11px] px-1.5 py-0.5 rounded-sm border border-blue-500/40 text-blue-400 bg-blue-500/10">
-              {claimedBy}
-            </span>
+            <button
+              type="button"
+              onClick={() => callbacks.onEditClaim(astronaut)}
+              className="inline-flex min-w-[92px] max-w-full items-center rounded-md border border-transparent px-2 py-1 text-left transition-colors hover:border-border/60 hover:bg-muted/50"
+            >
+              {claimedTeam ? (
+                <span className="inline-flex min-w-0 items-center gap-1.5 text-[11px] text-blue-400">
+                  <ShieldCheck className="size-3 shrink-0" />
+                  <TeamBadge team={claimedTeam} />
+                </span>
+              ) : (
+                <span className="text-xs text-muted-foreground">Unclaimed</span>
+              )}
+            </button>
           );
         },
       },
@@ -472,6 +585,7 @@ export default function AdminAstronautsPage() {
   const [description, setDescription] = useState("");
   const [hint, setHint] = useState("");
   const [editingAssignment, setEditingAssignment] = useState<Astronaut | null>(null);
+  const [editingClaim, setEditingClaim] = useState<Astronaut | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const invalidateAll = () => {
@@ -479,6 +593,8 @@ export default function AdminAstronautsPage() {
     queryClient.invalidateQueries({ queryKey: trpc.assignment.list.queryKey() });
     queryClient.invalidateQueries({ queryKey: trpc.team.list.queryKey() });
     queryClient.invalidateQueries({ queryKey: trpc.activity.validateSetup.queryKey() });
+    queryClient.invalidateQueries({ queryKey: trpc.leaderboard.getCurrent.queryKey() });
+    queryClient.invalidateQueries({ queryKey: trpc.leaderboard.getFinal.queryKey() });
   };
 
   const createMutation = useMutation({
@@ -496,6 +612,15 @@ export default function AdminAstronautsPage() {
     ...trpc.astronaut.toggleActive.mutationOptions(),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: trpc.astronaut.list.queryKey() }),
+    onError: (err) => toast.error(err.message),
+  });
+
+  const setClaimedByTeamMutation = useMutation({
+    ...trpc.astronaut.setClaimedByTeam.mutationOptions(),
+    onSuccess: () => {
+      toast.success("Claimed status updated");
+      invalidateAll();
+    },
     onError: (err) => toast.error(err.message),
   });
 
@@ -540,9 +665,21 @@ export default function AdminAstronautsPage() {
       code: a.code,
       active: a.active,
       assignedTeam: assignment?.team
-        ? { id: assignment.team.id, name: assignment.team.name, color: assignment.team.color, icon: assignment.team.icon }
+        ? {
+            id: assignment.team.id,
+            name: assignment.team.name,
+            color: assignment.team.color,
+            icon: assignment.team.icon,
+          }
         : null,
-      claimedBy: a.claims[0]?.team?.name ?? null,
+      claimedTeam: a.claims[0]?.team
+        ? {
+            id: a.claims[0].team.id,
+            name: a.claims[0].team.name,
+            color: a.claims[0].team.color,
+            icon: a.claims[0].team.icon,
+          }
+        : null,
     };
   });
 
@@ -556,6 +693,7 @@ export default function AdminAstronautsPage() {
       onToggleActive: (id) => toggleActiveMutation.mutate({ id }),
       onDelete: (id, astronautName) => setDeleteTarget({ id, name: astronautName }),
       onEditAssignment: setEditingAssignment,
+      onEditClaim: setEditingClaim,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [appBaseUrl],
@@ -644,6 +782,22 @@ export default function AdminAstronautsPage() {
           onAssign={(astronautId, teamId) => assignMutation.mutate({ astronautId, teamId })}
           onUnassign={(astronautId, teamId) => unassignMutation.mutate({ astronautId, teamId })}
           isPending={assignMutation.isPending || unassignMutation.isPending}
+        />
+      )}
+
+      {editingClaim && (
+        <ClaimedStatusDialog
+          key={editingClaim.id}
+          astronaut={editingClaim}
+          teams={teams}
+          open={!!editingClaim}
+          onOpenChange={(open) => {
+            if (!open) setEditingClaim(null);
+          }}
+          onSetClaimedByTeam={(astronautId, teamId) =>
+            setClaimedByTeamMutation.mutate({ id: astronautId, teamId })
+          }
+          isPending={setClaimedByTeamMutation.isPending}
         />
       )}
 
