@@ -100,17 +100,20 @@ bunx prisma migrate resolve --applied 0_init
 
 ## 4. Run the processes
 
-Use PM2 (one process per app):
+Use PM2 with the checked-in ecosystem file (one process per app):
 
 ```bash
-# Start server (Bun runs the entry directly):
-pm2 start --name scavenger-server --interpreter bun apps/server/src/index.ts
-
-# Start web (uses next start on port 3001):
-pm2 start --name scavenger-web --cwd apps/web --interpreter bun -- bun run start
-
+pm2 start ecosystem.config.cjs
 pm2 save
 pm2 startup            # follow the printed instructions to enable on boot
+```
+
+The default ports are `3000` for `scavenger-server` and `3001` for
+`scavenger-web`. Override them when starting or restarting PM2:
+
+```bash
+SCAVENGER_SERVER_PORT=4000 SCAVENGER_WEB_PORT=4001 pm2 start ecosystem.config.cjs
+SCAVENGER_SERVER_PORT=4000 SCAVENGER_WEB_PORT=4001 pm2 restart ecosystem.config.cjs --update-env
 ```
 
 On first start, `apps/server` will auto-create the admin user from
@@ -219,7 +222,7 @@ git pull
 bun install
 bun run db:deploy      # only if schema changed
 bun run build
-pm2 restart scavenger-server scavenger-web
+pm2 restart ecosystem.config.cjs --update-env
 ```
 
 ## 8. systemd templates
