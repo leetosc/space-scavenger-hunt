@@ -5,8 +5,7 @@ This app runs as two long-running processes on a VPS:
 - **apps/server** (Bun + Express + tRPC + Better Auth) on `localhost:3000`
 - **apps/web** (`next start`) on `localhost:3001`
 
-A reverse proxy (Caddy or Nginx) terminates TLS and routes traffic to the
-correct process.
+Nginx terminates TLS and routes traffic to the correct process.
 
 ## 1. Host prerequisites
 
@@ -20,9 +19,8 @@ curl -fsSL https://bun.sh/install | bash
 sudo apt-get install -y nodejs npm
 sudo npm install -g pm2
 
-# A reverse proxy. Caddy is easiest (auto TLS):
-sudo apt-get install -y caddy
-# (or install Nginx + certbot)
+# Nginx reverse proxy + Let's Encrypt certificates:
+sudo apt-get install -y nginx certbot python3-certbot-nginx
 ```
 
 ## 2. Filesystem layout
@@ -126,71 +124,62 @@ at the bottom of this file.
 
 ## 5. Reverse proxy
 
-### Caddy (recommended)
-
-`/etc/caddy/Caddyfile`:
-
-```caddy
-your-domain.com {
-    encode zstd gzip
-
-    # API + auth + tRPC + uploads -> apps/server (:3000)
-    @api path /api/* /trpc /trpc/*
-    handle @api {
-        request_body {
-            max_size 10MB
-        }
-        reverse_proxy 127.0.0.1:3000
-    }
-
-    # Everything else -> apps/web (:3001)
-    handle {
-        reverse_proxy 127.0.0.1:3001
-    }
-}
-```
-
-Reload: `sudo systemctl reload caddy`.
-
-### Nginx alternative
+### Nginx
 
 `/etc/nginx/sites-available/scavenger-hunt`:
 
 ```nginx
 server {
-    listen 443 ssl http2;
     server_name your-domain.com;
-
-    # certbot will fill these:
-    ssl_certificate     /etc/letsencrypt/live/your-domain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
 
     client_max_body_size 10M;
 
     location /api/ {
         proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
         proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
     location /trpc {
         proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
         proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
     location / {
         proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
         proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 ```
 
-`sudo nginx -t && sudo systemctl reload nginx`.
+Enable the site, then let Certbot request a certificate and update the Nginx
+config for HTTPS:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/scavenger-hunt /etc/nginx/sites-enabled/scavenger-hunt
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t
+sudo systemctl reload nginx
+sudo certbot --nginx -d your-domain.com
+```
+
+After Certbot finishes, test and reload Nginx:
+
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
 
 `client_max_body_size` should be at least `MAX_UPLOAD_MB + 2` MB.
 
