@@ -1,8 +1,8 @@
 const path = require("path");
 
 const root = __dirname;
-const serverPort = process.env.SCAVENGER_SERVER_PORT || "3000";
-const webPort = process.env.SCAVENGER_WEB_PORT || "3001";
+const serverPort = process.env.SCAVENGER_SERVER_PORT || "4000";
+const webPort = process.env.SCAVENGER_WEB_PORT || "4001";
 
 module.exports = {
   apps: [
