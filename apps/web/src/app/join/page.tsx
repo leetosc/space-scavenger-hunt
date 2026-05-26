@@ -21,7 +21,11 @@ function PlayerIcon({ icon, name }: { icon: string | null; name: string }) {
 
   return (
     <div className="flex size-14 shrink-0 items-center justify-center border border-cyan-300/35 bg-cyan-300/10 text-cyan-200 shadow-[inset_0_0_22px_rgba(34,211,238,0.16)]">
-      {Icon ? <Icon className="size-7" /> : <span className="text-lg font-bold">{name.slice(0, 1)}</span>}
+      {Icon ? (
+        <Icon className="size-7" />
+      ) : (
+        <span className="text-lg font-bold">{name.slice(0, 1)}</span>
+      )}
     </div>
   );
 }
@@ -60,8 +64,8 @@ export default function JoinDisplayPage() {
                 Join the Mission
               </h1>
               <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                Scan the code, create your astronaut profile, and watch for your signal on the
-                ready board.
+                Scan the code, create your astronaut profile, and watch for your
+                signal on the ready board.
               </p>
             </div>
 
@@ -85,7 +89,9 @@ export default function JoinDisplayPage() {
                 <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-cyan-300/70">
                   Ready
                 </div>
-                <div className="mt-1 font-mono text-4xl font-black text-slate-100">{readyCount}</div>
+                <div className="mt-1 font-mono text-4xl font-black text-slate-100">
+                  {readyCount}
+                </div>
               </div>
               <div className="px-3 py-3">
                 <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-cyan-300/70">
@@ -102,10 +108,6 @@ export default function JoinDisplayPage() {
               <div className="flex items-center gap-2 border border-cyan-400/15 bg-slate-900/55 px-3 py-2">
                 <Rocket className="size-3.5 text-cyan-300" />
                 Team assignment starts after check-in
-              </div>
-              <div className="flex items-center gap-2 border border-cyan-400/15 bg-slate-900/55 px-3 py-2">
-                <Satellite className="size-3.5 text-cyan-300" />
-                Display updates automatically
               </div>
             </div>
           </div>
@@ -125,11 +127,14 @@ export default function JoinDisplayPage() {
                   <h2 className="font-mono text-sm font-bold uppercase tracking-[0.18em] text-slate-100">
                     Ready Crew
                   </h2>
-                  <p className="text-xs text-muted-foreground">Players appear here after signup.</p>
+                  <p className="text-xs text-muted-foreground">
+                    Players appear here after signup.
+                  </p>
                 </div>
               </div>
-              <div className="border border-cyan-400/20 bg-slate-950/70 px-3 py-2 font-mono text-xs uppercase tracking-[0.16em] text-cyan-200">
-                {joinState.isFetching ? "Syncing" : "Live"}
+              <div className="inline-flex h-9 w-24 items-center justify-center gap-2 border border-cyan-400/20 bg-slate-950/70 px-3 font-mono text-xs uppercase tracking-[0.16em] text-cyan-200">
+                <span className="size-1.5 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,0.9)]" />
+                Live
               </div>
             </div>
           </div>
@@ -145,7 +150,9 @@ export default function JoinDisplayPage() {
                 <UserRound className="size-9" />
               </div>
               <div>
-                <h3 className="text-2xl font-bold text-slate-100">Awaiting first crew signal</h3>
+                <h3 className="text-2xl font-bold text-slate-100">
+                  Awaiting first crew signal
+                </h3>
                 <p className="mt-2 text-sm text-muted-foreground">
                   The ready board will fill as players complete signup.
                 </p>
@@ -172,7 +179,9 @@ export default function JoinDisplayPage() {
                       <div className="flex min-w-0 items-center gap-3">
                         <PlayerIcon icon={player.icon} name={player.name} />
                         <div className="min-w-0">
-                          <h3 className="truncate text-lg font-bold text-slate-100">{player.name}</h3>
+                          <h3 className="truncate text-lg font-bold text-slate-100">
+                            {player.name}
+                          </h3>
                           <p className="mt-1 truncate font-mono text-xs uppercase tracking-[0.14em] text-cyan-300">
                             @{player.username ?? "crew"}
                           </p>
