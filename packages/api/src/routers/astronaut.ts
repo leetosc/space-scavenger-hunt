@@ -111,7 +111,11 @@ export const astronautRouter = router({
 
       // Use AI to generate missing name/description
       if (!name?.trim() || !description?.trim()) {
-        const generated = await generateAstronautProfile();
+        const existingProfiles = await ctx.prisma.astronaut.findMany({
+          orderBy: { createdAt: "asc" },
+          select: { name: true, description: true },
+        });
+        const generated = await generateAstronautProfile({ existingProfiles });
         if (!name?.trim()) name = generated.name;
         if (!description?.trim()) description = generated.description;
       }

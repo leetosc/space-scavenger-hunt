@@ -20,28 +20,104 @@ const FALLBACK_PROFILES = [
   { name: "Luna Lightyear", description: "An overly enthusiastic rookie astronaut who treats every coffee break like a moon landing." },
   { name: "Asteroid Andy", description: "Claims to have personally high-fived an asteroid. Nobody believes him, but nobody can disprove it either." },
   { name: "Stella Supernova", description: "A dramatic astronaut whose farewell speeches before every 5-minute spacewalk bring colleagues to tears." },
-  { name: "Rocket Raccoon Jr.", description: "No relation to the famous one, but don't tell him that — he's very sensitive about it." },
+  { name: "Comet Clipboard", description: "A mission planner who color-codes every orbit and refuses to launch without a perfectly labeled checklist." },
   { name: "Major Stardust", description: "An astronaut who got promoted to Major purely because of how much glitter gets stuck to their suit." },
 ];
 
-export async function generateAstronautProfile(): Promise<{ name: string; description: string }> {
+type AstronautProfile = {
+  name: string;
+  description: string;
+};
+
+type ExistingAstronautProfile = {
+  name: string;
+  description: string | null;
+};
+
+type GenerateAstronautProfileOptions = {
+  existingProfiles?: ExistingAstronautProfile[];
+};
+
+function normalizeProfileText(text: string): string {
+  return text.trim().toLowerCase();
+}
+
+function buildUserPrompt(existingProfiles: ExistingAstronautProfile[]): string {
+  if (existingProfiles.length === 0) {
+    return USER_PROMPT;
+  }
+
+  const profileList = existingProfiles
+    .map(
+      (profile, i) =>
+        `${i + 1}. ${profile.name}${
+          profile.description ? `: ${profile.description}` : ""
+        }`,
+    )
+    .join("\n");
+
+  return `${USER_PROMPT}
+
+These astronauts already exist in this hunt. Your new astronaut must be clearly different from every one of them:
+${profileList}
+
+Avoid repeating existing name patterns, titles, personality traits, backstories, jokes, or description structure. Vary the character archetype, comedic angle, and space-office theme in a noticeable way.`;
+}
+
+function isDuplicateProfile(
+  profile: AstronautProfile,
+  existingProfiles: ExistingAstronautProfile[],
+): boolean {
+  const normalizedName = normalizeProfileText(profile.name);
+  const normalizedDescription = normalizeProfileText(
+    profile.description ?? "",
+  );
+
+  return existingProfiles.some(
+    (existing) =>
+      normalizeProfileText(existing.name) === normalizedName ||
+      (normalizedDescription.length > 0 &&
+        normalizeProfileText(existing.description ?? "") ===
+          normalizedDescription),
+  );
+}
+
+function pickFallbackProfile(
+  existingProfiles: ExistingAstronautProfile[],
+): AstronautProfile {
+  const available = FALLBACK_PROFILES.filter(
+    (profile) => !isDuplicateProfile(profile, existingProfiles),
+  );
+  const pool = available.length > 0 ? available : FALLBACK_PROFILES;
+  const idx = Math.floor(Math.random() * pool.length);
+  return pool[idx]!;
+}
+
+export async function generateAstronautProfile(
+  options?: GenerateAstronautProfileOptions,
+): Promise<AstronautProfile> {
+  const existingProfiles = options?.existingProfiles ?? [];
+
   try {
     const result = await generateObject({
       model: foundryModel(),
       system: SYSTEM_PROMPT,
-      prompt: USER_PROMPT,
+      prompt: buildUserPrompt(existingProfiles),
       schema: z.object({
         name: z.string().describe("A fun space-themed character name"),
         description: z.string().describe("1-2 sentence character description"),
       }),
       maxOutputTokens: 300,
     });
-    if (result.object.name && result.object.description) {
+    if (
+      result.object.name &&
+      result.object.description &&
+      !isDuplicateProfile(result.object, existingProfiles)
+    ) {
       return result.object;
     }
   } catch (error) {
     console.error("[ai.generateAstronautProfile] falling back due to error:", error);
   }
-  const idx = Math.floor(Math.random() * FALLBACK_PROFILES.length);
-  return FALLBACK_PROFILES[idx]!;
+  return pickFallbackProfile(existingProfiles);
 }
