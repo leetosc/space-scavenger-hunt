@@ -294,11 +294,11 @@ export default function Home() {
                 <Users className="size-4" />
               </div>
               <h4 className="font-mono text-xs tracking-wider text-slate-200 uppercase font-bold">
-                1. Deploy Squads
+                1. Enlist Your Crew
               </h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Form search parties under authorized flight names. Work together
-                in close radio telemetry to share coordinate intelligence.
+                Sign up, claim your callsign, and lock in with a rescue team.
+                The stranded won&apos;t wait — coordination starts on the ground.
               </p>
             </motion.div>
 
@@ -309,15 +309,15 @@ export default function Home() {
               className="bg-slate-900/40 border border-slate-800/80 p-5 rounded-none space-y-3 transition-colors duration-300"
             >
               <div className="h-8 w-8 rounded-none bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
-                <Terminal className="size-4" />
+                <Compass className="size-4" />
               </div>
               <h4 className="font-mono text-xs tracking-wider text-slate-200 uppercase font-bold">
-                2. Decrypt Coordinates
+                2. Sweep the Campus
               </h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Decrypt distress beacons scattered across the sector. Bypass
-                local mainframes by resolving mathematical & logical sector
-                questions.
+                Distress beacons are pinging from hidden posts across ETH.
+                Follow the signals, scour every corridor, and pinpoint each
+                stranded astronaut before their oxygen runs thin.
               </p>
             </motion.div>
 
@@ -331,11 +331,12 @@ export default function Home() {
                 <Rocket className="size-4" />
               </div>
               <h4 className="font-mono text-xs tracking-wider text-slate-200 uppercase font-bold">
-                3. Secure Extrication
+                3. Execute the Rescue
               </h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Log the found crew members with correct authorization codes to
-                dispatch secure escape pods. Save the astronauts in time!
+                Every crew member needs a verified extraction sequence — crack
+                the challenges, punch in the right codes, and get them to the
+                escape pods before the window closes.
               </p>
             </motion.div>
           </motion.div>
