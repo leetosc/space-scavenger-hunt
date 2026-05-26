@@ -192,13 +192,22 @@ export default function AdminKickoffPage() {
             ))}
           </div>
           <a
+            href="/join"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex h-10 items-center justify-center gap-1.5 border border-emerald-300/30 bg-emerald-300/10 px-3 text-xs font-bold uppercase tracking-wide text-emerald-100 transition-colors hover:bg-emerald-300/20"
+          >
+            <ExternalLink className="size-3.5" />
+            Open joining display
+          </a>
+          <a
             href="/kickoff"
             target="_blank"
             rel="noreferrer"
             className="inline-flex h-10 items-center justify-center gap-1.5 border border-cyan-400/30 bg-cyan-400/10 px-3 text-xs font-bold uppercase tracking-wide text-cyan-100 transition-colors hover:bg-cyan-400/20"
           >
             <ExternalLink className="size-3.5" />
-            Open display
+            Open kickoff display
           </a>
         </div>
       </motion.header>

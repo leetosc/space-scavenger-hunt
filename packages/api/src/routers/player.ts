@@ -187,6 +187,27 @@ export const playerRouter = router({
     };
   }),
 
+  getJoinDisplayState: publicProcedure.query(async ({ ctx }) => {
+    const players = await ctx.prisma.player.findMany({
+      where: { isCheckedIn: true },
+      orderBy: { createdAt: "desc" },
+      include: {
+        authUser: { select: { username: true } },
+      },
+    });
+
+    return {
+      readyCount: players.length,
+      players: players.map((player) => ({
+        id: player.id,
+        name: player.name,
+        icon: player.icon,
+        username: player.authUser?.username ?? null,
+        createdAt: player.createdAt,
+      })),
+    };
+  }),
+
   list: adminProcedure.query(({ ctx }) => {
     return ctx.prisma.player.findMany({
       orderBy: { name: "asc" },
