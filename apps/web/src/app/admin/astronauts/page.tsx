@@ -37,7 +37,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { motion } from "framer-motion";
-import { ArrowUpDown, Power, ShieldCheck, Trash2 } from "lucide-react";
+import { ArrowUpDown, Check, Pencil, Power, ShieldCheck, Trash2, X } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -73,9 +73,11 @@ type ColumnCallbacks = {
   appBaseUrl: string;
   onCopyUrl: (scanUrl: string) => void;
   onToggleActive: (id: string) => void;
+  onUpdateCode: (id: string, code: string) => void;
   onDelete: (id: string, name: string) => void;
   onEditAssignment: (astronaut: Astronaut) => void;
   onEditClaim: (astronaut: Astronaut) => void;
+  isUpdatingCode: boolean;
 };
 
 function IconActionButton({
@@ -108,6 +110,99 @@ function IconActionButton({
       />
       <TooltipContent>{label}</TooltipContent>
     </Tooltip>
+  );
+}
+
+function filterCode(value: string): string {
+  return value.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 4);
+}
+
+function CodeCell({
+  astronaut,
+  callbacks,
+}: {
+  astronaut: Astronaut;
+  callbacks: ColumnCallbacks;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [code, setCode] = useState(astronaut.code);
+  const scanUrl = `${callbacks.appBaseUrl}/astronaut/${astronaut.code}`;
+  const canSave = code.length === 4 && code !== astronaut.code;
+
+  if (isEditing) {
+    return (
+      <form
+        className="flex items-center gap-1.5"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!canSave || callbacks.isUpdatingCode) return;
+          callbacks.onUpdateCode(astronaut.id, code);
+          setIsEditing(false);
+        }}
+      >
+        <Input
+          value={code}
+          onChange={(e) => setCode(filterCode(e.target.value))}
+          className="h-8 w-20 font-mono text-xs uppercase"
+          aria-label={`Edit code for ${astronaut.name}`}
+          maxLength={4}
+          autoFocus
+        />
+        <IconActionButton
+          label="Save code"
+          onClick={() => {
+            if (!canSave || callbacks.isUpdatingCode) return;
+            callbacks.onUpdateCode(astronaut.id, code);
+            setIsEditing(false);
+          }}
+        >
+          <Check className="size-3.5" />
+        </IconActionButton>
+        <IconActionButton
+          label="Cancel"
+          onClick={() => {
+            setCode(astronaut.code);
+            setIsEditing(false);
+          }}
+        >
+          <X className="size-3.5" />
+        </IconActionButton>
+      </form>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <code className="bg-muted px-2 py-0.5 rounded text-xs shrink-0">{astronaut.code}</code>
+      <IconActionButton
+        label="Edit code"
+        onClick={() => {
+          setCode(astronaut.code);
+          setIsEditing(true);
+        }}
+      >
+        <Pencil className="size-3.5" />
+      </IconActionButton>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <motion.div {...buttonInteraction}>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => callbacks.onCopyUrl(scanUrl)}
+              >
+                Copy
+              </Button>
+            </motion.div>
+          }
+        />
+        <TooltipContent className="max-w-sm whitespace-normal break-all">
+          {scanUrl}
+        </TooltipContent>
+      </Tooltip>
+    </div>
   );
 }
 
@@ -421,32 +516,7 @@ function useColumns(callbacks: ColumnCallbacks) {
         accessorKey: "code",
         header: "URL",
         cell: ({ row }) => {
-          const a = row.original;
-          const scanUrl = `${callbacks.appBaseUrl}/astronaut/${a.code}`;
-          return (
-            <div className="flex items-center gap-2">
-              <code className="bg-muted px-2 py-0.5 rounded text-xs shrink-0">{a.code}</code>
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <motion.div {...buttonInteraction}>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => callbacks.onCopyUrl(scanUrl)}
-                      >
-                        Copy
-                      </Button>
-                    </motion.div>
-                  }
-                />
-                <TooltipContent className="max-w-sm whitespace-normal break-all">
-                  {scanUrl}
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          );
+          return <CodeCell astronaut={row.original} callbacks={callbacks} />;
         },
       },
       {
@@ -624,6 +694,15 @@ export default function AdminAstronautsPage() {
     onError: (err) => toast.error(err.message),
   });
 
+  const updateCodeMutation = useMutation({
+    ...trpc.astronaut.update.mutationOptions(),
+    onSuccess: () => {
+      toast.success("Astronaut code updated");
+      invalidateAll();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
   const deleteMutation = useMutation({
     ...trpc.astronaut.delete.mutationOptions(),
     onSuccess: () => {
@@ -691,12 +770,14 @@ export default function AdminAstronautsPage() {
         toast.success("URL copied");
       },
       onToggleActive: (id) => toggleActiveMutation.mutate({ id }),
+      onUpdateCode: (id, code) => updateCodeMutation.mutate({ id, code }),
       onDelete: (id, astronautName) => setDeleteTarget({ id, name: astronautName }),
       onEditAssignment: setEditingAssignment,
       onEditClaim: setEditingClaim,
+      isUpdatingCode: updateCodeMutation.isPending,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [appBaseUrl],
+    [appBaseUrl, updateCodeMutation.isPending],
   );
 
   return (

@@ -10,6 +10,12 @@ import { getAttemptPhotoPreviewPath } from "../services/attempt-photo-url";
 
 const CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const generateFourLetterCode = customAlphabet(CODE_ALPHABET, 4);
+const fourLetterCodeSchema = z
+  .string()
+  .trim()
+  .length(4, "Code must be exactly 4 letters.")
+  .regex(/^[a-zA-Z]+$/, "Code must contain letters only.")
+  .transform((code) => code.toUpperCase());
 
 async function generateUniqueCode(prisma: Context["prisma"]) {
   const maxAttempts = 50;
@@ -128,11 +134,24 @@ export const astronautRouter = router({
         name: z.string().min(1).max(80).optional(),
         description: z.string().max(500).optional(),
         hint: z.string().max(500).optional(),
+        code: fourLetterCodeSchema.optional(),
         active: z.boolean().optional(),
       }),
     )
-    .mutation(({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       const { id, ...rest } = input;
+      if (rest.code) {
+        const existing = await ctx.prisma.astronaut.findUnique({
+          where: { code: rest.code },
+          select: { id: true },
+        });
+        if (existing && existing.id !== id) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "That astronaut code is already in use.",
+          });
+        }
+      }
       return ctx.prisma.astronaut.update({ where: { id }, data: rest });
     }),
 
