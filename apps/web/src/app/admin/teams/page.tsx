@@ -13,6 +13,11 @@ import {
 import { Button } from "@space-scavenger-hunt/ui/components/button";
 import { Card } from "@space-scavenger-hunt/ui/components/card";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@space-scavenger-hunt/ui/components/collapsible";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -25,8 +30,17 @@ import { Label } from "@space-scavenger-hunt/ui/components/label";
 import { cn } from "@space-scavenger-hunt/ui/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { Orbit, Pencil, Plus, RadioTower, ShieldCheck, Sparkles, UsersRound } from "lucide-react";
-import { useState } from "react";
+import {
+  ChevronDown,
+  Orbit,
+  Pencil,
+  Plus,
+  RadioTower,
+  ShieldCheck,
+  Sparkles,
+  UsersRound,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { IconPicker } from "@/components/icon-picker";
@@ -46,6 +60,10 @@ const DEFAULT_TEAMS = [
   { name: "Rocket Scientists", color: "#ef5b8d", icon: "Rocket" },
   { name: "Orbit Squad", color: "#5bef9c", icon: "Orbit" },
   { name: "Red Dwarfs", color: "#ef9c5b", icon: "Flame" },
+  { name: "Nova Navigators", color: "#a855f7", icon: "Compass" },
+  { name: "Comet Crew", color: "#f59e0b", icon: "Sparkles" },
+  { name: "Star Sailors", color: "#06b6d4", icon: "Star" },
+  { name: "Meteor Makers", color: "#f43f5e", icon: "Satellite" },
 ];
 
 const PRESET_COLORS = [
@@ -252,6 +270,7 @@ function EditTeamDialog({
 export default function AdminTeamsPage() {
   const queryClient = useQueryClient();
   const listQuery = useQuery(trpc.team.list.queryOptions());
+  const configQuery = useQuery(trpc.team.getConfig.queryOptions());
 
   const createMutation = useMutation({
     ...trpc.team.create.mutationOptions(),
@@ -282,14 +301,21 @@ export default function AdminTeamsPage() {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#5b8def");
   const [newIcon, setNewIcon] = useState("Rocket");
+  const [createFormOpen, setCreateFormOpen] = useState(true);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
 
   const teams = listQuery.data ?? [];
-  const canCreate = teams.length < 4;
+  const maxTeams = configQuery.data?.maxTeams ?? 4;
+  const canCreate = teams.length < maxTeams;
   const totalPlayers = teams.reduce((sum, team) => sum + team._count.players, 0);
   const totalAssignments = teams.reduce((sum, team) => sum + team._count.assignments, 0);
   const totalClaims = teams.reduce((sum, team) => sum + team._count.claims, 0);
-  const setupPercent = Math.round((teams.length / 4) * 100);
+  const setupPercent = Math.round((teams.length / maxTeams) * 100);
+  const createFormVisible = canCreate && createFormOpen;
+
+  useEffect(() => {
+    if (!canCreate) setCreateFormOpen(false);
+  }, [canCreate]);
 
   return (
     <motion.div
@@ -309,14 +335,14 @@ export default function AdminTeamsPage() {
           </div>
           <h1 className="text-2xl font-bold tracking-tight">Teams</h1>
           <p className="text-sm text-muted-foreground">
-            Fleet configuration requires <span className="font-mono text-cyan-300">4</span> teams before
+            Fleet configuration requires <span className="font-mono text-cyan-300">{maxTeams}</span> teams before
             kickoff assignment.
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="grid grid-cols-3 border border-cyan-400/20 bg-slate-950/50 text-center shadow-[0_0_24px_rgba(34,211,238,0.08)]">
             {[
-              ["Teams", `${teams.length}/4`],
+              ["Teams", `${teams.length}/${maxTeams}`],
               ["Crew", totalPlayers.toString()],
               ["Claims", totalClaims.toString()],
             ].map(([label, value]) => (
@@ -328,7 +354,7 @@ export default function AdminTeamsPage() {
               </div>
             ))}
           </div>
-          {teams.length < 4 ? (
+          {canCreate ? (
             <motion.div {...buttonInteraction}>
               <Button
                 type="button"
@@ -336,8 +362,13 @@ export default function AdminTeamsPage() {
                 disabled={createMutation.isPending}
                 className="h-10 border-cyan-400/30 bg-cyan-400/10 text-xs font-bold uppercase tracking-wide text-cyan-100 hover:bg-cyan-400/20"
                 onClick={async () => {
-                  for (const t of DEFAULT_TEAMS.slice(teams.length, 4)) {
-                    await createMutation.mutateAsync({ name: t.name, color: t.color, icon: t.icon });
+                  for (let i = teams.length; i < maxTeams; i++) {
+                    const t = DEFAULT_TEAMS[i % DEFAULT_TEAMS.length]!;
+                    await createMutation.mutateAsync({
+                      name: i < DEFAULT_TEAMS.length ? t.name : `${t.name} ${i + 1}`,
+                      color: t.color,
+                      icon: t.icon,
+                    });
                   }
                   toast.success("Seeded default teams");
                 }}
@@ -352,6 +383,12 @@ export default function AdminTeamsPage() {
 
       <motion.div variants={scaleIn}>
         <Card className="overflow-hidden border-cyan-400/25 bg-slate-950/55 p-0 shadow-[0_0_30px_rgba(34,211,238,0.08)] backdrop-blur">
+          <Collapsible
+            open={createFormVisible}
+            onOpenChange={(open) => {
+              if (canCreate) setCreateFormOpen(open);
+            }}
+          >
           <div className="border-b border-cyan-400/15 bg-[linear-gradient(90deg,rgba(34,211,238,0.14),rgba(15,23,42,0.6),rgba(132,204,22,0.08))] px-4 py-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
@@ -363,61 +400,84 @@ export default function AdminTeamsPage() {
                     Team Configuration
                   </h2>
                   <p className="text-xs text-muted-foreground">
-                    Register team identity, symbol, and beacon color.
+                    {canCreate
+                      ? "Register team identity, symbol, and beacon color."
+                      : `Maximum team grid reached (${maxTeams}).`}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 border border-cyan-400/20 bg-slate-950/70 px-2.5 py-1.5 text-xs">
-                <span className="text-muted-foreground">Grid sync</span>
-                <span className="font-mono font-semibold text-cyan-300">{setupPercent}%</span>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 border border-cyan-400/20 bg-slate-950/70 px-2.5 py-1.5 text-xs">
+                  <span className="text-muted-foreground">Grid sync</span>
+                  <span className="font-mono font-semibold text-cyan-300">{setupPercent}%</span>
+                </div>
+                <CollapsibleTrigger
+                  type="button"
+                  disabled={!canCreate}
+                  className={cn(
+                    "inline-flex h-9 items-center gap-2 border border-cyan-400/25 bg-slate-950/70 px-3 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100 transition-colors hover:bg-cyan-400/10 focus:outline-none focus:ring-2 focus:ring-cyan-300/50 disabled:cursor-not-allowed disabled:opacity-50",
+                  )}
+                  aria-label={createFormVisible ? "Collapse team creation form" : "Expand team creation form"}
+                >
+                  {createFormVisible ? "Collapse" : "Create"}
+                  <ChevronDown
+                    className={cn(
+                      "size-3.5 transition-transform",
+                      createFormVisible ? "rotate-180" : "rotate-0",
+                    )}
+                  />
+                </CollapsibleTrigger>
               </div>
             </div>
           </div>
-          <form
-            className="grid gap-4 p-4 lg:grid-cols-[1fr_1fr] xl:grid-cols-[1fr_1.15fr_1fr_auto]"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!canCreate) return;
-              createMutation.mutate({ name: newName, color: newColor, icon: newIcon });
-              setNewName("");
-            }}
-          >
-            <div className="border border-cyan-400/15 bg-slate-900/45 p-3 shadow-[inset_0_0_18px_rgba(15,23,42,0.8)]">
-              <Label htmlFor="name" className="font-mono text-[10px] uppercase tracking-[0.18em] text-cyan-300/75">
-                Team name
-              </Label>
-              <Input
-                id="name"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                required
-                placeholder="Enter call sign"
-                className="mt-2 font-mono"
-              />
-            </div>
-            <div className="border border-cyan-400/15 bg-slate-900/45 p-3 shadow-[inset_0_0_18px_rgba(15,23,42,0.8)]">
-              <Label className="mb-2 block font-mono text-[10px] uppercase tracking-[0.18em] text-cyan-300/75">
-                Signal icon
-              </Label>
-              <IconPicker value={newIcon} onChange={setNewIcon} />
-            </div>
-            <div className="border border-cyan-400/15 bg-slate-900/45 p-3 shadow-[inset_0_0_18px_rgba(15,23,42,0.8)]">
-              <Label className="mb-2 block font-mono text-[10px] uppercase tracking-[0.18em] text-cyan-300/75">
-                Beacon color
-              </Label>
-              <ColorPicker id="color" value={newColor} onChange={setNewColor} />
-            </div>
-            <motion.div className="flex items-end" {...buttonInteraction}>
-              <Button
-                type="submit"
-                disabled={!canCreate || createMutation.isPending}
-                className="h-10 w-full justify-center"
-              >
-                <Plus data-icon="inline-start" className="size-4" />
-                {canCreate ? "Create team" : "4 / 4"}
-              </Button>
-            </motion.div>
-          </form>
+          <CollapsibleContent>
+            <form
+              className="grid gap-4 p-4 lg:grid-cols-[1fr_1fr] xl:grid-cols-[1fr_1.15fr_1fr_auto]"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!canCreate) return;
+                createMutation.mutate({ name: newName, color: newColor, icon: newIcon });
+                setNewName("");
+              }}
+            >
+              <div className="border border-cyan-400/15 bg-slate-900/45 p-3 shadow-[inset_0_0_18px_rgba(15,23,42,0.8)]">
+                <Label htmlFor="name" className="font-mono text-[10px] uppercase tracking-[0.18em] text-cyan-300/75">
+                  Team name
+                </Label>
+                <Input
+                  id="name"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  required
+                  placeholder="Enter call sign"
+                  className="mt-2 font-mono"
+                />
+              </div>
+              <div className="border border-cyan-400/15 bg-slate-900/45 p-3 shadow-[inset_0_0_18px_rgba(15,23,42,0.8)]">
+                <Label className="mb-2 block font-mono text-[10px] uppercase tracking-[0.18em] text-cyan-300/75">
+                  Signal icon
+                </Label>
+                <IconPicker value={newIcon} onChange={setNewIcon} />
+              </div>
+              <div className="border border-cyan-400/15 bg-slate-900/45 p-3 shadow-[inset_0_0_18px_rgba(15,23,42,0.8)]">
+                <Label className="mb-2 block font-mono text-[10px] uppercase tracking-[0.18em] text-cyan-300/75">
+                  Beacon color
+                </Label>
+                <ColorPicker id="color" value={newColor} onChange={setNewColor} />
+              </div>
+              <motion.div className="flex items-end" {...buttonInteraction}>
+                <Button
+                  type="submit"
+                  disabled={!canCreate || createMutation.isPending}
+                  className="h-10 w-full justify-center"
+                >
+                  <Plus data-icon="inline-start" className="size-4" />
+                  {canCreate ? "Create team" : `${maxTeams} / ${maxTeams}`}
+                </Button>
+              </motion.div>
+            </form>
+          </CollapsibleContent>
+          </Collapsible>
         </Card>
       </motion.div>
 

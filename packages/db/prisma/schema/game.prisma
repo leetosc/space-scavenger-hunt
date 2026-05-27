@@ -5,6 +5,7 @@ model Activity {
   startedAt        DateTime?
   endedAt          DateTime?
   timeLimitMinutes Int?
+  maxTeams         Int       @default(4)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 

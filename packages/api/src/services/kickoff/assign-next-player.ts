@@ -1,5 +1,7 @@
 import prisma from "@space-scavenger-hunt/db";
 
+import { DEFAULT_MAX_TEAMS } from "../activity";
+
 export type AssignNextPlayerResult = {
   player: { id: string; name: string };
   team: { id: string; name: string; color: string | null };
@@ -12,6 +14,7 @@ export async function assignNextPlayer(): Promise<AssignNextPlayerResult> {
     if (!activity || activity.status !== "TEAM_ASSIGNMENT") {
       throw new Error("Team assignment is not currently active.");
     }
+    const maxTeams = activity.maxTeams ?? DEFAULT_MAX_TEAMS;
 
     const unassigned = await tx.player.findMany({ where: { teamId: null } });
     if (unassigned.length === 0) return null;
@@ -23,8 +26,8 @@ export async function assignNextPlayer(): Promise<AssignNextPlayerResult> {
         _count: { select: { players: true } },
       },
     });
-    if (teams.length !== 4) {
-      throw new Error("Expected exactly 4 teams. Configure teams before kickoff.");
+    if (teams.length !== maxTeams) {
+      throw new Error(`Expected exactly ${maxTeams} teams. Configure teams before kickoff.`);
     }
 
     const minCount = Math.min(...teams.map((t) => t._count.players));

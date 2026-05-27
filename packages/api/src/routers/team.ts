@@ -3,8 +3,14 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 
 import { adminProcedure, playerProcedure, publicProcedure, router } from "../index";
+import { DEFAULT_MAX_TEAMS, getOrCreateActivity } from "../services/activity";
 
 export const teamRouter = router({
+  getConfig: publicProcedure.query(async () => {
+    const activity = await getOrCreateActivity();
+    return { maxTeams: activity.maxTeams ?? DEFAULT_MAX_TEAMS };
+  }),
+
   list: publicProcedure.query(({ ctx }) => {
     return ctx.prisma.team.findMany({
       orderBy: { name: "asc" },
@@ -95,11 +101,13 @@ export const teamRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const activity = await getOrCreateActivity();
+      const maxTeams = activity.maxTeams ?? DEFAULT_MAX_TEAMS;
       const count = await ctx.prisma.team.count();
-      if (count >= 4) {
+      if (count >= maxTeams) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "There are already 4 teams.",
+          message: `There are already ${maxTeams} teams.`,
         });
       }
       return ctx.prisma.$transaction(async (tx) => {

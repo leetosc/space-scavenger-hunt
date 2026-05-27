@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "activity" ADD COLUMN "maxTeams" INTEGER NOT NULL DEFAULT 4;

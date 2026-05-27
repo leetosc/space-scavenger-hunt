@@ -2,6 +2,7 @@ import prisma from "@space-scavenger-hunt/db";
 
 export const ACTIVITY_STATUSES = ["SETUP", "TEAM_ASSIGNMENT", "ACTIVE", "FINISHED"] as const;
 export type ActivityStatus = (typeof ACTIVITY_STATUSES)[number];
+export const DEFAULT_MAX_TEAMS = 4;
 
 export type ActivityTiming = {
   startedAt: Date | null;
@@ -20,6 +21,7 @@ export async function getOrCreateActivity() {
     data: {
       name: "Astronaut NFC Scavenger Hunt",
       status: "SETUP",
+      maxTeams: DEFAULT_MAX_TEAMS,
     },
   });
 }

@@ -2,7 +2,12 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import { adminProcedure, publicProcedure, router } from "../index";
-import { ACTIVITY_STATUSES, buildActivityTiming, getOrCreateActivity } from "../services/activity";
+import {
+  ACTIVITY_STATUSES,
+  DEFAULT_MAX_TEAMS,
+  buildActivityTiming,
+  getOrCreateActivity,
+} from "../services/activity";
 
 export const activityRouter = router({
   getCurrent: publicProcedure.query(async () => {
@@ -49,7 +54,8 @@ export const activityRouter = router({
     );
 
     const issues: string[] = [];
-    if (teams !== 4) issues.push(`Expected exactly 4 teams, found ${teams}.`);
+    const maxTeams = activity.maxTeams ?? DEFAULT_MAX_TEAMS;
+    if (teams !== maxTeams) issues.push(`Expected exactly ${maxTeams} teams, found ${teams}.`);
     if (players === 0) issues.push("No players have been created yet.");
     if (astronauts.length === 0) issues.push("No active astronauts exist yet.");
     if (unassignedPlayers > 0 && activity.status === "ACTIVE") {
@@ -81,10 +87,32 @@ export const activityRouter = router({
         activeHints,
         signalBoosts: signalBoosts._sum.signalBoostBalance ?? 0,
       },
+      maxTeams,
       issues,
       ready: issues.length === 0,
     };
   }),
+
+  getSettings: adminProcedure.query(async () => {
+    const activity = await getOrCreateActivity();
+    return {
+      maxTeams: activity.maxTeams ?? DEFAULT_MAX_TEAMS,
+    };
+  }),
+
+  updateSettings: adminProcedure
+    .input(
+      z.object({
+        maxTeams: z.number().int().positive(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const activity = await getOrCreateActivity();
+      return ctx.prisma.activity.update({
+        where: { id: activity.id },
+        data: { maxTeams: input.maxTeams },
+      });
+    }),
 
   adminSetState: adminProcedure
     .input(

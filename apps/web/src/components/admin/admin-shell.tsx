@@ -24,6 +24,7 @@ const NAV = [
   { to: "/admin/astronauts", label: "Astronauts" },
   { to: "/admin/hints", label: "Hints" },
   { to: "/admin/attempts", label: "Attempts" },
+  { to: "/admin/settings", label: "Settings" },
 ] as const;
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {

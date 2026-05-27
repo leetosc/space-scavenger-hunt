@@ -102,12 +102,13 @@ export default function AdminOverviewPage() {
   }
 
   const { activity, counts, issues, ready } = validate.data;
+  const maxTeams = validate.data.maxTeams;
   const setupPercent = Math.round(
-    ((Math.min(counts.teams, 4) +
+    ((Math.min(counts.teams, maxTeams) +
       (counts.players > 0 ? 1 : 0) +
       (counts.astronauts > 0 ? 1 : 0) +
       (counts.unassignedPlayers === 0 && counts.players > 0 ? 1 : 0)) /
-      7) *
+      (maxTeams + 3)) *
       100,
   );
   const statusIndex = ACTIVITY_STATUSES.indexOf(activity.status as (typeof ACTIVITY_STATUSES)[number]);

@@ -273,7 +273,7 @@ curl -fsS https://your-domain.com/api/trpc/healthCheck
 
 Sign in at `/login`, visit `/admin`, run through:
 
-1. Create 4 teams
+1. Confirm max teams in `/admin/settings` and create teams
 2. Create players (admin pre-creates Better Auth users)
 3. Create astronauts (copy scan URLs)
 4. Assign astronauts to teams

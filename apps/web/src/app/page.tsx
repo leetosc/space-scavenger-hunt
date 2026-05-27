@@ -15,14 +15,13 @@ import {
   Compass,
   Orbit,
   Rocket,
-  Shield,
   Sparkles,
-  Star,
   Terminal,
   Trophy,
   Users,
 } from "lucide-react";
 import type { Route } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -109,66 +108,88 @@ export default function Home() {
   return (
     <div className="relative min-h-full w-full overflow-x-hidden flex flex-col justify-between">
       {/* Main Content Area */}
-      <div className="relative z-10 flex-1 flex flex-col max-w-6xl mx-auto w-full px-4 sm:px-6 py-12 md:py-20 justify-center items-center gap-12 sm:gap-16">
+      <div className="relative z-10 flex-1 flex flex-col max-w-6xl mx-auto w-full px-4 sm:px-6 py-10 md:py-16 justify-center items-center gap-12 sm:gap-16">
         {/* Hero Header Section */}
-        <div className="text-center space-y-6 max-w-3xl">
-          {/* Live System Status Badge */}
-          {statusConfig && (
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-mono tracking-wider uppercase backdrop-blur-sm ${statusConfig.color}`}
-            >
-              <span
-                className={`h-1.5 w-1.5 rounded-full animate-ping ${statusConfig.indicator}`}
-              />
-              <span
-                className={`h-1.5 w-1.5 rounded-full absolute ${statusConfig.indicator}`}
-              />
-              {statusConfig.label}
-            </motion.div>
-          )}
+        <section className="grid w-full items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(300px,420px)] lg:gap-12">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, rotate: -2 }}
+            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+            transition={{ duration: 0.7, ease: "easeOut" }}
+            className="relative order-1 mx-auto flex aspect-square w-full max-w-[19rem] items-center justify-center sm:max-w-sm lg:order-2"
+          >
+            <div className="absolute inset-4 rounded-full border border-cyan-300/25 bg-cyan-300/5 shadow-[0_0_80px_rgba(34,211,238,0.18)]" />
+            <div className="absolute inset-0 rounded-full border border-indigo-300/15" />
+            <div className="absolute inset-10 rounded-full border border-purple-300/15" />
+            <div className="absolute left-1/2 top-1/2 h-[115%] w-[115%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(34,211,238,0.16),rgba(99,102,241,0.08)_38%,transparent_68%)]" />
+            <Image
+              src="/spacelogo.png"
+              alt="Space Scavenger Hunt mission logo"
+              width={1024}
+              height={1024}
+              priority
+              className="relative z-10 h-full w-full object-contain drop-shadow-[0_28px_65px_rgba(6,182,212,0.25)]"
+            />
+          </motion.div>
 
-          {/* Glowing Titles */}
-          <div className="space-y-4">
-            <motion.h1
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6 }}
-              className="text-5xl md:text-7xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-cyan-400 to-purple-400 drop-shadow-[0_0_20px_rgba(129,140,248,0.2)]"
-            >
-              SPACE SCAVENGER HUNT
-            </motion.h1>
+          <div className="order-2 mx-auto max-w-3xl space-y-6 text-center lg:order-1 lg:mx-0 lg:text-left">
+            {/* Live System Status Badge */}
+            {statusConfig && (
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`relative inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-mono uppercase tracking-wider backdrop-blur-sm ${statusConfig.color}`}
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full animate-ping ${statusConfig.indicator}`}
+                />
+                <span
+                  className={`h-1.5 w-1.5 rounded-full absolute ${statusConfig.indicator}`}
+                />
+                {statusConfig.label}
+              </motion.div>
+            )}
 
-            <motion.h2
+            {/* Glowing Titles */}
+            <div className="space-y-4">
+              <motion.h1
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6 }}
+                className="text-balance text-4xl font-black leading-[0.95] tracking-normal text-slate-50 drop-shadow-[0_0_28px_rgba(34,211,238,0.16)] sm:text-6xl md:text-7xl"
+              >
+                Space Scavenger Hunt
+              </motion.h1>
+
+              <motion.h2
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3, duration: 0.5 }}
+                className="flex items-center justify-center gap-3 text-lg font-semibold uppercase tracking-[0.18em] text-cyan-300/90 md:text-2xl lg:justify-start"
+              >
+                <Sparkles
+                  className="size-5 shrink-0 text-cyan-400 animate-spin"
+                  style={{ animationDuration: "6s" }}
+                />
+                Save the Astronauts
+                <Sparkles
+                  className="size-5 shrink-0 text-cyan-400 animate-spin"
+                  style={{ animationDuration: "6s" }}
+                />
+              </motion.h2>
+            </div>
+
+            <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.3, duration: 0.5 }}
-              className="text-xl md:text-3xl font-semibold tracking-widest text-cyan-300/90 uppercase flex items-center justify-center gap-3"
+              transition={{ delay: 0.5 }}
+              className="mx-auto max-w-xl text-sm leading-relaxed text-slate-300 md:text-base lg:mx-0"
             >
-              <Sparkles
-                className="size-5 text-cyan-400 animate-spin"
-                style={{ animationDuration: "6s" }}
-              />
-              Save the Astronauts
-              <Sparkles
-                className="size-5 text-cyan-400 animate-spin"
-                style={{ animationDuration: "6s" }}
-              />
-            </motion.h2>
+              The Starfarer-9 has suffered a critical hull failure. Its crew is
+              stranded across orbital coordinates. Enlist with your team, decrypt
+              sector logs, and rescue them before life support systems fail.
+            </motion.p>
           </div>
-
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="text-sm md:text-base text-slate-400 max-w-xl mx-auto leading-relaxed"
-          >
-            The Starfarer-9 has suffered a critical hull failure. Its crew is
-            stranded across orbital coordinates. Enlist with your team, decrypt
-            sector logs, and rescue them before life support systems fail.
-          </motion.p>
-        </div>
+        </section>
 
         {/* Dashboard / Control Center Panel */}
         <motion.div
