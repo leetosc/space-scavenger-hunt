@@ -33,6 +33,7 @@ export const activityRouter = router({
       activity,
       teams,
       players,
+      incompleteOnboardingPlayers,
       astronauts,
       assignments,
       unassignedPlayers,
@@ -43,6 +44,7 @@ export const activityRouter = router({
         getOrCreateActivity(),
         ctx.prisma.team.count(),
         ctx.prisma.player.count(),
+        ctx.prisma.player.count({ where: { isCheckedIn: false } }),
         ctx.prisma.astronaut.findMany({ where: { active: true }, select: { id: true } }),
         ctx.prisma.teamAstronautAssignment.findMany({
           select: { astronautId: true, teamId: true },
@@ -57,6 +59,9 @@ export const activityRouter = router({
     const maxTeams = activity.maxTeams ?? DEFAULT_MAX_TEAMS;
     if (teams !== maxTeams) issues.push(`Expected exactly ${maxTeams} teams, found ${teams}.`);
     if (players === 0) issues.push("No players have been created yet.");
+    if (incompleteOnboardingPlayers > 0) {
+      issues.push(`${incompleteOnboardingPlayers} player(s) have not completed onboarding.`);
+    }
     if (astronauts.length === 0) issues.push("No active astronauts exist yet.");
     if (unassignedPlayers > 0 && activity.status === "ACTIVE") {
       issues.push(`${unassignedPlayers} player(s) are not assigned to a team.`);
@@ -81,6 +86,7 @@ export const activityRouter = router({
       counts: {
         teams,
         players,
+        incompleteOnboardingPlayers,
         unassignedPlayers,
         astronauts: astronauts.length,
         assignments: assignments.length,
@@ -97,6 +103,7 @@ export const activityRouter = router({
     const activity = await getOrCreateActivity();
     return {
       maxTeams: activity.maxTeams ?? DEFAULT_MAX_TEAMS,
+      funFactGuessAttempts: activity.funFactGuessAttempts ?? 2,
     };
   }),
 
@@ -104,13 +111,17 @@ export const activityRouter = router({
     .input(
       z.object({
         maxTeams: z.number().int().positive(),
+        funFactGuessAttempts: z.number().int().min(1).max(10),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const activity = await getOrCreateActivity();
       return ctx.prisma.activity.update({
         where: { id: activity.id },
-        data: { maxTeams: input.maxTeams },
+        data: {
+          maxTeams: input.maxTeams,
+          funFactGuessAttempts: input.funFactGuessAttempts,
+        },
       });
     }),
 

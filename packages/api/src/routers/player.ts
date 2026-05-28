@@ -63,7 +63,7 @@ export const playerRouter = router({
           name: fullName,
           icon: input.icon,
           authUserId: user.id,
-          isCheckedIn: true,
+          isCheckedIn: false,
         },
       });
 
@@ -269,7 +269,7 @@ export const playerRouter = router({
         data: {
           name: input.name,
           authUserId: user.id,
-          isCheckedIn: true,
+          isCheckedIn: false,
         },
       });
 

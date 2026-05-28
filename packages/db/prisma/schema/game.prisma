@@ -1,29 +1,32 @@
 model Activity {
-  id               String    @id @default(cuid())
-  name             String
-  status           String    @default("SETUP")
-  startedAt        DateTime?
-  endedAt          DateTime?
-  timeLimitMinutes Int?
-  maxTeams         Int       @default(4)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                       String    @id @default(cuid())
+  name                     String
+  status                   String    @default("SETUP")
+  startedAt                DateTime?
+  endedAt                  DateTime?
+  timeLimitMinutes         Int?
+  maxTeams                 Int       @default(4)
+  funFactGuessAttempts     Int       @default(2)
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
 
   @@map("activity")
 }
 
 model Player {
-  id              String         @id @default(cuid())
-  name            String
-  icon            String?
-  authUserId      String?        @unique
-  authUser        User?          @relation(fields: [authUserId], references: [id], onDelete: SetNull)
-  teamId          String?
-  team            Team?          @relation(fields: [teamId], references: [id], onDelete: SetNull)
-  isCheckedIn    Boolean        @default(false)
-  scannedAttempts ClaimAttempt[] @relation("ScannedByPlayer")
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  id                       String                 @id @default(cuid())
+  name                     String
+  icon                     String?
+  authUserId               String?                @unique
+  authUser                 User?                  @relation(fields: [authUserId], references: [id], onDelete: SetNull)
+  teamId                   String?
+  team                     Team?                  @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  isCheckedIn              Boolean                @default(false)
+  scannedAttempts          ClaimAttempt[]         @relation("ScannedByPlayer")
+  funFacts                 PlayerFunFact[]
+  funFactChallengeGuesses  TeamFunFactChallenge[] @relation("LastFunFactGuess")
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
 
   @@index([teamId])
   @@index([authUserId])
@@ -31,22 +34,76 @@ model Player {
 }
 
 model Team {
-  id                 String                    @id @default(cuid())
-  name               String                    @unique
-  joinCode           String                    @unique
-  color              String?
-  icon               String?
-  signalBoostBalance Int                       @default(2)
-  players            Player[]
-  assignments        TeamAstronautAssignment[]
-  attempts           ClaimAttempt[]
-  claims             TeamClaim[]
-  hintReveals        TeamLocationHintReveal[]
-  signalBoostLedger  SignalBoostLedger[]
-  createdAt          DateTime                  @default(now())
-  updatedAt          DateTime                  @updatedAt
+  id                    String                    @id @default(cuid())
+  name                  String                    @unique
+  joinCode              String                    @unique
+  color                 String?
+  icon                  String?
+  signalBoostBalance    Int                       @default(2)
+  players               Player[]
+  assignments           TeamAstronautAssignment[]
+  attempts              ClaimAttempt[]
+  claims                TeamClaim[]
+  hintReveals           TeamLocationHintReveal[]
+  signalBoostLedger     SignalBoostLedger[]
+  funFactChallenges     TeamFunFactChallenge[]
+  funFactChallengeState TeamFunFactChallengeState?
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
 
   @@map("team")
+}
+
+model PlayerFunFact {
+  id             String                 @id @default(cuid())
+  playerId       String
+  player         Player                 @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  factOrder      Int
+  text           String
+  challenges     TeamFunFactChallenge[]
+  currentForTeam TeamFunFactChallengeState[]
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  @@unique([playerId, factOrder])
+  @@index([playerId])
+  @@map("player_fun_fact")
+}
+
+model TeamFunFactChallenge {
+  id                  String        @id @default(cuid())
+  teamId              String
+  team                Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  playerFunFactId     String
+  playerFunFact       PlayerFunFact @relation(fields: [playerFunFactId], references: [id], onDelete: Cascade)
+  status              String        @default("ACTIVE")
+  attemptsUsed        Int           @default(0)
+  lastGuessedPlayerId String?
+  lastGuessedPlayer   Player?       @relation("LastFunFactGuess", fields: [lastGuessedPlayerId], references: [id], onDelete: SetNull)
+  lastAttemptAt       DateTime?
+  completedAt         DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  @@unique([teamId, playerFunFactId])
+  @@index([teamId])
+  @@index([playerFunFactId])
+  @@index([status])
+  @@index([lastGuessedPlayerId])
+  @@map("team_fun_fact_challenge")
+}
+
+model TeamFunFactChallengeState {
+  id                 String        @id @default(cuid())
+  teamId             String        @unique
+  team               Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  currentFunFactId   String?
+  currentFunFact     PlayerFunFact? @relation(fields: [currentFunFactId], references: [id], onDelete: SetNull)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([currentFunFactId])
+  @@map("team_fun_fact_challenge_state")
 }
 
 model Astronaut {

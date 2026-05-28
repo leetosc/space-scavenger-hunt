@@ -8,10 +8,13 @@ export type {
   ClaimAttempt,
   LocationHint,
   Player,
+  PlayerFunFact,
   PrismaClient,
   SignalBoostLedger,
   Team,
   TeamClaim,
+  TeamFunFactChallenge,
+  TeamFunFactChallengeState,
   TeamLocationHintReveal,
   User,
 } from "../prisma/generated/client";

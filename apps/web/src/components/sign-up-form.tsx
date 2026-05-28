@@ -61,7 +61,7 @@ export default function SignUpForm({ nextPath = "/" }: { nextPath?: string }) {
           },
           {
             onSuccess: () => {
-              router.push(nextPath);
+              router.push(`/onboarding?next=${encodeURIComponent(nextPath)}`);
               router.refresh();
               toast.success("Welcome aboard, astronaut!");
             },

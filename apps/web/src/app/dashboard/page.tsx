@@ -62,6 +62,10 @@ export default function TeamPage() {
     refetchInterval: 4000,
     enabled: !!session,
   });
+  const onboarding = useQuery({
+    ...trpc.funFact.getOnboardingStatus.queryOptions(),
+    enabled: !!session,
+  });
   const updateTeam = useMutation({
     ...trpc.team.updateMine.mutationOptions(),
     onSuccess: () => {
@@ -83,6 +87,13 @@ export default function TeamPage() {
     if (isPending) return;
     if (!session) router.push("/login");
   }, [isPending, session, router]);
+
+  useEffect(() => {
+    if (!onboarding.data) return;
+    if (!onboarding.data.isComplete) {
+      router.push("/onboarding?next=/dashboard");
+    }
+  }, [onboarding.data, router]);
 
   useEffect(() => {
     if (

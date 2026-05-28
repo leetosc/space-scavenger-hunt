@@ -6,6 +6,7 @@ import { attemptRouter } from "./attempt";
 import { kickoffRouter } from "./kickoff";
 import { leaderboardRouter } from "./leaderboard";
 import { hintRouter } from "./hint";
+import { funFactRouter } from "./fun-fact";
 import { playerRouter } from "./player";
 import { scanRouter } from "./scan";
 import { teamRouter } from "./team";
@@ -22,6 +23,7 @@ export const appRouter = router({
   attempt: attemptRouter,
   leaderboard: leaderboardRouter,
   hint: hintRouter,
+  funFact: funFactRouter,
 });
 
 export type AppRouter = typeof appRouter;

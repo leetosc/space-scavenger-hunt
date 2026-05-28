@@ -7,8 +7,20 @@ import { Card } from "@space-scavenger-hunt/ui/components/card";
 import { cn } from "@space-scavenger-hunt/ui/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { inferRouterOutputs } from "@trpc/server";
-import { motion } from "framer-motion";
-import { ArrowLeft, ImageOff, Radar, Satellite, Zap } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  ArrowLeft,
+  Brain,
+  CheckCircle2,
+  ImageOff,
+  Radar,
+  Satellite,
+  SkipForward,
+  Sparkles,
+  UsersRound,
+  XCircle,
+  Zap,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -27,6 +39,7 @@ import { trpc } from "@/utils/trpc";
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type Hint = RouterOutputs["hint"]["listForTeam"]["hints"][number];
+type FunFactChallenge = RouterOutputs["funFact"]["getTeamChallenge"];
 
 function revealLabel(level: number, max: number) {
   if (level >= max) return "Fully revealed";
@@ -164,6 +177,170 @@ function HintCard({
   );
 }
 
+function FunFactChallengeCard({
+  data,
+  guessPending,
+  skipPending,
+  resumePending,
+  onGuess,
+  onSkip,
+  onResume,
+}: {
+  data: FunFactChallenge | undefined;
+  guessPending: boolean;
+  skipPending: boolean;
+  resumePending: boolean;
+  onGuess: (playerId: string) => void;
+  onSkip: () => void;
+  onResume: (challengeId: string) => void;
+}) {
+  const current = data?.current;
+
+  return (
+    <motion.section variants={fadeInUp}>
+      <Card className="relative overflow-hidden rounded-none border-emerald-400/25 bg-slate-950/70 p-0 shadow-[0_0_34px_rgba(52,211,153,0.1)]">
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(52,211,153,0.06)_1px,transparent_1px)] bg-[length:100%_14px]" />
+        <div className="relative border-b border-emerald-400/15 bg-[linear-gradient(90deg,rgba(52,211,153,0.14),rgba(15,23,42,0.7),rgba(34,211,238,0.08))] px-4 py-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <motion.div
+                className="flex size-10 items-center justify-center border border-emerald-400/35 bg-emerald-400/10 text-emerald-200"
+                animate={{ rotate: [0, 3, -3, 0] }}
+                transition={{ duration: 3.2, repeat: Infinity }}
+              >
+                <Brain className="size-4" />
+              </motion.div>
+              <div>
+                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-300">
+                  Signal Boost challenge
+                </p>
+                <h2 className="text-lg font-bold text-slate-100">
+                  Match the fun fact
+                </h2>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 border border-emerald-400/20 bg-slate-950/70 px-2.5 py-1.5 font-mono text-xs text-emerald-100">
+              <Sparkles className="size-3.5" />
+              +1 Boost on correct
+            </div>
+          </div>
+        </div>
+
+        <div className="relative grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+          <div className="space-y-4">
+            <AnimatePresence mode="wait">
+              {current ? (
+                <motion.div
+                  key={current.funFact.id}
+                  className="border border-emerald-400/15 bg-slate-900/55 p-4"
+                  initial={{ opacity: 0, x: 24, filter: "blur(4px)" }}
+                  animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+                  exit={{ opacity: 0, x: -24, filter: "blur(4px)" }}
+                >
+                  <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-emerald-300/75">
+                    Incoming transmission
+                  </p>
+                  <blockquote className="mt-2 text-xl font-semibold leading-8 text-slate-100">
+                    "{current.funFact.text}"
+                  </blockquote>
+                  <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+                    <span className="border border-cyan-400/20 bg-cyan-400/10 px-2 py-1 font-mono text-cyan-100">
+                      {current.attemptsRemaining} attempt
+                      {current.attemptsRemaining === 1 ? "" : "s"} left
+                    </span>
+                    {current.lastGuessedPlayer ? (
+                      <span className="border border-amber-400/20 bg-amber-400/10 px-2 py-1 font-mono text-amber-100">
+                        Last guess: {current.lastGuessedPlayer.name}
+                      </span>
+                    ) : null}
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="empty"
+                  className="flex min-h-40 flex-col items-center justify-center gap-3 border border-emerald-400/15 bg-slate-900/45 p-8 text-center"
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
+                >
+                  <CheckCircle2 className="size-8 text-emerald-300" />
+                  <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                    No available other-team fun facts right now.
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {current ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {data.candidates.map((candidate) => (
+                  <motion.button
+                    key={candidate.id}
+                    type="button"
+                    className="group flex min-w-0 items-center gap-2 border border-cyan-400/15 bg-slate-900/60 px-3 py-2 text-left transition-colors hover:border-cyan-300/40 hover:bg-cyan-400/10 disabled:opacity-60"
+                    disabled={guessPending || skipPending || resumePending}
+                    onClick={() => onGuess(candidate.id)}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <span className="flex size-8 shrink-0 items-center justify-center border border-cyan-400/20 bg-cyan-400/10 text-xs font-bold text-cyan-100">
+                      {candidate.name.slice(0, 1).toUpperCase()}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-100">
+                      {candidate.name}
+                    </span>
+                    <UsersRound className="size-3.5 shrink-0 text-cyan-300/50 transition-colors group-hover:text-cyan-200" />
+                  </motion.button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          <aside className="space-y-3 border border-emerald-400/10 bg-slate-950/55 p-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={!current || skipPending || guessPending}
+              onClick={onSkip}
+            >
+              <SkipForward data-icon="inline-start" className="size-4" />
+              {skipPending ? "Skipping..." : "Skip for now"}
+            </Button>
+            <div>
+              <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                Skipped facts
+              </p>
+              {!data || data.skipped.length === 0 ? (
+                <p className="border border-slate-700/50 bg-slate-900/40 p-3 text-xs text-muted-foreground">
+                  Skipped transmissions will appear here.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {data.skipped.map((skipped) => (
+                    <button
+                      key={skipped.id}
+                      type="button"
+                      className="w-full border border-emerald-400/10 bg-slate-900/50 p-2 text-left text-xs text-slate-300 transition-colors hover:border-emerald-300/35 hover:bg-emerald-400/10 disabled:opacity-60"
+                      disabled={resumePending || skipPending || guessPending}
+                      onClick={() => onResume(skipped.id)}
+                    >
+                      <span className="line-clamp-2">{skipped.funFact.text}</span>
+                      <span className="mt-1 block font-mono text-[10px] text-emerald-300/70">
+                        {skipped.attemptsRemaining} attempts left
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </aside>
+        </div>
+      </Card>
+    </motion.section>
+  );
+}
+
 export default function HintsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -172,6 +349,15 @@ export default function HintsPage() {
     ...trpc.hint.listForTeam.queryOptions(),
     enabled: !!session,
     refetchInterval: 10000,
+  });
+  const onboarding = useQuery({
+    ...trpc.funFact.getOnboardingStatus.queryOptions(),
+    enabled: !!session,
+  });
+  const funFactChallenge = useQuery({
+    ...trpc.funFact.getTeamChallenge.queryOptions(),
+    enabled: !!session && onboarding.data?.isComplete,
+    refetchInterval: 5000,
   });
   const spend = useMutation({
     ...trpc.hint.spendSignalBoost.mutationOptions(),
@@ -186,10 +372,61 @@ export default function HintsPage() {
     },
     onError: (error) => toast.error(error.message),
   });
+  const guess = useMutation({
+    ...trpc.funFact.guess.mutationOptions(),
+    onSuccess: (result) => {
+      if (result.result === "CORRECT") {
+        toast.success("Correct! Signal Boost added.");
+      } else if (result.result === "WRONG") {
+        toast.error("Not this astronaut. Try another signal.");
+      } else if (result.result === "EXHAUSTED") {
+        toast.error("No attempts left for that fun fact.");
+      } else {
+        toast.info("No fun facts are available right now.");
+      }
+      queryClient.invalidateQueries({
+        queryKey: trpc.funFact.getTeamChallenge.queryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.hint.listForTeam.queryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.team.getDashboard.queryKey(),
+      });
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const skip = useMutation({
+    ...trpc.funFact.skip.mutationOptions(),
+    onSuccess: () => {
+      toast.info("Fun fact skipped");
+      queryClient.invalidateQueries({
+        queryKey: trpc.funFact.getTeamChallenge.queryKey(),
+      });
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const resume = useMutation({
+    ...trpc.funFact.resumeSkipped.mutationOptions(),
+    onSuccess: () => {
+      toast.info("Fun fact restored");
+      queryClient.invalidateQueries({
+        queryKey: trpc.funFact.getTeamChallenge.queryKey(),
+      });
+    },
+    onError: (error) => toast.error(error.message),
+  });
 
   useEffect(() => {
     if (!sessionPending && !session) router.push("/login");
   }, [router, session, sessionPending]);
+
+  useEffect(() => {
+    if (!onboarding.data) return;
+    if (!onboarding.data.isComplete) {
+      router.push("/onboarding?next=/hints");
+    }
+  }, [onboarding.data, router]);
 
   if (sessionPending || (session && hints.isPending)) {
     return (
@@ -240,6 +477,16 @@ export default function HintsPage() {
           </p>
         </div>
       </motion.header>
+
+      <FunFactChallengeCard
+        data={funFactChallenge.data}
+        guessPending={guess.isPending}
+        skipPending={skip.isPending}
+        resumePending={resume.isPending}
+        onGuess={(playerId) => guess.mutate({ playerId })}
+        onSkip={() => skip.mutate()}
+        onResume={(challengeId) => resume.mutate({ challengeId })}
+      />
 
       {!data || data.hints.length === 0 ? (
         <motion.div variants={fadeInUp}>

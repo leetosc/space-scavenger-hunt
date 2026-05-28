@@ -24,6 +24,7 @@ import type { Route } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 import Loader from "@/components/loader";
 import { authClient } from "@/lib/auth-client";
@@ -48,11 +49,22 @@ export default function Home() {
     ...trpc.player.me.queryOptions(),
     enabled: !!session,
   });
+  const onboarding = useQuery({
+    ...trpc.funFact.getOnboardingStatus.queryOptions(),
+    enabled: !!session && !!me.data?.player,
+  });
 
   const board = useQuery({
     ...trpc.leaderboard.getCurrent.queryOptions(),
     refetchInterval: 10000,
   });
+
+  useEffect(() => {
+    if (!session || !me.data?.player || !onboarding.data) return;
+    if (me.data.user.role !== "ADMIN" && !onboarding.data.isComplete) {
+      router.push("/onboarding");
+    }
+  }, [me.data, onboarding.data, router, session]);
 
   const handleEnterMission = () => {
     if (!session) {
@@ -60,6 +72,10 @@ export default function Home() {
       return;
     }
     if (!activity.data || !me.data) return;
+    if (me.data.player && onboarding.data && !onboarding.data.isComplete) {
+      router.push("/onboarding");
+      return;
+    }
     if (me.data.user.role === "ADMIN") {
       router.push("/admin");
       return;

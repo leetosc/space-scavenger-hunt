@@ -47,6 +47,10 @@ export default function WaitingPage() {
     ...trpc.player.me.queryOptions(),
     enabled: !!session,
   });
+  const onboarding = useQuery({
+    ...trpc.funFact.getOnboardingStatus.queryOptions(),
+    enabled: !!session && !!me.data?.player,
+  });
 
   useEffect(() => {
     if (isPending) return;
@@ -57,6 +61,13 @@ export default function WaitingPage() {
     if (activity.data?.status === "ACTIVE") router.push("/dashboard");
     if (activity.data?.status === "FINISHED") router.push("/leaderboard");
   }, [activity.data?.status, router]);
+
+  useEffect(() => {
+    if (!me.data?.player || !onboarding.data) return;
+    if (me.data.user.role !== "ADMIN" && !onboarding.data.isComplete) {
+      router.push("/onboarding?next=/waiting");
+    }
+  }, [me.data, onboarding.data, router]);
 
   if (!activity.data || !me.data) {
     return <div className="p-10 text-center">Loading...</div>;
