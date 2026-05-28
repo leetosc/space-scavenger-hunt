@@ -129,6 +129,8 @@ space-scavenger-hunt/
 - `bun run build`: Build all applications
 - `bun run dev:web`: Start only the web application
 - `bun run dev:server`: Start only the server
+- `bun run test:e2e`: Run Playwright end-to-end tests
+- `bun run test:e2e:ui`: Run Playwright end-to-end tests in the UI runner
 - `bun run check-types`: Check TypeScript types across all apps
 - `bun run db:push`: Push schema changes to database (local dev only)
 - `bun run db:generate`: Generate database client/types
@@ -136,3 +138,18 @@ space-scavenger-hunt/
 - `bun run db:deploy`: Apply pending migrations (production)
 - `bun run db:studio`: Open database studio UI
 - `bun run db:local`: Start the local SQLite database
+
+## End-to-end tests
+
+Playwright tests live in `e2e/`.
+
+```bash
+bun run test:e2e
+```
+
+The E2E runner checks `http://localhost:3000` and `http://localhost:3001`
+before starting anything. If both the API and web app are already healthy, the
+tests reuse them. If neither is running, the runner starts an isolated test
+stack with a throwaway database under `.e2e/`. If only one service is running
+or one port is occupied by an unhealthy process, the runner fails with a message
+showing which service needs attention.

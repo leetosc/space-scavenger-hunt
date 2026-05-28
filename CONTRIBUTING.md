@@ -16,8 +16,19 @@ The web app runs on `http://localhost:3001` and the server runs on
 ## Before opening a PR
 
 - Run `bun run check-types`
+- Run `bun run test:e2e`
 - Run `bun run build` if your change affects production code or config
 - Keep secrets out of commits and use the example env files for documentation
+
+## Git hooks
+
+Husky installs a `pre-push` hook from `.husky/pre-push`. The hook runs
+`bun run test:e2e`.
+
+The E2E runner reuses healthy dev servers on `http://localhost:3000` and
+`http://localhost:3001`. If neither server is running, it starts its own
+isolated stack. If only one service is running, stop the partial stack or start
+both services before pushing.
 
 ## Scope
 
