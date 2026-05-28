@@ -155,6 +155,77 @@ function HintPreview({ hint, level }: { hint: Hint; level: number }) {
   );
 }
 
+function RevealLevelSummary({
+  teams,
+  revealByTeamId,
+  maxRevealLevel,
+}: {
+  teams: Team[];
+  revealByTeamId: Map<string, Hint["reveals"][number]>;
+  maxRevealLevel: number;
+}) {
+  if (teams.length === 0) {
+    return (
+      <div className="border border-cyan-400/10 bg-slate-950/35 px-3 py-2 text-xs text-muted-foreground">
+        No teams configured.
+      </div>
+    );
+  }
+
+  return (
+    <div className="border border-cyan-400/10 bg-slate-950/45 p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-300/75">
+          Team reveal levels
+        </p>
+        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+          /{maxRevealLevel}
+        </p>
+      </div>
+      <div className="grid gap-2">
+        {teams.map((team) => {
+          const revealLevel = revealByTeamId.get(team.id)?.revealLevel ?? 0;
+          return (
+            <div
+              key={team.id}
+              className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2"
+            >
+              <div className="flex min-w-0 items-center gap-2">
+                <span
+                  className="flex size-5 shrink-0 items-center justify-center rounded-sm text-[9px] font-black text-white shadow-[0_0_12px_rgba(255,255,255,0.08)]"
+                  style={{ backgroundColor: team.color ?? "#0891b2" }}
+                >
+                  {team.name.slice(0, 1).toUpperCase()}
+                </span>
+                <span className="truncate text-xs font-semibold text-slate-200">
+                  {team.name}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {Array.from({ length: maxRevealLevel + 1 }, (_, level) => (
+                  <span
+                    key={level}
+                    className={cn(
+                      "size-2 rounded-full border transition-colors",
+                      level <= revealLevel
+                        ? "border-cyan-200 bg-cyan-300 shadow-[0_0_10px_rgba(34,211,238,0.7)]"
+                        : "border-slate-600 bg-slate-900",
+                    )}
+                    title={`${team.name}: level ${revealLevel}/${maxRevealLevel}`}
+                  />
+                ))}
+                <span className="ml-1 min-w-7 text-right font-mono text-[10px] text-cyan-200">
+                  {revealLevel}/{maxRevealLevel}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function HintEditor({
   hint,
   teams,
@@ -293,6 +364,12 @@ function HintEditor({
               Reveals
             </Button>
           </div>
+
+          <RevealLevelSummary
+            teams={teams}
+            revealByTeamId={revealByTeamId}
+            maxRevealLevel={maxRevealLevel}
+          />
 
           <div className="flex flex-wrap items-center gap-2 border-t border-cyan-400/10 pt-3">
             <label className="inline-flex h-8 cursor-pointer items-center gap-1.5 border border-input bg-background px-2.5 text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground">

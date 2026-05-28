@@ -24,7 +24,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import Loader from "@/components/loader";
@@ -51,12 +51,14 @@ function HintCard({
   balance,
   maxRevealLevel,
   spendPending,
+  isBoosting,
   onSpend,
 }: {
   hint: Hint;
   balance: number;
   maxRevealLevel: number;
   spendPending: boolean;
+  isBoosting: boolean;
   onSpend: () => void;
 }) {
   const distortion = getHintDistortion(hint.revealLevel);
@@ -146,6 +148,42 @@ function HintCard({
               {revealLabel(hint.revealLevel, maxRevealLevel)}
             </Badge>
           </div>
+          <AnimatePresence>
+            {isBoosting ? (
+              <motion.div
+                className="pointer-events-none absolute inset-0 overflow-hidden"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <motion.div
+                  className="absolute inset-x-0 h-16 bg-[linear-gradient(180deg,transparent,rgba(34,211,238,0.08),rgba(34,211,238,0.75),rgba(167,243,208,0.95),rgba(34,211,238,0.75),rgba(34,211,238,0.08),transparent)] shadow-[0_0_38px_rgba(34,211,238,0.75)]"
+                  initial={{ y: "-35%" }}
+                  animate={{ y: ["-35%", "335%", "-20%"] }}
+                  transition={{ duration: 1.45, ease: "easeInOut" }}
+                />
+                <motion.div
+                  className="absolute inset-0 bg-cyan-300/15 mix-blend-screen"
+                  animate={{ opacity: [0.1, 0.42, 0.16, 0.35, 0.08] }}
+                  transition={{ duration: 1.45, ease: "easeInOut" }}
+                />
+                <motion.div
+                  className="absolute inset-5 border border-cyan-200/40 shadow-[inset_0_0_28px_rgba(34,211,238,0.25),0_0_28px_rgba(34,211,238,0.24)]"
+                  initial={{ scale: 0.96, opacity: 0 }}
+                  animate={{ scale: [0.96, 1.02, 1], opacity: [0, 1, 0.35] }}
+                  transition={{ duration: 1.45, ease: "easeOut" }}
+                />
+                <motion.div
+                  className="absolute bottom-3 right-3 border border-cyan-300/35 bg-slate-950/80 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-100 backdrop-blur"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: [0, 1, 1, 0], y: [8, 0, 0, -6] }}
+                  transition={{ duration: 1.45, ease: "easeOut" }}
+                >
+                  Signal boost
+                </motion.div>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
         </div>
         <div className="space-y-3 p-4">
           <div className="space-y-1">
@@ -344,6 +382,7 @@ function FunFactChallengeCard({
 export default function HintsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [boostingHintId, setBoostingHintId] = useState<string | null>(null);
   const { data: session, isPending: sessionPending } = authClient.useSession();
   const hints = useQuery({
     ...trpc.hint.listForTeam.queryOptions(),
@@ -361,6 +400,9 @@ export default function HintsPage() {
   });
   const spend = useMutation({
     ...trpc.hint.spendSignalBoost.mutationOptions(),
+    onMutate: (input) => {
+      setBoostingHintId(input.locationHintId);
+    },
     onSuccess: () => {
       toast.success("Signal boosted");
       queryClient.invalidateQueries({
@@ -371,6 +413,9 @@ export default function HintsPage() {
       });
     },
     onError: (error) => toast.error(error.message),
+    onSettled: () => {
+      window.setTimeout(() => setBoostingHintId(null), 1050);
+    },
   });
   const guess = useMutation({
     ...trpc.funFact.guess.mutationOptions(),
@@ -453,9 +498,33 @@ export default function HintsPage() {
       <motion.div
         className="sticky top-3 z-30 ml-auto flex w-fit items-center gap-2 border border-emerald-400/30 bg-slate-950/90 px-3 py-2 font-mono text-xs font-bold text-emerald-100 shadow-[0_0_24px_rgba(52,211,153,0.16)] backdrop-blur-md sm:text-sm"
         variants={fadeInUp}
+        animate={{
+          scale: spend.isPending ? 1.04 : 1,
+          boxShadow: spend.isPending
+            ? "0 0 34px rgba(52,211,153,0.28)"
+            : "0 0 24px rgba(52,211,153,0.16)",
+        }}
       >
-        <Zap className="size-4" />
-        {data?.balance ?? 0} Signal Boost{data?.balance === 1 ? "" : "s"}
+        <motion.div
+          animate={{ rotate: spend.isPending ? [0, -8, 8, 0] : 0 }}
+          transition={{ duration: 0.7, repeat: spend.isPending ? Infinity : 0 }}
+        >
+          <Zap className="size-4" />
+        </motion.div>
+        <span className="relative inline-flex min-w-5 justify-center overflow-hidden">
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.span
+              key={data?.balance ?? 0}
+              initial={{ y: -14, opacity: 0, filter: "blur(3px)" }}
+              animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
+              exit={{ y: 14, opacity: 0, filter: "blur(3px)" }}
+              transition={{ type: "spring", stiffness: 420, damping: 28 }}
+            >
+              {data?.balance ?? 0}
+            </motion.span>
+          </AnimatePresence>
+        </span>
+        Signal Boost{data?.balance === 1 ? "" : "s"}
       </motion.div>
 
       <motion.header
@@ -506,6 +575,7 @@ export default function HintsPage() {
               balance={data.balance}
               maxRevealLevel={data.maxRevealLevel}
               spendPending={spend.isPending}
+              isBoosting={boostingHintId === hint.id}
               onSpend={() => spend.mutate({ locationHintId: hint.id })}
             />
           ))}
