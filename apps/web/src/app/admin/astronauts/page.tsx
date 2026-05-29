@@ -1,7 +1,9 @@
 "use client";
 
+import { env } from "@space-scavenger-hunt/env/web";
 import { Button } from "@space-scavenger-hunt/ui/components/button";
 import { Card } from "@space-scavenger-hunt/ui/components/card";
+import { FileUpload } from "@space-scavenger-hunt/ui/components/ui/file-upload";
 import {
   Dialog,
   DialogContent,
@@ -40,16 +42,19 @@ import { motion } from "framer-motion";
 import {
   ArrowUpDown,
   Check,
+  ImagePlus,
   Orbit,
   Pencil,
   Power,
   Search,
   ShieldCheck,
   Trash2,
+  Upload,
   UsersRound,
   X,
 } from "lucide-react";
-import { type ReactNode, useMemo, useState } from "react";
+import Image from "next/image";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -74,6 +79,7 @@ type Astronaut = {
   name: string;
   description: string | null;
   hint: string | null;
+  previewUrl?: string;
   code: string;
   active: boolean;
   assignedTeam: TeamInfo | null;
@@ -93,8 +99,12 @@ type ColumnCallbacks = {
   onDelete: (id: string, name: string) => void;
   onEditAssignment: (astronaut: Astronaut) => void;
   onEditClaim: (astronaut: Astronaut) => void;
+  onEditImage: (astronaut: Astronaut) => void;
   isUpdatingCode: boolean;
 };
+
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 
 function IconActionButton({
   label,
@@ -515,6 +525,138 @@ function ClaimedStatusDialog({
   );
 }
 
+function AstronautImageDialog({
+  astronaut,
+  open,
+  onOpenChange,
+  onUpload,
+  isPending,
+}: {
+  astronaut: Astronaut;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onUpload: (astronautId: string, file: File) => Promise<void>;
+  isPending: boolean;
+}) {
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
+    };
+  }, [localPreviewUrl]);
+
+  function clearPendingImage() {
+    if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
+    setLocalPreviewUrl(null);
+    setPendingFile(null);
+  }
+
+  function handleFileSelect(files: File[]) {
+    const file = files[0];
+    if (!file) return;
+    if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+      toast.error("Only JPG, PNG, or WebP images are allowed.");
+      return;
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      toast.error("Image must be 8MB or smaller.");
+      return;
+    }
+    if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
+    setPendingFile(file);
+    setLocalPreviewUrl(URL.createObjectURL(file));
+  }
+
+  const previewSrc = localPreviewUrl ?? astronaut.previewUrl;
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen && !isPending) clearPendingImage();
+        onOpenChange(nextOpen);
+      }}
+    >
+      <DialogContent className="sm:max-w-lg" showCloseButton={!isPending}>
+        <DialogHeader>
+          <DialogTitle>Astronaut image</DialogTitle>
+          <DialogDescription>
+            Upload a JPG, PNG, or WebP image for {astronaut.name}.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {previewSrc ? (
+            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border bg-muted/20">
+              <Image
+                src={previewSrc}
+                alt={`${astronaut.name} image preview`}
+                fill
+                sizes="(min-width: 640px) 480px, calc(100vw - 48px)"
+                className="object-contain"
+                unoptimized
+              />
+            </div>
+          ) : null}
+
+          {pendingFile ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+                {pendingFile.name}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isPending}
+                onClick={clearPendingImage}
+              >
+                Choose another
+              </Button>
+            </div>
+          ) : (
+            <div className="min-h-72 overflow-hidden rounded-lg border border-dashed border-cyan-500/20 bg-slate-950/50">
+              <FileUpload onChange={handleFileSelect} disabled={isPending} />
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isPending}
+            onClick={() => onOpenChange(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            disabled={!pendingFile || isPending}
+            onClick={async () => {
+              if (!pendingFile) return;
+              try {
+                await onUpload(astronaut.id, pendingFile);
+                clearPendingImage();
+                onOpenChange(false);
+              } catch {
+                // Error toast is handled by the upload caller.
+              }
+            }}
+          >
+            <Upload className="size-3.5" />
+            {isPending ? "Uploading..." : "Upload image"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Column definitions
 // ---------------------------------------------------------------------------
@@ -536,23 +678,37 @@ function useColumns(callbacks: ColumnCallbacks) {
         cell: ({ row }) => {
           const a = row.original;
           return (
-            <div className="min-w-0 space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="font-medium truncate">{a.name}</p>
-                <span
-                  className={cn(
-                    "text-[11px] px-1.5 py-0.5 rounded-sm border shrink-0",
-                    a.active
-                      ? "border-emerald-500/40 text-emerald-400 bg-emerald-500/10"
-                      : "border-border/40 text-muted-foreground",
-                  )}
-                >
-                  {a.active ? "Active" : "Inactive"}
-                </span>
-              </div>
-              {a.hint ? (
-                <p className="text-[11px] text-muted-foreground truncate">{a.hint}</p>
+            <div className="flex min-w-0 items-center gap-2">
+              {a.previewUrl ? (
+                <div className="relative size-10 shrink-0 overflow-hidden rounded-md border bg-muted/20">
+                  <Image
+                    src={a.previewUrl}
+                    alt=""
+                    fill
+                    sizes="40px"
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
               ) : null}
+              <div className="min-w-0 space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-medium truncate">{a.name}</p>
+                  <span
+                    className={cn(
+                      "text-[11px] px-1.5 py-0.5 rounded-sm border shrink-0",
+                      a.active
+                        ? "border-emerald-500/40 text-emerald-400 bg-emerald-500/10"
+                        : "border-border/40 text-muted-foreground",
+                    )}
+                  >
+                    {a.active ? "Active" : "Inactive"}
+                  </span>
+                </div>
+                {a.hint ? (
+                  <p className="text-[11px] text-muted-foreground truncate">{a.hint}</p>
+                ) : null}
+              </div>
             </div>
           );
         },
@@ -658,6 +814,12 @@ function useColumns(callbacks: ColumnCallbacks) {
           const a = row.original;
           return (
             <div className="flex items-center gap-0.5">
+              <IconActionButton
+                label={a.previewUrl ? "Replace image" : "Upload image"}
+                onClick={() => callbacks.onEditImage(a)}
+              >
+                <ImagePlus className="size-3.5" />
+              </IconActionButton>
               <IconActionButton
                 label={a.active ? "Deactivate" : "Activate"}
                 onClick={() => callbacks.onToggleActive(a.id)}
@@ -800,6 +962,7 @@ export default function AdminAstronautsPage() {
   const [hint, setHint] = useState("");
   const [editingAssignment, setEditingAssignment] = useState<Astronaut | null>(null);
   const [editingClaim, setEditingClaim] = useState<Astronaut | null>(null);
+  const [editingImage, setEditingImage] = useState<Astronaut | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const invalidateAll = () => {
@@ -875,6 +1038,35 @@ export default function AdminAstronautsPage() {
     onError: (err) => toast.error(err.message),
   });
 
+  const [imageUploadPending, setImageUploadPending] = useState(false);
+
+  async function uploadAstronautImage(astronautId: string, file: File) {
+    setImageUploadPending(true);
+    try {
+      const form = new FormData();
+      form.append("image", file);
+      const res = await fetch(
+        `${env.NEXT_PUBLIC_SERVER_URL}/api/astronauts/${astronautId}/upload`,
+        {
+          method: "POST",
+          body: form,
+          credentials: "include",
+        },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message ?? `Upload failed (${res.status})`);
+      }
+      toast.success("Astronaut image uploaded");
+      invalidateAll();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Upload failed");
+      throw error;
+    } finally {
+      setImageUploadPending(false);
+    }
+  }
+
   const appBaseUrl =
     typeof window !== "undefined" ? `${window.location.protocol}//${window.location.host}` : "";
 
@@ -892,6 +1084,7 @@ export default function AdminAstronautsPage() {
       name: a.name,
       description: a.description,
       hint: a.hint,
+      previewUrl: a.previewUrl,
       code: a.code,
       active: a.active,
       assignedTeam: assignment?.team
@@ -937,6 +1130,7 @@ export default function AdminAstronautsPage() {
       onDelete: (id, astronautName) => setDeleteTarget({ id, name: astronautName }),
       onEditAssignment: setEditingAssignment,
       onEditClaim: setEditingClaim,
+      onEditImage: setEditingImage,
       isUpdatingCode: updateCodeMutation.isPending,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1058,6 +1252,19 @@ export default function AdminAstronautsPage() {
             setClaimedByTeamMutation.mutate({ id: astronautId, teamId })
           }
           isPending={setClaimedByTeamMutation.isPending}
+        />
+      )}
+
+      {editingImage && (
+        <AstronautImageDialog
+          key={editingImage.id}
+          astronaut={editingImage}
+          open={!!editingImage}
+          onOpenChange={(open) => {
+            if (!open) setEditingImage(null);
+          }}
+          onUpload={uploadAstronautImage}
+          isPending={imageUploadPending}
         />
       )}
 

@@ -14,6 +14,7 @@ import {
   uploadLocationHintPhoto,
 } from "./routes/hint-photo";
 import { getAttemptPhoto } from "./routes/attempt-photo";
+import { getAstronautPhoto, uploadAstronautPhoto } from "./routes/astronaut-photo";
 import { uploadAttemptPhoto, uploadMiddleware } from "./routes/upload";
 
 const app = express();
@@ -54,6 +55,12 @@ app.post(
 );
 
 app.get("/api/attempts/:attemptId/photo/:token", getAttemptPhoto);
+app.post(
+  "/api/astronauts/:astronautId/upload",
+  uploadMiddleware.single("image"),
+  uploadAstronautPhoto,
+);
+app.get("/api/astronauts/:astronautId/photo/:token", getAstronautPhoto);
 app.post(
   "/api/location-hints/upload",
   uploadMiddleware.single("image"),

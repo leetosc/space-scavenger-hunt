@@ -142,6 +142,24 @@ export default function AstronautPage({
       {/* Astronaut info */}
       <motion.div variants={scaleIn}>
         <Card className="p-6 space-y-4">
+          {astronaut.previewUrl ? (
+            <motion.div
+              className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border bg-muted/20"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...springTransition, delay: 0.08 }}
+            >
+              <Image
+                src={astronaut.previewUrl}
+                alt={`${astronaut.name} portrait`}
+                fill
+                sizes="(min-width: 768px) 672px, calc(100vw - 48px)"
+                className="object-cover"
+                unoptimized
+              />
+            </motion.div>
+          ) : null}
+
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <motion.code

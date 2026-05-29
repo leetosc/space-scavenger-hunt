@@ -107,17 +107,21 @@ model TeamFunFactChallengeState {
 }
 
 model Astronaut {
-  id          String                    @id @default(cuid())
-  name        String
-  code        String                    @unique
-  description String?
-  hint        String?
-  active      Boolean                   @default(true)
-  assignments TeamAstronautAssignment[]
-  attempts    ClaimAttempt[]
-  claims      TeamClaim[]
-  createdAt   DateTime                  @default(now())
-  updatedAt   DateTime                  @updatedAt
+  id             String                    @id @default(cuid())
+  name           String
+  code           String                    @unique
+  description    String?
+  hint           String?
+  imageUrl       String?
+  imageBlobName  String?
+  imageMimeType  String?
+  imageSizeBytes Int?
+  active         Boolean                   @default(true)
+  assignments    TeamAstronautAssignment[]
+  attempts       ClaimAttempt[]
+  claims         TeamClaim[]
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
 
   @@index([code])
   @@index([active])

@@ -5,7 +5,9 @@ import { z } from "zod";
 
 import type { Context } from "../context";
 import { adminProcedure, publicProcedure, router } from "../index";
+import { deleteBlob } from "../services/azure-blob";
 import { generateAstronautProfile } from "../services/ai/generate-astronaut";
+import { getAstronautPhotoPreviewPath } from "../services/astronaut-photo-url";
 import { getAttemptPhotoPreviewPath } from "../services/attempt-photo-url";
 
 const CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -30,6 +32,17 @@ async function generateUniqueCode(prisma: Context["prisma"]) {
   throw new Error("Failed to generate unique astronaut code");
 }
 
+function withPreviewUrl<T extends { id: string; imageBlobName: string | null }>(
+  astronaut: T,
+) {
+  return {
+    ...astronaut,
+    previewUrl: astronaut.imageBlobName
+      ? getAstronautPhotoPreviewPath(astronaut.id)
+      : undefined,
+  };
+}
+
 export const astronautRouter = router({
   getByCode: publicProcedure
     .input(z.object({ code: z.string().min(1).max(64) }))
@@ -43,6 +56,7 @@ export const astronautRouter = router({
           name: true,
           description: true,
           hint: true,
+          imageBlobName: true,
           code: true,
           active: true,
           claims: {
@@ -72,6 +86,9 @@ export const astronautRouter = router({
         name: astronaut.name,
         description: astronaut.description,
         hint: astronaut.hint,
+        previewUrl: astronaut.imageBlobName
+          ? getAstronautPhotoPreviewPath(astronaut.id)
+          : undefined,
         code: astronaut.code,
         active: astronaut.active,
         claimedBy,
@@ -88,14 +105,15 @@ export const astronautRouter = router({
       };
     }),
 
-  list: adminProcedure.query(({ ctx }) => {
-    return ctx.prisma.astronaut.findMany({
+  list: adminProcedure.query(async ({ ctx }) => {
+    const astronauts = await ctx.prisma.astronaut.findMany({
       orderBy: { createdAt: "asc" },
       include: {
         assignments: { include: { team: true } },
         claims: { orderBy: { claimedAt: "desc" }, include: { team: true } },
       },
     });
+    return astronauts.map(withPreviewUrl);
   }),
 
   create: adminProcedure
@@ -305,6 +323,13 @@ export const astronautRouter = router({
   delete: adminProcedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
+      const astronaut = await ctx.prisma.astronaut.findUnique({
+        where: { id: input.id },
+        select: { imageBlobName: true },
+      });
+      if (astronaut?.imageBlobName) {
+        await deleteBlob(astronaut.imageBlobName);
+      }
       await ctx.prisma.astronaut.delete({ where: { id: input.id } });
       return { deleted: true };
     }),
