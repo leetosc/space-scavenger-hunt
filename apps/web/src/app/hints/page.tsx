@@ -42,6 +42,8 @@ type RouterOutputs = inferRouterOutputs<AppRouter>;
 type Hint = RouterOutputs["hint"]["listForTeam"]["hints"][number];
 type FunFactChallenge = RouterOutputs["funFact"]["getTeamChallenge"];
 
+const SIGNAL_BOOST_REVEAL_DURATION_S = 3.15;
+
 function revealLabel(level: number, max: number) {
   if (level >= max) return "Fully revealed";
   return `Signal level ${level}/${max}`;
@@ -161,24 +163,36 @@ function HintCard({
                   className="absolute inset-x-0 h-16 bg-[linear-gradient(180deg,transparent,rgba(34,211,238,0.08),rgba(34,211,238,0.75),rgba(167,243,208,0.95),rgba(34,211,238,0.75),rgba(34,211,238,0.08),transparent)] shadow-[0_0_38px_rgba(34,211,238,0.75)]"
                   initial={{ y: "-35%" }}
                   animate={{ y: ["-35%", "335%", "-20%"] }}
-                  transition={{ duration: 1.45, ease: "easeInOut" }}
+                  transition={{
+                    duration: SIGNAL_BOOST_REVEAL_DURATION_S,
+                    ease: "easeInOut",
+                  }}
                 />
                 <motion.div
                   className="absolute inset-0 bg-cyan-300/15 mix-blend-screen"
                   animate={{ opacity: [0.1, 0.42, 0.16, 0.35, 0.08] }}
-                  transition={{ duration: 1.45, ease: "easeInOut" }}
+                  transition={{
+                    duration: SIGNAL_BOOST_REVEAL_DURATION_S,
+                    ease: "easeInOut",
+                  }}
                 />
                 <motion.div
                   className="absolute inset-5 border border-cyan-200/40 shadow-[inset_0_0_28px_rgba(34,211,238,0.25),0_0_28px_rgba(34,211,238,0.24)]"
                   initial={{ scale: 0.96, opacity: 0 }}
                   animate={{ scale: [0.96, 1.02, 1], opacity: [0, 1, 0.35] }}
-                  transition={{ duration: 1.45, ease: "easeOut" }}
+                  transition={{
+                    duration: SIGNAL_BOOST_REVEAL_DURATION_S,
+                    ease: "easeOut",
+                  }}
                 />
                 <motion.div
                   className="absolute bottom-3 right-3 border border-cyan-300/35 bg-slate-950/80 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-100 backdrop-blur"
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: [0, 1, 1, 0], y: [8, 0, 0, -6] }}
-                  transition={{ duration: 1.45, ease: "easeOut" }}
+                  transition={{
+                    duration: SIGNAL_BOOST_REVEAL_DURATION_S,
+                    ease: "easeOut",
+                  }}
                 >
                   Signal boost
                 </motion.div>
@@ -364,7 +378,9 @@ function FunFactChallengeCard({
                       disabled={resumePending || skipPending || guessPending}
                       onClick={() => onResume(skipped.id)}
                     >
-                      <span className="line-clamp-2">{skipped.funFact.text}</span>
+                      <span className="line-clamp-2">
+                        {skipped.funFact.text}
+                      </span>
                       <span className="mt-1 block font-mono text-[10px] text-emerald-300/70">
                         {skipped.attemptsRemaining} attempts left
                       </span>
@@ -420,7 +436,10 @@ export default function HintsPage() {
       toast.error(error.message);
     },
     onSettled: () => {
-      window.setTimeout(() => setBoostingHintId(null), 1050);
+      window.setTimeout(
+        () => setBoostingHintId(null),
+        SIGNAL_BOOST_REVEAL_DURATION_S * 1000 + 200,
+      );
     },
   });
   const guess = useMutation({
