@@ -669,11 +669,18 @@ export default function AdminAstronautsPage() {
 
   const createMutation = useMutation({
     ...trpc.astronaut.create.mutationOptions(),
-    onSuccess: () => {
+    onSuccess: (data) => {
       setName("");
       setDescription("");
       setHint("");
       invalidateAll();
+      if (data.aiFallbackUsed) {
+        toast.warning(
+          "Astronaut created with a preset profile — AI generation is temporarily unavailable.",
+        );
+      } else {
+        toast.success("Astronaut created");
+      }
     },
     onError: (err) => toast.error(err.message),
   });

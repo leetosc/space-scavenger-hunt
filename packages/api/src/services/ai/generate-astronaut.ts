@@ -2,6 +2,7 @@ import { generateObject } from "ai";
 import { z } from "zod";
 
 import { foundryModel } from "./client";
+import { logAiFallback } from "./log-ai-error";
 
 const SYSTEM_PROMPT = `You generate creative astronaut character profiles for a space-themed office scavenger hunt game. Each astronaut is a hidden character that teams must find by scanning NFC tags placed around the office.`;
 
@@ -36,6 +37,11 @@ type ExistingAstronautProfile = {
 
 type GenerateAstronautProfileOptions = {
   existingProfiles?: ExistingAstronautProfile[];
+};
+
+export type GenerateAstronautProfileResult = {
+  profile: AstronautProfile;
+  source: "ai" | "fallback";
 };
 
 function normalizeProfileText(text: string): string {
@@ -95,7 +101,7 @@ function pickFallbackProfile(
 
 export async function generateAstronautProfile(
   options?: GenerateAstronautProfileOptions,
-): Promise<AstronautProfile> {
+): Promise<GenerateAstronautProfileResult> {
   const existingProfiles = options?.existingProfiles ?? [];
 
   try {
@@ -108,16 +114,21 @@ export async function generateAstronautProfile(
         description: z.string().describe("1-2 sentence character description"),
       }),
       maxOutputTokens: 300,
+      maxRetries: 0,
     });
     if (
       result.object.name &&
       result.object.description &&
       !isDuplicateProfile(result.object, existingProfiles)
     ) {
-      return result.object;
+      return { profile: result.object, source: "ai" };
     }
   } catch (error) {
-    console.error("[ai.generateAstronautProfile] falling back due to error:", error);
+    logAiFallback("ai.generateAstronautProfile", error);
   }
-  return pickFallbackProfile(existingProfiles);
+
+  return {
+    profile: pickFallbackProfile(existingProfiles),
+    source: "fallback",
+  };
 }

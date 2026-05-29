@@ -108,6 +108,7 @@ export const astronautRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       let { name, description } = input;
+      let aiFallbackUsed = false;
 
       // Use AI to generate missing name/description
       if (!name?.trim() || !description?.trim()) {
@@ -116,11 +117,12 @@ export const astronautRouter = router({
           select: { name: true, description: true },
         });
         const generated = await generateAstronautProfile({ existingProfiles });
-        if (!name?.trim()) name = generated.name;
-        if (!description?.trim()) description = generated.description;
+        if (!name?.trim()) name = generated.profile.name;
+        if (!description?.trim()) description = generated.profile.description;
+        aiFallbackUsed = generated.source === "fallback";
       }
 
-      return ctx.prisma.astronaut.create({
+      const astronaut = await ctx.prisma.astronaut.create({
         data: {
           name,
           description,
@@ -129,6 +131,8 @@ export const astronautRouter = router({
           active: true,
         },
       });
+
+      return { astronaut, aiFallbackUsed };
     }),
 
   update: adminProcedure
