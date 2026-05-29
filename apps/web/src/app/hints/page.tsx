@@ -35,6 +35,7 @@ import {
   staggerContainer,
 } from "@/lib/animations";
 import { getHintDistortion } from "@/lib/hint-distortion";
+import { useGameHaptics } from "@/hooks/use-game-haptics";
 import { trpc } from "@/utils/trpc";
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
@@ -382,6 +383,7 @@ function FunFactChallengeCard({
 export default function HintsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const haptics = useGameHaptics();
   const [boostingHintId, setBoostingHintId] = useState<string | null>(null);
   const { data: session, isPending: sessionPending } = authClient.useSession();
   const hints = useQuery({
@@ -404,6 +406,7 @@ export default function HintsPage() {
       setBoostingHintId(input.locationHintId);
     },
     onSuccess: () => {
+      haptics.success();
       toast.success("Signal boosted");
       queryClient.invalidateQueries({
         queryKey: trpc.hint.listForTeam.queryKey(),
@@ -412,7 +415,10 @@ export default function HintsPage() {
         queryKey: trpc.team.getDashboard.queryKey(),
       });
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => {
+      haptics.error();
+      toast.error(error.message);
+    },
     onSettled: () => {
       window.setTimeout(() => setBoostingHintId(null), 1050);
     },
@@ -421,10 +427,13 @@ export default function HintsPage() {
     ...trpc.funFact.guess.mutationOptions(),
     onSuccess: (result) => {
       if (result.result === "CORRECT") {
+        haptics.success();
         toast.success("Correct! Signal Boost added.");
       } else if (result.result === "WRONG") {
+        haptics.error();
         toast.error("Not this astronaut. Try another signal.");
       } else if (result.result === "EXHAUSTED") {
+        haptics.error();
         toast.error("No attempts left for that fun fact.");
       } else {
         toast.info("No fun facts are available right now.");
@@ -439,7 +448,10 @@ export default function HintsPage() {
         queryKey: trpc.team.getDashboard.queryKey(),
       });
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => {
+      haptics.error();
+      toast.error(error.message);
+    },
   });
   const skip = useMutation({
     ...trpc.funFact.skip.mutationOptions(),
@@ -449,7 +461,10 @@ export default function HintsPage() {
         queryKey: trpc.funFact.getTeamChallenge.queryKey(),
       });
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => {
+      haptics.error();
+      toast.error(error.message);
+    },
   });
   const resume = useMutation({
     ...trpc.funFact.resumeSkipped.mutationOptions(),
@@ -459,7 +474,10 @@ export default function HintsPage() {
         queryKey: trpc.funFact.getTeamChallenge.queryKey(),
       });
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => {
+      haptics.error();
+      toast.error(error.message);
+    },
   });
 
   useEffect(() => {
@@ -552,9 +570,18 @@ export default function HintsPage() {
         guessPending={guess.isPending}
         skipPending={skip.isPending}
         resumePending={resume.isPending}
-        onGuess={(playerId) => guess.mutate({ playerId })}
-        onSkip={() => skip.mutate()}
-        onResume={(challengeId) => resume.mutate({ challengeId })}
+        onGuess={(playerId) => {
+          haptics.select();
+          guess.mutate({ playerId });
+        }}
+        onSkip={() => {
+          haptics.select();
+          skip.mutate();
+        }}
+        onResume={(challengeId) => {
+          haptics.select();
+          resume.mutate({ challengeId });
+        }}
       />
 
       {!data || data.hints.length === 0 ? (
@@ -576,7 +603,10 @@ export default function HintsPage() {
               maxRevealLevel={data.maxRevealLevel}
               spendPending={spend.isPending}
               isBoosting={boostingHintId === hint.id}
-              onSpend={() => spend.mutate({ locationHintId: hint.id })}
+              onSpend={() => {
+                haptics.submit();
+                spend.mutate({ locationHintId: hint.id });
+              }}
             />
           ))}
         </div>

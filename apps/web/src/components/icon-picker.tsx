@@ -15,15 +15,25 @@ import { staggerContainer, popIn, iconButtonInteraction } from "@/lib/animations
 export function IconPicker({
   value,
   onChange,
+  onOpen,
+  onSelect,
 }: {
   value: string;
   onChange: (icon: string) => void;
+  onOpen?: () => void;
+  onSelect?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const SelectedIcon = ICON_MAP[value];
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (nextOpen && !open) onOpen?.();
+        setOpen(nextOpen);
+      }}
+    >
       <PopoverTrigger
         render={
           <motion.button
@@ -53,6 +63,7 @@ export function IconPicker({
               key={name}
               type="button"
               onClick={() => {
+                onSelect?.();
                 onChange(name);
                 setOpen(false);
               }}

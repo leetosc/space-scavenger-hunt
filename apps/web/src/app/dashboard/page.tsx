@@ -25,6 +25,7 @@ import { authClient } from "@/lib/auth-client";
 import { IconPicker } from "@/components/icon-picker";
 import { MissionCountdown } from "@/components/mission-countdown";
 import { TeamIcon } from "@/components/team-icon";
+import { useGameHaptics } from "@/hooks/use-game-haptics";
 import {
   staggerContainer,
   staggerContainerSlow,
@@ -48,6 +49,7 @@ function filterAstronautCode(value: string): string {
 export default function TeamPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const haptics = useGameHaptics();
   const [manualCode, setManualCode] = useState("");
   const [isEditingTeam, setIsEditingTeam] = useState(false);
   const [teamName, setTeamName] = useState("");
@@ -69,6 +71,7 @@ export default function TeamPage() {
   const updateTeam = useMutation({
     ...trpc.team.updateMine.mutationOptions(),
     onSuccess: () => {
+      haptics.success();
       queryClient.invalidateQueries({
         queryKey: trpc.team.getDashboard.queryKey(),
       });
@@ -79,6 +82,7 @@ export default function TeamPage() {
       toast.success("Team updated");
     },
     onError: (error) => {
+      haptics.error();
       toast.error(error.message);
     },
   });
@@ -157,6 +161,7 @@ export default function TeamPage() {
             aria-label="Edit team name and icon"
             title="Edit team"
             onClick={() => {
+              haptics.tap();
               setTeamName(team.name);
               setTeamIcon(team.icon ?? "Rocket");
               setIsEditingTeam((value) => !value);
@@ -179,7 +184,12 @@ export default function TeamPage() {
                 updateTeam.mutate({ name: nextName, icon: teamIcon });
               }}
             >
-              <IconPicker value={teamIcon} onChange={setTeamIcon} />
+              <IconPicker
+                value={teamIcon}
+                onChange={setTeamIcon}
+                onOpen={haptics.tap}
+                onSelect={haptics.select}
+              />
               <Input
                 value={teamName}
                 onChange={(e) => setTeamName(e.target.value)}
@@ -207,6 +217,7 @@ export default function TeamPage() {
                 aria-label="Cancel team edit"
                 title="Cancel"
                 onClick={() => {
+                  haptics.tap();
                   setTeamName(team.name);
                   setTeamIcon(team.icon ?? "Rocket");
                   setIsEditingTeam(false);

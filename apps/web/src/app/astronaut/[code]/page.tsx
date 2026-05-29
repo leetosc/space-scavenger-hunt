@@ -23,6 +23,7 @@ import {
   bounceTransition,
   springTransition,
 } from "@/lib/animations";
+import { useGameHaptics } from "@/hooks/use-game-haptics";
 import { ICON_MAP } from "@/lib/icons";
 import { trpc } from "@/utils/trpc";
 
@@ -33,6 +34,7 @@ export default function AstronautPage({
 }) {
   const { code } = use(params);
   const router = useRouter();
+  const haptics = useGameHaptics();
   const { data: session, isPending: sessionPending } = authClient.useSession();
 
   const astronautQuery = useQuery({
@@ -90,6 +92,7 @@ export default function AstronautPage({
   // ---------- Claim action (logged-in players) ----------
   function handleClaim() {
     if (scanCalledRef.current) return;
+    haptics.submit();
     scanCalledRef.current = true;
     scanMutation.mutate(
       { code },
@@ -100,8 +103,14 @@ export default function AstronautPage({
             (data.status === "CREATED_ATTEMPT" ||
               data.status === "EXISTING_ATTEMPT")
           ) {
+            haptics.success();
             router.push(`/attempt/${data.attemptId}` as Route);
+          } else {
+            haptics.error();
           }
+        },
+        onError: () => {
+          haptics.error();
         },
         onSettled: () => {
           scanCalledRef.current = false;

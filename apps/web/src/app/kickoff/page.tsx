@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import NameWheel, { type WheelPhase } from "@/components/kickoff/name-wheel";
 import StarfieldBackground from "@/components/starfield-background";
 import TeamCards from "@/components/kickoff/team-cards";
+import { useGameHaptics } from "@/hooks/use-game-haptics";
 import { trpc } from "@/utils/trpc";
 
 /* ------------------------------------------------------------------ */
@@ -49,6 +50,7 @@ type PagePhase = WheelPhase | "landed";
 
 export default function KickoffDisplayPage() {
   const queryClient = useQueryClient();
+  const haptics = useGameHaptics();
   const state = useQuery({
     ...trpc.kickoff.getDisplayState.queryOptions(),
     refetchInterval: 1500,
@@ -60,7 +62,10 @@ export default function KickoffDisplayPage() {
         queryKey: trpc.kickoff.getDisplayState.queryKey(),
       });
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err) => {
+      haptics.error();
+      toast.error(err.message);
+    },
   });
 
   const [phase, setPhase] = useState<PagePhase>("idle");
@@ -72,6 +77,7 @@ export default function KickoffDisplayPage() {
 
   const prevAssigned = useRef<Set<string>>(new Set());
   const hasInitialized = useRef(false);
+  const previousActivityStatus = useRef<string | null>(null);
   const wheelContainerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
 
@@ -133,7 +139,10 @@ export default function KickoffDisplayPage() {
   /*  2. Wheel spin complete → "selected"                              */
   /* ────────────────────────────────────────────────────────────────── */
 
-  const onSpinDone = useCallback(() => setPhase("selected"), []);
+  const onSpinDone = useCallback(() => {
+    haptics.select();
+    setPhase("selected");
+  }, [haptics.select]);
 
   /* ────────────────────────────────────────────────────────────────── */
   /*  3. Selected → flying (after dramatic pause)                      */
@@ -187,6 +196,7 @@ export default function KickoffDisplayPage() {
 
       const tgt = targetRef.current;
       if (tgt) {
+        haptics.impact();
         // Impact highlight
         setHighlightTeam(tgt.teamId);
 
@@ -218,7 +228,7 @@ export default function KickoffDisplayPage() {
     }, 900);
 
     return () => clearTimeout(timer);
-  }, [phase]);
+  }, [phase, haptics]);
 
   /* ────────────────────────────────────────────────────────────────── */
   /*  5. Landed → idle (reset for next spin)                           */
@@ -253,7 +263,14 @@ export default function KickoffDisplayPage() {
   /* ────────────────────────────────────────────────────────────────── */
 
   useEffect(() => {
+    const previousStatus = previousActivityStatus.current;
+    previousActivityStatus.current = state.data?.status ?? null;
+
     if (state.data?.status === "ACTIVE") {
+      if (previousStatus && previousStatus !== "ACTIVE") {
+        haptics.success();
+      }
+
       const end = Date.now() + 3000;
       const tick = () => {
         confetti({
@@ -270,7 +287,7 @@ export default function KickoffDisplayPage() {
       };
       tick();
     }
-  }, [state.data?.status]);
+  }, [state.data?.status, haptics]);
 
   /* ────────────────────────────────────────────────────────────────── */
   /*  Render                                                           */
@@ -332,7 +349,10 @@ export default function KickoffDisplayPage() {
         <Button
           className="mx-auto border-white/20 bg-white/10 text-white shadow-[0_0_24px_rgba(34,211,238,0.2)] backdrop-blur hover:bg-white/20"
           disabled={!canSpinNextPlayer}
-          onClick={() => spinNextPlayer.mutate()}
+          onClick={() => {
+            haptics.select();
+            spinNextPlayer.mutate();
+          }}
           size="lg"
         >
           {spinNextPlayer.isPending ? (

@@ -23,6 +23,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { MissionCountdown } from "@/components/mission-countdown";
+import { useGameHaptics } from "@/hooks/use-game-haptics";
 import {
   fadeInUp,
   scaleIn,
@@ -620,6 +621,7 @@ function AiVerdictCard({
 /* ========================================================================= */
 export default function AttemptView({ attemptId }: { attemptId: string }) {
   const queryClient = useQueryClient();
+  const haptics = useGameHaptics();
   const attemptQuery = useQuery({
     ...trpc.attempt.getById.queryOptions({ id: attemptId }),
     refetchInterval: (query) => {
@@ -635,6 +637,7 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
   const regenerateTaskMutation = useMutation({
     ...trpc.attempt.regenerateTask.mutationOptions(),
     onSuccess: async () => {
+      haptics.success();
       clearPendingPhoto();
       await queryClient.invalidateQueries({
         queryKey: trpc.attempt.getById.queryKey({ id: attemptId }),
@@ -644,18 +647,43 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
       });
       toast.success("Task regenerated");
     },
+    onError: (error) => {
+      haptics.error();
+      toast.error(error.message);
+    },
   });
 
   const [uploading, setUploading] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
   const celebratedRef = useRef(false);
+  const previousStatusRef = useRef<string | null>(null);
 
   useEffect(() => {
     return () => {
       if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
     };
   }, [localPreviewUrl]);
+
+  const attemptStatus = attemptQuery.data?.attempt.status;
+  const attemptCanEdit = attemptQuery.data?.canEdit;
+
+  useEffect(() => {
+    if (!attemptStatus) return;
+
+    const previousStatus = previousStatusRef.current;
+    previousStatusRef.current = attemptStatus;
+
+    if (!previousStatus || previousStatus === attemptStatus || !attemptCanEdit) {
+      return;
+    }
+
+    if (attemptStatus === "APPROVED") {
+      haptics.success();
+    } else if (attemptStatus === "REJECTED" || attemptStatus === "EXPIRED") {
+      haptics.error();
+    }
+  }, [attemptStatus, attemptCanEdit, haptics.success, haptics.error]);
 
   if (!attemptQuery.data) {
     return <InitialLoader />;
@@ -680,10 +708,12 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
   async function handleUpload(file: File) {
     if (uploading || !canEdit) return;
     if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+      haptics.error();
       toast.error("Only JPG, PNG, or WebP photos are allowed.");
       return;
     }
     if (file.size > MAX_UPLOAD_BYTES) {
+      haptics.error();
       toast.error("Photo must be 8MB or smaller.");
       return;
     }
@@ -704,6 +734,7 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.message ?? `Upload failed (${res.status})`);
       }
+      haptics.success();
       toast.success("Photo uploaded - judging...");
       clearPendingPhoto();
       queryClient.invalidateQueries({
@@ -711,6 +742,7 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Upload failed";
+      haptics.error();
       toast.error(message);
     } finally {
       setUploading(false);
@@ -736,19 +768,23 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
     const file = files[0];
     if (!file) return;
     if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+      haptics.error();
       toast.error("Only JPG, PNG, or WebP photos are allowed.");
       return;
     }
     if (file.size > MAX_UPLOAD_BYTES) {
+      haptics.error();
       toast.error("Photo must be 8MB or smaller.");
       return;
     }
+    haptics.select();
     if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
     setPendingFile(file);
     setLocalPreviewUrl(URL.createObjectURL(file));
   }
 
   function handleConfirmUpload() {
+    haptics.submit();
     if (pendingFile) handleUpload(pendingFile);
   }
 
@@ -803,7 +839,10 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
               variant="outline"
               size="sm"
               className="border-cyan-500/30 bg-slate-950/40 font-mono text-[11px] uppercase tracking-wide text-cyan-200 hover:bg-cyan-500/10 hover:text-cyan-100"
-              onClick={() => regenerateTaskMutation.mutate({ attemptId })}
+              onClick={() => {
+                haptics.submit();
+                regenerateTaskMutation.mutate({ attemptId });
+              }}
               disabled={regenerateTaskMutation.isPending}
             >
               <RefreshCw
@@ -953,7 +992,10 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={clearPendingPhoto}
+                      onClick={() => {
+                        haptics.tap();
+                        clearPendingPhoto();
+                      }}
                       disabled={uploading || !canEdit}
                     >
                       Choose another
