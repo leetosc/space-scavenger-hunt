@@ -37,7 +37,18 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { motion } from "framer-motion";
-import { ArrowUpDown, Check, Pencil, Power, ShieldCheck, Trash2, X } from "lucide-react";
+import {
+  ArrowUpDown,
+  Check,
+  Orbit,
+  Pencil,
+  Power,
+  Search,
+  ShieldCheck,
+  Trash2,
+  UsersRound,
+  X,
+} from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -67,6 +78,11 @@ type Astronaut = {
   active: boolean;
   assignedTeam: TeamInfo | null;
   claimedTeam: TeamInfo | null;
+};
+
+type TeamStats = TeamInfo & {
+  assignedCount: number;
+  claimedCount: number;
 };
 
 type ColumnCallbacks = {
@@ -226,6 +242,80 @@ function TeamBadge({ team }: { team: TeamInfo }) {
       </span>
       <span className="text-xs truncate">{team.name}</span>
     </span>
+  );
+}
+
+function StatTile({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: number | string;
+  icon: typeof Orbit;
+}) {
+  return (
+    <div className="border border-border/60 bg-muted/20 px-3 py-2">
+      <div className="mb-1 flex items-center gap-1.5 text-muted-foreground">
+        <Icon className="size-3.5" />
+        <span className="font-mono text-[9px] uppercase tracking-[0.16em]">
+          {label}
+        </span>
+      </div>
+      <div className="font-mono text-lg font-bold">{value}</div>
+    </div>
+  );
+}
+
+function TeamStatCard({ team }: { team: TeamStats }) {
+  const total = team.assignedCount;
+  const progress = total > 0 ? Math.round((team.claimedCount / total) * 100) : 0;
+
+  return (
+    <motion.div
+      variants={fadeInUp}
+      className="overflow-hidden border bg-card"
+      style={{
+        borderColor: team.color ? `${team.color}55` : undefined,
+        boxShadow: team.color ? `0 0 18px ${team.color}14` : undefined,
+      }}
+    >
+      <div className="flex min-w-0 items-center gap-2 border-b px-3 py-2">
+        <TeamBadge team={team} />
+        <span className="ml-auto font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+          {progress}%
+        </span>
+      </div>
+      <div className="grid grid-cols-2 divide-x">
+        <div className="px-3 py-2">
+          <div className="mb-1 flex items-center gap-1.5 text-muted-foreground">
+            <Orbit className="size-3.5" />
+            <span className="font-mono text-[9px] uppercase tracking-[0.16em]">
+              Assigned
+            </span>
+          </div>
+          <div className="font-mono text-lg font-bold">{team.assignedCount}</div>
+        </div>
+        <div className="px-3 py-2">
+          <div className="mb-1 flex items-center gap-1.5 text-muted-foreground">
+            <ShieldCheck className="size-3.5" />
+            <span className="font-mono text-[9px] uppercase tracking-[0.16em]">
+              Claimed
+            </span>
+          </div>
+          <div className="font-mono text-lg font-bold">{team.claimedCount}</div>
+        </div>
+      </div>
+      <div className="h-1 bg-muted">
+        <div
+          className="h-full bg-primary"
+          style={{
+            width: `${progress}%`,
+            backgroundColor: team.color ?? undefined,
+          }}
+        />
+      </div>
+    </motion.div>
   );
 }
 
@@ -494,7 +584,16 @@ function useColumns(callbacks: ColumnCallbacks) {
       },
       {
         id: "assignedTeam",
-        header: "Assigned to",
+        accessorFn: (row) => row.assignedTeam?.name ?? "Unassigned",
+        header: ({ column }) => (
+          <button
+            type="button"
+            className="flex items-center gap-1 hover:text-foreground transition-colors"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Assigned to <ArrowUpDown className="size-3" />
+          </button>
+        ),
         cell: ({ row }) => {
           const a = row.original;
           return (
@@ -520,8 +619,17 @@ function useColumns(callbacks: ColumnCallbacks) {
         },
       },
       {
-        accessorKey: "claimedTeam",
-        header: "Claimed",
+        id: "claimedTeam",
+        accessorFn: (row) => row.claimedTeam?.name ?? "Unclaimed",
+        header: ({ column }) => (
+          <button
+            type="button"
+            className="flex items-center gap-1 hover:text-foreground transition-colors"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Claimed <ArrowUpDown className="size-3" />
+          </button>
+        ),
         cell: ({ row }) => {
           const astronaut = row.original;
           const claimedTeam = astronaut.claimedTeam;
@@ -579,10 +687,28 @@ function useColumns(callbacks: ColumnCallbacks) {
 
 function DataTable({ data, callbacks }: { data: Astronaut[]; callbacks: ColumnCallbacks }) {
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [search, setSearch] = useState("");
   const columns = useColumns(callbacks);
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredData = useMemo(() => {
+    if (!normalizedSearch) return data;
+    return data.filter((astronaut) =>
+      [
+        astronaut.name,
+        astronaut.description,
+        astronaut.hint,
+        astronaut.code,
+        astronaut.active ? "active" : "inactive",
+        astronaut.assignedTeam?.name ?? "unassigned",
+        astronaut.claimedTeam?.name ?? "unclaimed",
+      ]
+        .filter((value): value is string => Boolean(value))
+        .some((value) => value.toLowerCase().includes(normalizedSearch)),
+    );
+  }, [data, normalizedSearch]);
 
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -592,6 +718,24 @@ function DataTable({ data, callbacks }: { data: Astronaut[]; callbacks: ColumnCa
 
   return (
     <TooltipProvider>
+      <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-sm font-semibold">Astronaut roster</h2>
+          <p className="text-xs text-muted-foreground">
+            Showing {filteredData.length} of {data.length} astronauts
+          </p>
+        </div>
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search table..."
+            className="h-9 pl-8 text-sm"
+            aria-label="Search astronauts"
+          />
+        </div>
+      </div>
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((hg) => (
@@ -610,7 +754,7 @@ function DataTable({ data, callbacks }: { data: Astronaut[]; callbacks: ColumnCa
           {table.getRowModel().rows.length === 0 ? (
             <TableRow>
               <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
-                No astronauts yet.
+                {data.length === 0 ? "No astronauts yet." : "No astronauts match that search."}
               </TableCell>
             </TableRow>
           ) : (
@@ -768,6 +912,18 @@ export default function AdminAstronautsPage() {
         : null,
     };
   });
+  const assignedCount = astronauts.filter((astronaut) => astronaut.assignedTeam).length;
+  const claimedCount = astronauts.filter((astronaut) => astronaut.claimedTeam).length;
+  const activeCount = astronauts.filter((astronaut) => astronaut.active).length;
+  const unassignedCount = astronauts.length - assignedCount;
+  const unclaimedCount = astronauts.length - claimedCount;
+  const teamStats: TeamStats[] = teams.map((team) => ({
+    ...team,
+    assignedCount: astronauts.filter((astronaut) => astronaut.assignedTeam?.id === team.id)
+      .length,
+    claimedCount: astronauts.filter((astronaut) => astronaut.claimedTeam?.id === team.id)
+      .length,
+  }));
 
   const callbacks = useMemo<ColumnCallbacks>(
     () => ({
@@ -800,6 +956,22 @@ export default function AdminAstronautsPage() {
           Create astronauts and assign them to teams. Copy scan URLs onto NFC tags.
         </p>
       </motion.header>
+
+      <motion.div className="space-y-3" variants={staggerContainer}>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+          <StatTile label="Astronauts" value={astronauts.length} icon={UsersRound} />
+          <StatTile label="Active" value={activeCount} icon={Power} />
+          <StatTile label="Assigned" value={assignedCount} icon={Orbit} />
+          <StatTile label="Claimed" value={claimedCount} icon={Check} />
+          <StatTile label="Unassigned" value={unassignedCount} icon={X} />
+          <StatTile label="Unclaimed" value={unclaimedCount} icon={ShieldCheck} />
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {teamStats.map((team) => (
+            <TeamStatCard key={team.id} team={team} />
+          ))}
+        </div>
+      </motion.div>
 
       <motion.div variants={fadeInUp}>
         <Card className="p-4">
