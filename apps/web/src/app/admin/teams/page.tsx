@@ -153,6 +153,8 @@ type Team = {
   name: string;
   color: string | null;
   icon: string | null;
+  signalBoostBalance: number;
+  signalBoostsUsed: number;
   _count: { players: number; assignments: number; claims: number };
 };
 
@@ -551,11 +553,13 @@ export default function AdminTeamsPage() {
                         </motion.div>
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 divide-x divide-white/10">
+                    <div className="grid grid-cols-2 divide-x divide-y divide-white/10 sm:grid-cols-5 sm:divide-y-0">
                       {[
                         ["Crew", team._count.players, UsersRound],
                         ["Astronauts", team._count.assignments, Orbit],
                         ["Claims", team._count.claims, ShieldCheck],
+                        ["Boosts left", team.signalBoostBalance, Sparkles],
+                        ["Boosts used", team.signalBoostsUsed, RadioTower],
                       ].map(([label, value, Icon]) => {
                         const StatIcon = Icon as typeof UsersRound;
                         return (

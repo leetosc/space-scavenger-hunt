@@ -11,13 +11,32 @@ export const teamRouter = router({
     return { maxTeams: activity.maxTeams ?? DEFAULT_MAX_TEAMS };
   }),
 
-  list: publicProcedure.query(({ ctx }) => {
-    return ctx.prisma.team.findMany({
-      orderBy: { name: "asc" },
-      include: {
-        _count: { select: { players: true, assignments: true, claims: true } },
-      },
-    });
+  list: publicProcedure.query(async ({ ctx }) => {
+    const [teams, boostSpendByTeam] = await Promise.all([
+      ctx.prisma.team.findMany({
+        orderBy: { name: "asc" },
+        include: {
+          _count: { select: { players: true, assignments: true, claims: true } },
+        },
+      }),
+      ctx.prisma.signalBoostLedger.groupBy({
+        by: ["teamId"],
+        where: { type: "HINT_SPEND", delta: { lt: 0 } },
+        _sum: { delta: true },
+      }),
+    ]);
+
+    const boostsUsedByTeamId = new Map(
+      boostSpendByTeam.map((entry) => [
+        entry.teamId,
+        Math.abs(entry._sum.delta ?? 0),
+      ]),
+    );
+
+    return teams.map((team) => ({
+      ...team,
+      signalBoostsUsed: boostsUsedByTeamId.get(team.id) ?? 0,
+    }));
   }),
 
   getMyTeam: playerProcedure.query(async ({ ctx }) => {
