@@ -116,6 +116,34 @@ export const astronautRouter = router({
     return astronauts.map(withPreviewUrl);
   }),
 
+  listGallery: publicProcedure.query(async ({ ctx }) => {
+    const astronauts = await ctx.prisma.astronaut.findMany({
+      where: { active: true },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        imageBlobName: true,
+        claims: {
+          orderBy: { claimedAt: "desc" },
+          select: { id: true },
+          take: 1,
+        },
+      },
+    });
+
+    return astronauts.map((astronaut) => ({
+      id: astronaut.id,
+      name: astronaut.name,
+      description: astronaut.description,
+      previewUrl: astronaut.imageBlobName
+        ? getAstronautPhotoPreviewPath(astronaut.id)
+        : undefined,
+      status: astronaut.claims.length > 0 ? "found" : "missing",
+    }));
+  }),
+
   create: adminProcedure
     .input(
       z.object({

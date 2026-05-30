@@ -30,6 +30,7 @@ export default function Header() {
 
   const baseLinks = [
     { to: "/" as const, label: "Mission" },
+    { to: "/astronauts" as const, label: "Astronauts" },
     { to: "/leaderboard" as const, label: "Leaderboard" },
   ];
   const playerLinks = [
