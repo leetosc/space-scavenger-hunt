@@ -9,6 +9,7 @@ import { Radar, Satellite, UserRoundSearch } from "lucide-react";
 import Image from "next/image";
 
 import Loader from "@/components/loader";
+import { ScrollToTopButton } from "@/components/scroll-to-top-button";
 import { fadeIn, fadeInUp, scaleIn, staggerContainer } from "@/lib/animations";
 import { trpc } from "@/utils/trpc";
 
@@ -182,6 +183,7 @@ export default function AstronautsPage() {
           ))}
         </motion.section>
       )}
+      <ScrollToTopButton />
     </motion.main>
   );
 }
