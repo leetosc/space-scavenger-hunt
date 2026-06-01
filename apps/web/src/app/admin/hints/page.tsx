@@ -53,6 +53,7 @@ import {
   HINT_DISTORTION_BY_LEVEL,
   getHintDistortion,
 } from "@/lib/hint-distortion";
+import { IMAGE_BLUR_DATA_URL } from "@/lib/image-placeholder";
 import { trpc } from "@/utils/trpc";
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
@@ -90,6 +91,8 @@ function HintPreview({ hint, level }: { hint: Hint; level: number }) {
               filter: `blur(${distortion.blur}px) contrast(${distortion.contrast}) saturate(${distortion.saturate})`,
               transform: `scale(${distortion.scale})`,
             }}
+            placeholder="blur"
+            blurDataURL={IMAGE_BLUR_DATA_URL}
             referrerPolicy="no-referrer"
           />
           {!fullyRevealed ? (
@@ -108,6 +111,8 @@ function HintPreview({ hint, level }: { hint: Hint; level: number }) {
                   opacity: distortion.sliceOpacity,
                   transform: `translateX(${level === 0 ? 4 : 2}%) scale(${level === 0 ? 1.12 : 1.05})`,
                 }}
+                placeholder="blur"
+                blurDataURL={IMAGE_BLUR_DATA_URL}
                 referrerPolicy="no-referrer"
               />
               <Image
@@ -124,6 +129,8 @@ function HintPreview({ hint, level }: { hint: Hint; level: number }) {
                   opacity: distortion.sliceOpacity * 0.7,
                   transform: `translateX(${level === 0 ? -5 : -2}%) scale(${level === 0 ? 1.1 : 1.04})`,
                 }}
+                placeholder="blur"
+                blurDataURL={IMAGE_BLUR_DATA_URL}
                 referrerPolicy="no-referrer"
               />
               <div
@@ -632,6 +639,8 @@ function PendingUploadCard({
           fill
           sizes="(min-width: 1280px) 260px, (min-width: 768px) 33vw, 100vw"
           className="object-cover"
+          placeholder="blur"
+          blurDataURL={IMAGE_BLUR_DATA_URL}
           unoptimized
         />
         <Button

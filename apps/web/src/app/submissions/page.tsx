@@ -22,6 +22,7 @@ import { useEffect, useState } from "react";
 import Loader from "@/components/loader";
 import { authClient } from "@/lib/auth-client";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
+import { IMAGE_BLUR_DATA_URL } from "@/lib/image-placeholder";
 import { trpc } from "@/utils/trpc";
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
@@ -76,6 +77,8 @@ function SubmissionCard({
               fill
               sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
               className="object-cover transition duration-500 group-hover:scale-[1.03]"
+              placeholder="blur"
+              blurDataURL={IMAGE_BLUR_DATA_URL}
               referrerPolicy="no-referrer"
             />
           ) : (
@@ -143,6 +146,8 @@ function SubmissionDialog({
                   fill
                   sizes="(min-width: 1024px) 62vw, 100vw"
                   className="object-contain"
+                  placeholder="blur"
+                  blurDataURL={IMAGE_BLUR_DATA_URL}
                   referrerPolicy="no-referrer"
                 />
               ) : (

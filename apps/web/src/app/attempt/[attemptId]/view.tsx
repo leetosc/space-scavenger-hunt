@@ -32,6 +32,7 @@ import {
   bounceTransition,
   springTransition,
 } from "@/lib/animations";
+import { IMAGE_BLUR_DATA_URL } from "@/lib/image-placeholder";
 import { trpc } from "@/utils/trpc";
 
 const STATUS_COPY: Record<
@@ -897,6 +898,8 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
                   fill
                   sizes="(min-width: 768px) 672px, calc(100vw - 48px)"
                   className="object-contain"
+                  placeholder="blur"
+                  blurDataURL={IMAGE_BLUR_DATA_URL}
                   referrerPolicy="no-referrer"
                   priority
                 />
@@ -980,6 +983,8 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
                       fill
                       sizes="(min-width: 768px) 672px, calc(100vw - 48px)"
                       className="object-contain"
+                      placeholder="blur"
+                      blurDataURL={IMAGE_BLUR_DATA_URL}
                       unoptimized
                     />
                   </div>

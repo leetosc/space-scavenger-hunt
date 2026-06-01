@@ -25,6 +25,7 @@ import {
 } from "@/lib/animations";
 import { useGameHaptics } from "@/hooks/use-game-haptics";
 import { ICON_MAP } from "@/lib/icons";
+import { IMAGE_BLUR_DATA_URL } from "@/lib/image-placeholder";
 import { trpc } from "@/utils/trpc";
 
 export default function AstronautPage({
@@ -155,6 +156,8 @@ export default function AstronautPage({
                 fill
                 sizes="(min-width: 768px) 672px, calc(100vw - 48px)"
                 className="object-cover"
+                placeholder="blur"
+                blurDataURL={IMAGE_BLUR_DATA_URL}
                 priority
               />
             </motion.div>
@@ -269,6 +272,8 @@ export default function AstronautPage({
                     fill
                     sizes="(min-width: 640px) 464px, calc(100vw - 72px)"
                     className="object-contain"
+                    placeholder="blur"
+                    blurDataURL={IMAGE_BLUR_DATA_URL}
                     referrerPolicy="no-referrer"
                   />
                 </div>

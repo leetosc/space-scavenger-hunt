@@ -28,6 +28,7 @@ import {
   fadeInUp,
   buttonInteraction,
 } from "@/lib/animations";
+import { IMAGE_BLUR_DATA_URL } from "@/lib/image-placeholder";
 import { trpc } from "@/utils/trpc";
 
 const STATUS_FILTERS = [
@@ -200,6 +201,8 @@ function AttemptPhoto({
           fill
           sizes={sizes}
           className="object-cover"
+          placeholder="blur"
+          blurDataURL={IMAGE_BLUR_DATA_URL}
           referrerPolicy="no-referrer"
         />
       ) : (

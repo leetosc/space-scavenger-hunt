@@ -19,6 +19,7 @@ import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { springTransition } from "@/lib/animations";
 import { ICON_MAP } from "@/lib/icons";
+import { IMAGE_BLUR_DATA_URL } from "@/lib/image-placeholder";
 import { trpc } from "@/utils/trpc";
 
 export default function UserMenu() {
@@ -70,6 +71,8 @@ export default function UserMenu() {
                 width={36}
                 height={36}
                 className="size-full object-cover"
+                placeholder="blur"
+                blurDataURL={IMAGE_BLUR_DATA_URL}
               />
             ) : AvatarIcon ? (
               <AvatarIcon className="size-5" />

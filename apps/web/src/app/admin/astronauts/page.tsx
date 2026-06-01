@@ -66,6 +66,7 @@ import {
   springTransition,
 } from "@/lib/animations";
 import { ICON_MAP } from "@/lib/icons";
+import { IMAGE_BLUR_DATA_URL } from "@/lib/image-placeholder";
 import { trpc } from "@/utils/trpc";
 
 // ---------------------------------------------------------------------------
@@ -597,6 +598,8 @@ function AstronautImageDialog({
                 fill
                 sizes="(min-width: 640px) 480px, calc(100vw - 48px)"
                 className="object-contain"
+                placeholder="blur"
+                blurDataURL={IMAGE_BLUR_DATA_URL}
                 unoptimized={isLocalPreview}
               />
             </div>
@@ -688,6 +691,8 @@ function useColumns(callbacks: ColumnCallbacks) {
                     fill
                     sizes="40px"
                     className="object-cover"
+                    placeholder="blur"
+                    blurDataURL={IMAGE_BLUR_DATA_URL}
                   />
                 </div>
               ) : null}

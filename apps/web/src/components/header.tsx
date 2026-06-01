@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 
 import { authClient } from "@/lib/auth-client";
 import { staggerContainer, fadeInUp, springTransition } from "@/lib/animations";
+import { IMAGE_BLUR_DATA_URL } from "@/lib/image-placeholder";
 
 import UserMenu from "./user-menu";
 
@@ -60,6 +61,8 @@ export default function Header() {
                   width={36}
                   height={36}
                   className="size-8 sm:size-9"
+                  placeholder="blur"
+                  blurDataURL={IMAGE_BLUR_DATA_URL}
                   priority
                 />
               </motion.div>

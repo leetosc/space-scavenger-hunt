@@ -11,6 +11,7 @@ import Image from "next/image";
 import Loader from "@/components/loader";
 import { ScrollToTopButton } from "@/components/scroll-to-top-button";
 import { fadeIn, fadeInUp, scaleIn, staggerContainer } from "@/lib/animations";
+import { IMAGE_BLUR_DATA_URL } from "@/lib/image-placeholder";
 import { trpc } from "@/utils/trpc";
 
 const DEFAULT_ASTRONAUT_IMAGE = "/astronautIcon.png";
@@ -159,6 +160,8 @@ export default function AstronautsPage() {
                     fill
                     sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                     className="object-cover transition duration-500 group-hover:scale-105"
+                    placeholder="blur"
+                    blurDataURL={IMAGE_BLUR_DATA_URL}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/30 via-transparent to-transparent" />
                 </div>

@@ -36,6 +36,7 @@ import {
 } from "@/lib/animations";
 import { getHintDistortion } from "@/lib/hint-distortion";
 import { useGameHaptics } from "@/hooks/use-game-haptics";
+import { IMAGE_BLUR_DATA_URL } from "@/lib/image-placeholder";
 import { trpc } from "@/utils/trpc";
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
@@ -85,6 +86,8 @@ function HintCard({
                   filter: `blur(${distortion.blur}px) contrast(${distortion.contrast}) saturate(${distortion.saturate})`,
                   transform: `scale(${distortion.scale})`,
                 }}
+                placeholder="blur"
+                blurDataURL={IMAGE_BLUR_DATA_URL}
                 referrerPolicy="no-referrer"
               />
               {!fullyRevealed ? (
@@ -103,6 +106,8 @@ function HintCard({
                       opacity: distortion.sliceOpacity,
                       transform: `translateX(${hint.revealLevel === 0 ? 4 : 2}%) scale(${hint.revealLevel === 0 ? 1.12 : 1.05})`,
                     }}
+                    placeholder="blur"
+                    blurDataURL={IMAGE_BLUR_DATA_URL}
                     referrerPolicy="no-referrer"
                   />
                   <Image
@@ -119,6 +124,8 @@ function HintCard({
                       opacity: distortion.sliceOpacity * 0.7,
                       transform: `translateX(${hint.revealLevel === 0 ? -5 : -2}%) scale(${hint.revealLevel === 0 ? 1.1 : 1.04})`,
                     }}
+                    placeholder="blur"
+                    blurDataURL={IMAGE_BLUR_DATA_URL}
                     referrerPolicy="no-referrer"
                   />
                   <div

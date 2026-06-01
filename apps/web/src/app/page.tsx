@@ -34,6 +34,7 @@ import {
   buttonInteraction,
   springTransition,
 } from "@/lib/animations";
+import { IMAGE_BLUR_DATA_URL } from "@/lib/image-placeholder";
 import { trpc } from "@/utils/trpc";
 
 export default function Home() {
@@ -144,6 +145,8 @@ export default function Home() {
               height={1024}
               priority
               className="relative z-10 h-full w-full object-contain drop-shadow-[0_28px_65px_rgba(6,182,212,0.25)]"
+              placeholder="blur"
+              blurDataURL={IMAGE_BLUR_DATA_URL}
             />
           </motion.div>
 
