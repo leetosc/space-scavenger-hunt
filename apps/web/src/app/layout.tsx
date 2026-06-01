@@ -44,8 +44,8 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/spacelogo.png",
-        alt: "Space Scavenger Hunt",
+        url: "/astronauts2.png",
+        alt: "Space Scavenger Hunt astronauts",
       },
     ],
   },
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Space Scavenger Hunt",
     description: siteDescription,
-    images: ["/spacelogo.png"],
+    images: ["/astronauts2.png"],
   },
 };
 
