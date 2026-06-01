@@ -17,7 +17,6 @@ import {
   staggerContainer,
   fadeInUp,
   scaleIn,
-  popIn,
   shake,
   buttonInteraction,
   bounceTransition,
@@ -164,29 +163,19 @@ export default function AstronautPage({
           ) : null}
 
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <motion.code
-                className="bg-muted px-2 py-0.5 rounded text-xs"
-                variants={popIn}
-                initial="hidden"
-                animate="visible"
-              >
-                {astronaut.code}
-              </motion.code>
-              <motion.span
-                className={cn(
-                  "text-xs px-2 py-0.5 rounded-sm border",
-                  astronaut.active
-                    ? "border-emerald-500/40 text-emerald-400 bg-emerald-500/10"
-                    : "border-border/40 text-muted-foreground",
-                )}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={bounceTransition}
-              >
-                {astronaut.active ? "Active" : "Inactive"}
-              </motion.span>
-            </div>
+            <motion.span
+              className={cn(
+                "inline-flex text-xs px-2 py-0.5 rounded-sm border",
+                astronaut.active
+                  ? "border-emerald-500/40 text-emerald-400 bg-emerald-500/10"
+                  : "border-border/40 text-muted-foreground",
+              )}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={bounceTransition}
+            >
+              {astronaut.active ? "Active" : "Inactive"}
+            </motion.span>
             <motion.h1
               className="text-2xl font-bold"
               initial={{ opacity: 0, y: 10 }}
