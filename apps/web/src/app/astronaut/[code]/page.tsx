@@ -155,7 +155,7 @@ export default function AstronautPage({
                 fill
                 sizes="(min-width: 768px) 672px, calc(100vw - 48px)"
                 className="object-cover"
-                unoptimized
+                priority
               />
             </motion.div>
           ) : null}

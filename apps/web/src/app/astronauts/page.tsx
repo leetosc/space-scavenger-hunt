@@ -159,7 +159,6 @@ export default function AstronautsPage() {
                     fill
                     sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                     className="object-cover transition duration-500 group-hover:scale-105"
-                    unoptimized={!!astronaut.previewUrl}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/30 via-transparent to-transparent" />
                 </div>

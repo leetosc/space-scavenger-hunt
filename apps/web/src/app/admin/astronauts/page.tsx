@@ -570,6 +570,7 @@ function AstronautImageDialog({
   }
 
   const previewSrc = localPreviewUrl ?? astronaut.previewUrl;
+  const isLocalPreview = previewSrc?.startsWith("blob:") ?? false;
 
   return (
     <Dialog
@@ -596,7 +597,7 @@ function AstronautImageDialog({
                 fill
                 sizes="(min-width: 640px) 480px, calc(100vw - 48px)"
                 className="object-contain"
-                unoptimized
+                unoptimized={isLocalPreview}
               />
             </div>
           ) : null}
@@ -687,7 +688,6 @@ function useColumns(callbacks: ColumnCallbacks) {
                     fill
                     sizes="40px"
                     className="object-cover"
-                    unoptimized
                   />
                 </div>
               ) : null}
