@@ -11,12 +11,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useRef } from "react";
 
+import Loader from "@/components/loader";
 import { MissionCountdown } from "@/components/mission-countdown";
 import { authClient } from "@/lib/auth-client";
 import {
-  staggerContainer,
   fadeInUp,
-  scaleIn,
   shake,
   buttonInteraction,
   bounceTransition,
@@ -39,29 +38,45 @@ export default function AstronautPage({
 
   const astronautQuery = useQuery({
     ...trpc.astronaut.getByCode.queryOptions({ code }),
+    retry: 2,
   });
   const activity = useQuery({
     ...trpc.activity.getState.queryOptions(),
     refetchInterval: 5000,
+    enabled: astronautQuery.isSuccess,
   });
 
   const scanMutation = useMutation(trpc.scan.handleScan.mutationOptions());
   const scanCalledRef = useRef(false);
 
   const astronaut = astronautQuery.data;
-  const isLoading = astronautQuery.isPending;
 
   // ---------- Loading ----------
-  if (isLoading || sessionPending) {
+  if (astronautQuery.isPending) {
     return (
-      <div className="mx-auto max-w-lg px-6 py-20 text-center">
-        <motion.p
-          className="text-sm text-muted-foreground"
-          animate={{ opacity: [0.5, 1, 0.5] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-        >
-          Loading...
-        </motion.p>
+      <div className="mx-auto flex min-h-[50vh] max-w-lg flex-col items-center justify-center gap-3 px-6 py-20 text-center">
+        <Loader />
+        <p className="font-mono text-xs uppercase tracking-widest text-cyan-300/80">
+          Syncing astronaut telemetry...
+        </p>
+      </div>
+    );
+  }
+
+  // ---------- Error ----------
+  if (astronautQuery.isError) {
+    return (
+      <div className="mx-auto max-w-lg px-6 py-10">
+        <Card className="space-y-3 p-6 text-center">
+          <h1 className="text-2xl font-bold">Could not load astronaut</h1>
+          <p className="text-sm text-muted-foreground">
+            {astronautQuery.error.message ||
+              "Mission telemetry is offline. Check your connection and try again."}
+          </p>
+          <Link href="/" className="text-sm text-cyan-400 hover:underline">
+            Back to home
+          </Link>
+        </Card>
       </div>
     );
   }
@@ -124,23 +139,18 @@ export default function AstronautPage({
   const ClaimedTeamIcon = claimedBy?.icon ? ICON_MAP[claimedBy.icon] : null;
 
   return (
-    <motion.div
-      className="mx-auto max-w-lg px-6 py-10 space-y-4"
-      variants={staggerContainer}
-      initial="hidden"
-      animate="visible"
-    >
-      <motion.div variants={fadeInUp}>
+    <div className="mx-auto max-w-lg space-y-4 px-6 py-10">
+      <div>
         <MissionCountdown
           status={activity.data?.status}
           deadlineAt={activity.data?.deadlineAt}
           serverNow={activity.data?.serverNow}
           className="w-full justify-center"
         />
-      </motion.div>
+      </div>
 
       {/* Astronaut info */}
-      <motion.div variants={scaleIn}>
+      <div>
         <Card className="p-6 space-y-4">
           {astronaut.previewUrl ? (
             <motion.div
@@ -270,11 +280,15 @@ export default function AstronautPage({
             </motion.div>
           )}
         </Card>
-      </motion.div>
+      </div>
 
       {/* Actions (logged-in only) */}
-      {session ? (
-        <motion.div variants={fadeInUp}>
+      {sessionPending ? (
+        <Card className="flex items-center justify-center p-6">
+          <Loader />
+        </Card>
+      ) : session ? (
+        <motion.div variants={fadeInUp} initial="hidden" animate="visible">
           <Card className="p-4 space-y-3">
             <AnimatePresence mode="wait">
               {scanMutation.data ? (
@@ -374,7 +388,7 @@ export default function AstronautPage({
           </Card>
         </motion.div>
       ) : (
-        <motion.div variants={fadeInUp}>
+        <motion.div variants={fadeInUp} initial="hidden" animate="visible">
           <Card className="p-4 text-center space-y-3">
             <p className="text-sm text-muted-foreground">
               Sign in to claim this astronaut.
@@ -387,6 +401,6 @@ export default function AstronautPage({
           </Card>
         </motion.div>
       )}
-    </motion.div>
+    </div>
   );
 }

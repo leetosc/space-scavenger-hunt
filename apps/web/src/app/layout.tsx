@@ -66,11 +66,11 @@ export default function RootLayout({
     <html lang="en" className="dark" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-svh bg-background text-foreground relative overflow-x-hidden`}>
         <Providers>
-          <div className="relative min-h-svh w-full overflow-hidden flex flex-col z-0">
+          <div className="relative flex min-h-svh w-full flex-col z-0">
             <StarfieldBackground />
-            <div className="relative z-10 grid grid-rows-[auto_1fr] h-svh w-full overflow-hidden">
+            <div className="relative z-10 flex min-h-svh w-full flex-col">
               <Header />
-              <div className="overflow-y-auto w-full min-h-0 flex flex-col">
+              <div className="flex min-h-0 flex-1 flex-col overflow-y-auto w-full">
                 {children}
               </div>
             </div>
