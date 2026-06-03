@@ -13,6 +13,7 @@ import { motion } from "framer-motion";
 import {
   AlertCircle,
   Compass,
+  Loader2,
   Orbit,
   Rocket,
   Sparkles,
@@ -26,7 +27,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-import Loader from "@/components/loader";
 import { authClient } from "@/lib/auth-client";
 import {
   staggerContainer,
@@ -91,36 +91,55 @@ export default function Home() {
 
   const activityStatus = activity.data?.status || "STANDBY";
 
-  const statusConfig = {
-    ACTIVE: {
-      label: "Live Operations Active",
-      color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-      indicator: "bg-emerald-500",
-    },
-    FINISHED: {
-      label: "Mission Completed",
-      color: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-      indicator: "bg-blue-500",
-    },
-    STANDBY: {
-      label: "System Standby",
-      color: "bg-amber-500/20 text-amber-400 border-amber-500/30",
-      indicator: "bg-amber-500",
-    },
-  }[activityStatus];
+  const statusConfig = activity.isPending
+    ? {
+        label: "Syncing Mission Status",
+        color: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
+        indicator: "bg-cyan-400",
+      }
+    : activity.isError
+      ? {
+          label: "Telemetry Link Offline",
+          color: "bg-rose-500/20 text-rose-300 border-rose-500/30",
+          indicator: "bg-rose-400",
+        }
+      : {
+          ACTIVE: {
+            label: "Live Operations Active",
+            color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+            indicator: "bg-emerald-500",
+          },
+          FINISHED: {
+            label: "Mission Completed",
+            color: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+            indicator: "bg-blue-500",
+          },
+          STANDBY: {
+            label: "System Standby",
+            color: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+            indicator: "bg-amber-500",
+          },
+        }[activityStatus];
 
-  if (sessionPending || activity.isPending) {
-    return (
-      <div className="flex h-full w-full items-center justify-center bg-slate-950 text-slate-100">
-        <div className="text-center space-y-4">
-          <Loader />
-          <p className="text-sm font-mono tracking-widest text-cyan-500 animate-pulse">
-            CONNECTING TO DEEP-SPACE TELEMETRY...
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const isPlayerDataPending =
+    me.isPending || (Boolean(me.data?.player) && onboarding.isPending);
+  const isPlayerDataUnavailable = me.isError || onboarding.isError;
+  const isEnterMissionDisabled =
+    sessionPending ||
+    (!!session &&
+      (activity.isPending ||
+        activity.isError ||
+        isPlayerDataPending ||
+        isPlayerDataUnavailable));
+  const enterMissionLabel = sessionPending
+    ? "Checking Authorization"
+    : session && (activity.isPending || isPlayerDataPending)
+      ? "Syncing Telemetry"
+      : session && (activity.isError || isPlayerDataUnavailable)
+        ? "Telemetry Unavailable"
+        : session
+          ? "Enter Mission Control"
+          : "Initialize Launch Sequence";
 
   return (
     <div className="relative min-h-full w-full overflow-x-hidden flex flex-col justify-between">
@@ -129,28 +148,40 @@ export default function Home() {
         {/* Hero Header Section */}
         <section className="grid w-full items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(300px,420px)] lg:gap-12">
           <motion.div
-            initial={{ opacity: 0, scale: 0.96, rotate: -2 }}
-            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+            initial={{ opacity: 0, scale: 0.96, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.7, ease: "easeOut" }}
-            className="relative order-1 mx-auto flex aspect-square w-full max-w-[19rem] items-center justify-center sm:max-w-sm lg:order-2"
+            className="relative order-2 mx-auto w-full max-w-[24rem] sm:max-w-md lg:order-2"
           >
-            <div className="absolute inset-4 rounded-full border border-cyan-300/25 bg-cyan-300/5 shadow-[0_0_80px_rgba(34,211,238,0.18)]" />
-            <div className="absolute inset-0 rounded-full border border-indigo-300/15" />
-            <div className="absolute inset-10 rounded-full border border-purple-300/15" />
-            <div className="absolute left-1/2 top-1/2 h-[115%] w-[115%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(34,211,238,0.16),rgba(99,102,241,0.08)_38%,transparent_68%)]" />
-            <Image
-              src="/spacelogo.png"
-              alt="Space Scavenger Hunt mission logo"
-              width={1024}
-              height={1024}
-              priority
-              className="relative z-10 h-full w-full object-contain drop-shadow-[0_28px_65px_rgba(6,182,212,0.25)]"
-              placeholder="blur"
-              blurDataURL={IMAGE_BLUR_DATA_URL}
-            />
+            <div className="absolute -inset-6 bg-[radial-gradient(circle,rgba(34,211,238,0.22),rgba(79,70,229,0.08)_46%,transparent_72%)] blur-2xl" />
+            <div className="relative aspect-[4/3] overflow-hidden border border-cyan-300/25 bg-slate-950 shadow-[0_0_60px_rgba(6,182,212,0.16)]">
+              <Image
+                src="/astronauts2.png"
+                alt="Astronaut crew waving from a moon base under a colorful galaxy"
+                width={1448}
+                height={1086}
+                priority
+                className="h-full w-full object-cover"
+                placeholder="blur"
+                blurDataURL={IMAGE_BLUR_DATA_URL}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-slate-950/10" />
+              <div className="absolute bottom-3 left-3 flex items-center gap-2 border border-cyan-300/25 bg-slate-950/75 px-2.5 py-2 backdrop-blur-md">
+                <Image
+                  src="/spacelogo.png"
+                  alt=""
+                  width={1024}
+                  height={1024}
+                  className="size-8 object-contain"
+                />
+                <span className="font-mono text-[10px] uppercase tracking-widest text-cyan-200">
+                  Crew Signal Found
+                </span>
+              </div>
+            </div>
           </motion.div>
 
-          <div className="order-2 mx-auto max-w-3xl space-y-6 text-center lg:order-1 lg:mx-0 lg:text-left">
+          <div className="order-1 mx-auto max-w-3xl space-y-6 text-center lg:order-1 lg:mx-0 lg:text-left">
             {/* Live System Status Badge */}
             {statusConfig && (
               <motion.div
@@ -227,26 +258,53 @@ export default function Home() {
                 COMMAND TELEMETRY
               </CardTitle>
               <CardDescription className="text-slate-400 text-xs">
-                {session
-                  ? "AUTHENTICATED PLAYER PORTAL"
-                  : "UNENLISTED PILOT LINK"}
+                {sessionPending
+                  ? "CHECKING PILOT LINK"
+                  : session
+                    ? "AUTHENTICATED PLAYER PORTAL"
+                    : "UNENLISTED PILOT LINK"}
               </CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-6 pt-2">
-              {session ? (
+              {sessionPending ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-center gap-2 bg-slate-950/50 p-4 border border-slate-800 rounded-none font-mono text-xs text-cyan-300">
+                    <Loader2 className="size-4 animate-spin" />
+                    CHECKING AUTHORIZATION...
+                  </div>
+
+                  <motion.div {...buttonInteraction}>
+                    <Button
+                      onClick={handleEnterMission}
+                      disabled={isEnterMissionDisabled}
+                      className="w-full h-10 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-mono tracking-widest uppercase rounded-none border border-cyan-400/30 hover:border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {enterMissionLabel}
+                    </Button>
+                  </motion.div>
+                </div>
+              ) : session ? (
                 <div className="space-y-4">
                   <div className="bg-slate-950/50 p-4 border border-slate-800 rounded-none space-y-3 font-mono text-xs text-left">
                     <div className="flex justify-between border-b border-slate-900 pb-1.5">
                       <span className="text-slate-500">OPERATOR:</span>
                       <span className="text-slate-200 font-bold">
-                        {me.data?.user.name || session.user.name}
+                        {me.isPending
+                          ? "SYNCING..."
+                          : me.isError
+                            ? session.user.name
+                            : me.data?.user.name || session.user.name}
                       </span>
                     </div>
                     <div className="flex justify-between border-b border-slate-900 pb-1.5">
                       <span className="text-slate-500">SECTOR ASSIGNMENT:</span>
                       <span className="text-slate-200">
-                        {me.data?.user.role === "ADMIN" ? (
+                        {me.isPending ? (
+                          <span className="text-cyan-300">SYNCING...</span>
+                        ) : me.isError ? (
+                          <span className="text-rose-300">LINK OFFLINE</span>
+                        ) : me.data?.user.role === "ADMIN" ? (
                           <span className="text-purple-400 font-bold">
                             MISSION CONTROL ADMIN
                           </span>
@@ -266,8 +324,16 @@ export default function Home() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-500">MISSION CONFIG:</span>
-                      <span className="text-slate-200 uppercase">
-                        {activityStatus}
+                      <span
+                        className={`uppercase ${
+                          activity.isError ? "text-rose-300" : "text-slate-200"
+                        }`}
+                      >
+                        {activity.isPending
+                          ? "SYNCING"
+                          : activity.isError
+                            ? "OFFLINE"
+                            : activityStatus}
                       </span>
                     </div>
                   </div>
@@ -275,9 +341,10 @@ export default function Home() {
                   <motion.div {...buttonInteraction}>
                     <Button
                       onClick={handleEnterMission}
-                      className="w-full h-10 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-mono tracking-widest uppercase rounded-none border border-cyan-400/30 hover:border-cyan-400/60 shadow-[0_0_15px_rgba(99,102,241,0.3)] transition-all duration-300"
+                      disabled={isEnterMissionDisabled}
+                      className="w-full h-10 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-mono tracking-widest uppercase rounded-none border border-cyan-400/30 hover:border-cyan-400/60 shadow-[0_0_15px_rgba(99,102,241,0.3)] transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Enter Mission Control
+                      {enterMissionLabel}
                     </Button>
                   </motion.div>
                 </div>
@@ -291,9 +358,10 @@ export default function Home() {
                   <motion.div {...buttonInteraction}>
                     <Button
                       onClick={handleEnterMission}
-                      className="w-full h-10 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-mono tracking-widest uppercase rounded-none border border-cyan-400/30 hover:border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all duration-300"
+                      disabled={isEnterMissionDisabled}
+                      className="w-full h-10 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-mono tracking-widest uppercase rounded-none border border-cyan-400/30 hover:border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      INITIALIZE LAUNCH SEQUENCE
+                      {enterMissionLabel}
                     </Button>
                   </motion.div>
 
@@ -400,7 +468,17 @@ export default function Home() {
           </div>
 
           <div className="bg-slate-900/30 border border-slate-800/60 rounded-none overflow-hidden p-4">
-            {board.data && board.data.length > 0 ? (
+            {board.isPending ? (
+              <div className="p-6 text-center text-xs text-cyan-300 font-mono flex items-center justify-center gap-2">
+                <Loader2 className="size-4 animate-spin" />
+                SYNCING LIVE RANKINGS...
+              </div>
+            ) : board.isError ? (
+              <div className="p-6 text-center text-xs text-rose-300 font-mono flex items-center justify-center gap-2">
+                <AlertCircle className="size-4" />
+                LIVE RANKINGS LINK OFFLINE
+              </div>
+            ) : board.data && board.data.length > 0 ? (
               <motion.div
                 className="space-y-3 font-mono text-xs"
                 variants={staggerContainer}
