@@ -168,7 +168,7 @@ export default function Home() {
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-slate-950/10" />
               <div className="absolute bottom-3 left-3 flex items-center gap-2 border border-cyan-300/25 bg-slate-950/75 px-2.5 py-2 backdrop-blur-md">
                 <Image
-                  src="/spacelogo.png"
+                  src="/spacelogo2.png"
                   alt=""
                   width={1024}
                   height={1024}

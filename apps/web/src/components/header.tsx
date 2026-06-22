@@ -56,7 +56,7 @@ export default function Header() {
                 transition={springTransition}
               >
                 <Image
-                  src="/spacelogo.png"
+                  src="/spacelogo2.png"
                   alt="Space Scavenger Hunt"
                   width={36}
                   height={36}
