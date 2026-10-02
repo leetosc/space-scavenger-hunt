@@ -4,10 +4,15 @@ import { TRPCError } from "@trpc/server";
 import { hashPassword } from "better-auth/crypto";
 import { z } from "zod";
 
-import { adminProcedure, protectedProcedure, publicProcedure, router } from "../index";
+import { adminProcedure, playerProcedure, protectedProcedure, publicProcedure, router } from "../index";
 import { formatFullName } from "../lib/format-full-name";
 
 export const playerRouter = router({
+  getOnboardingStatus: playerProcedure.query(({ ctx }) => ({ isComplete: ctx.player.isCheckedIn })),
+  completeOnboarding: playerProcedure.mutation(async ({ ctx }) => {
+    await ctx.prisma.player.update({ where: { id: ctx.player.id }, data: { isCheckedIn: true } });
+    return { success: true };
+  }),
   signUp: publicProcedure
     .input(
       z.object({

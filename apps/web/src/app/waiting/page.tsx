@@ -48,7 +48,7 @@ export default function WaitingPage() {
     enabled: !!session,
   });
   const onboarding = useQuery({
-    ...trpc.funFact.getOnboardingStatus.queryOptions(),
+    ...trpc.player.getOnboardingStatus.queryOptions(),
     enabled: !!session && !!me.data?.player,
   });
 

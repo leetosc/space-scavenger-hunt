@@ -4,6 +4,7 @@ import { env } from "@space-scavenger-hunt/env/server";
 import { PrismaClient } from "../prisma/generated/client";
 
 export type {
+  Prisma,
   Astronaut,
   ClaimAttempt,
   LocationHint,

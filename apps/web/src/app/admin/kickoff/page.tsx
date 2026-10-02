@@ -17,7 +17,6 @@ import {
   BadgeCheck,
   ExternalLink,
   Play,
-  Radar,
   RotateCcw,
   Shuffle,
   Timer,
@@ -60,16 +59,8 @@ export default function AdminKickoffPage() {
     },
     onError: (err) => toast.error(err.message),
   });
-  const spin = useMutation({
-    ...trpc.kickoff.spinNextPlayer.mutationOptions(),
-    onSuccess: (data) => {
-      if (data) toast.success(`${data.player.name} -> ${data.team.name}`);
-      invalidate();
-    },
-    onError: (err) => toast.error(err.message),
-  });
   const autoAssign = useMutation({
-    ...trpc.kickoff.autoAssignRemaining.mutationOptions(),
+    ...trpc.kickoff.assignTeams.mutationOptions(),
     onSuccess: () => {
       toast.success("All remaining players assigned");
       invalidate();
@@ -124,17 +115,10 @@ export default function AdminKickoffPage() {
       variant: "default",
     },
     {
-      label: "Spin next player",
-      icon: Radar,
-      onClick: () => spin.mutate(),
-      disabled: state.status !== "TEAM_ASSIGNMENT" || spin.isPending,
-      variant: "secondary",
-    },
-    {
-      label: "Auto-assign remaining",
+      label: "Assign all teams",
       icon: Shuffle,
       onClick: () => autoAssign.mutate(),
-      disabled: state.status !== "TEAM_ASSIGNMENT" || autoAssign.isPending,
+      disabled: state.status !== "TEAM_ASSIGNMENT" || autoAssign.isPending || state.unassignedPlayers.length === 0,
       variant: "secondary",
     },
     {
@@ -148,7 +132,7 @@ export default function AdminKickoffPage() {
       label: "Begin activity",
       icon: BadgeCheck,
       onClick: handleBeginActivity,
-      disabled: state.status !== "TEAM_ASSIGNMENT" || begin.isPending || state.assignedCount === 0,
+      disabled: state.status !== "TEAM_ASSIGNMENT" || begin.isPending || autoAssign.isPending || state.assignedCount === 0 || state.unassignedPlayers.length > 0,
       variant: "default",
     },
   ];

@@ -65,7 +65,7 @@ export default function TeamPage() {
     enabled: !!session,
   });
   const onboarding = useQuery({
-    ...trpc.funFact.getOnboardingStatus.queryOptions(),
+    ...trpc.player.getOnboardingStatus.queryOptions(),
     enabled: !!session,
   });
   const updateTeam = useMutation({

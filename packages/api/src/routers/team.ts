@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { adminProcedure, playerProcedure, publicProcedure, router } from "../index";
 import { DEFAULT_MAX_TEAMS, getOrCreateActivity } from "../services/activity";
+import { grantBoosts, INITIAL_SIGNAL_BOOSTS } from "../services/boosts";
 
 export const teamRouter = router({
   getConfig: publicProcedure.query(async () => {
@@ -19,17 +20,17 @@ export const teamRouter = router({
           _count: { select: { players: true, assignments: true, claims: true } },
         },
       }),
-      ctx.prisma.signalBoostLedger.groupBy({
+      ctx.prisma.signalBoostCredit.groupBy({
         by: ["teamId"],
-        where: { type: "HINT_SPEND", delta: { lt: 0 } },
-        _sum: { delta: true },
+        where: { state: "SPENT" },
+        _count: true,
       }),
     ]);
 
     const boostsUsedByTeamId = new Map(
       boostSpendByTeam.map((entry) => [
         entry.teamId,
-        Math.abs(entry._sum.delta ?? 0),
+        entry._count,
       ]),
     );
 
@@ -135,20 +136,11 @@ export const teamRouter = router({
             name: input.name,
             color: input.color,
             icon: input.icon,
-            signalBoostBalance: 2,
+            signalBoostBalance: 0,
             joinCode: nanoid(10),
           },
         });
-        await tx.signalBoostLedger.create({
-          data: {
-            teamId: team.id,
-            type: "INITIAL_GRANT",
-            delta: 2,
-            balanceAfter: team.signalBoostBalance,
-            note: "Starting Signal Boosts",
-          },
-        });
-        return team;
+        return grantBoosts(tx, team.id, INITIAL_SIGNAL_BOOSTS, "INITIAL_GRANT", "Starting Signal Boosts");
       });
     }),
 

@@ -7,6 +7,7 @@ model Activity {
   timeLimitMinutes         Int?
   maxTeams                 Int       @default(4)
   funFactGuessAttempts     Int       @default(2)
+  assignmentBatchId       String?
   createdAt                DateTime  @default(now())
   updatedAt                DateTime  @updatedAt
 
@@ -24,6 +25,7 @@ model Player {
   isCheckedIn              Boolean                @default(false)
   scannedAttempts          ClaimAttempt[]         @relation("ScannedByPlayer")
   funFacts                 PlayerFunFact[]
+  birthdaySelfies          BirthdaySelfie[]
   funFactChallengeGuesses  TeamFunFactChallenge[] @relation("LastFunFactGuess")
   createdAt                DateTime               @default(now())
   updatedAt                DateTime               @updatedAt
@@ -46,6 +48,8 @@ model Team {
   claims                TeamClaim[]
   hintReveals           TeamLocationHintReveal[]
   signalBoostLedger     SignalBoostLedger[]
+  boostCredits          SignalBoostCredit[]
+  birthdaySelfies        BirthdaySelfie[]
   funFactChallenges     TeamFunFactChallenge[]
   funFactChallengeState TeamFunFactChallengeState?
   createdAt             DateTime                  @default(now())
@@ -203,6 +207,7 @@ model LocationHint {
   imageSizeBytes Int?
   reveals        TeamLocationHintReveal[]
   ledgerEntries  SignalBoostLedger[]
+  boostCredits   SignalBoostCredit[]
   createdAt      DateTime                 @default(now())
   updatedAt      DateTime                 @updatedAt
 
@@ -218,6 +223,7 @@ model TeamLocationHintReveal {
   locationHintId String
   locationHint   LocationHint @relation(fields: [locationHintId], references: [id], onDelete: Cascade)
   revealLevel    Int          @default(0)
+  version        Int          @default(0)
   lastSpentAt    DateTime?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
@@ -239,6 +245,9 @@ model SignalBoostLedger {
   delta          Int
   balanceAfter   Int
   note           String?
+  archivedAt     DateTime?
+  grantedCredits SignalBoostCredit[] @relation("CreditGrant")
+  spentCredit    SignalBoostCredit? @relation("CreditSpend")
   createdAt      DateTime      @default(now())
 
   @@index([teamId])
@@ -246,4 +255,67 @@ model SignalBoostLedger {
   @@index([type])
   @@index([createdAt])
   @@map("signal_boost_ledger")
+}
+
+model BirthdaySelfie {
+  id              String   @id @default(cuid())
+  requestId       String   @unique
+  playerId        String
+  player          Player   @relation(fields: [playerId], references: [id], onDelete: Restrict)
+  teamId          String
+  team            Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  twin            String
+  // Reserved while processing, awaiting review, or approved. Rejection frees the slot.
+  activeKey       String?  @unique
+  status          String   @default("PROCESSING")
+  imageBlobName   String?
+  imageMimeType   String?
+  aiPassed        Boolean?
+  aiFeedback      String?
+  aiConfidence    Float?
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  rejectionReason String?
+  credit          SignalBoostCredit?
+  reviews         SelfieReview[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([playerId, twin])
+  @@index([status, createdAt])
+  @@map("birthday_selfie")
+}
+
+model SelfieReview {
+  id         String @id @default(cuid())
+  selfieId   String
+  selfie     BirthdaySelfie @relation(fields: [selfieId], references: [id], onDelete: Cascade)
+  reviewerId String
+  decision   String
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  @@index([selfieId])
+  @@map("selfie_review")
+}
+
+model SignalBoostCredit {
+  id                String @id @default(cuid())
+  teamId            String
+  team              Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  grantLedgerId     String
+  grantLedger       SignalBoostLedger @relation("CreditGrant", fields: [grantLedgerId], references: [id], onDelete: Restrict)
+  spendLedgerId     String? @unique
+  spendLedger       SignalBoostLedger? @relation("CreditSpend", fields: [spendLedgerId], references: [id], onDelete: Restrict)
+  selfieId          String? @unique
+  selfie            BirthdaySelfie? @relation(fields: [selfieId], references: [id], onDelete: Restrict)
+  locationHintId    String?
+  locationHint      LocationHint? @relation(fields: [locationHintId], references: [id], onDelete: SetNull)
+  revealVersion     Int?
+  state             String @default("AVAILABLE")
+  createdAt         DateTime @default(now())
+  revokedAt         DateTime?
+
+  @@index([teamId, state, createdAt])
+  @@map("signal_boost_credit")
 }

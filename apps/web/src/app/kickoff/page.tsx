@@ -1,490 +1,101 @@
 "use client";
 
+import type { AppRouter } from "@space-scavenger-hunt/api/routers/index";
 import { Button } from "@space-scavenger-hunt/ui/components/button";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { inferRouterOutputs } from "@trpc/server";
 import confetti from "canvas-confetti";
-import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, Shuffle } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
+import { Loader2, Shuffle, Sparkles } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-
-import NameWheel, { type WheelPhase } from "@/components/kickoff/name-wheel";
 import StarfieldBackground from "@/components/starfield-background";
-import TeamCards from "@/components/kickoff/team-cards";
-import { useGameHaptics } from "@/hooks/use-game-haptics";
+import { TeamIcon } from "@/components/team-icon";
+import { authClient } from "@/lib/auth-client";
 import { trpc } from "@/utils/trpc";
 
-/* ------------------------------------------------------------------ */
-/*  Types                                                              */
-/* ------------------------------------------------------------------ */
+type Display = inferRouterOutputs<AppRouter>["kickoff"]["getDisplayState"];
+type Player = Display["unassignedPlayers"][number];
 
-type Player = { id: string; name: string };
-type TeamData = {
-  id: string;
-  name: string;
-  color: string | null;
-  icon: string | null;
-  players: Player[];
-};
-
-type AnimTarget = {
-  player: Player;
-  teamId: string;
-  teamColor: string | null;
-};
-
-type FlyState = {
-  x0: number;
-  y0: number;
-  x1: number;
-  y1: number;
-  name: string;
-  color: string | null;
-};
-
-type PagePhase = WheelPhase | "landed";
-
-/* ------------------------------------------------------------------ */
-/*  Page                                                               */
-/* ------------------------------------------------------------------ */
+function Name({ player, color, reduced }: { player: Player; color?: string | null; reduced: boolean }) {
+  return <motion.div layoutId={`crew-${player.id}`} transition={{ layout: { duration: reduced ? 0 : 1.6, ease: [0.22, 1, 0.36, 1] } }} className="relative z-20 rounded-lg border bg-slate-900 px-3 py-2 text-center text-sm font-bold shadow-lg" style={{ borderColor: color ?? "#22d3ee66", color: color ?? "#e2e8f0" }}>
+    {player.name}
+  </motion.div>;
+}
 
 export default function KickoffDisplayPage() {
   const queryClient = useQueryClient();
-  const haptics = useGameHaptics();
-  const state = useQuery({
-    ...trpc.kickoff.getDisplayState.queryOptions(),
-    refetchInterval: 1500,
+  const reduced = !!useReducedMotion();
+  const state = useQuery({ ...trpc.kickoff.getDisplayState.queryOptions(), refetchInterval: 1500 });
+  const { data: session } = authClient.useSession();
+  const me = useQuery({ ...trpc.player.me.queryOptions(), enabled: !!session });
+  const [display, setDisplay] = useState<Display>();
+  const [phase, setPhase] = useState<"idle" | "shuffling" | "flying">("idle");
+  const seenBatch = useRef<string | null | undefined>(undefined);
+  const revealTarget = useRef<Display | undefined>(undefined);
+  const assign = useMutation({ ...trpc.kickoff.assignTeams.mutationOptions(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: trpc.kickoff.getDisplayState.queryKey() }),
+    onError: error => toast.error(error.message),
   });
-  const spinNextPlayer = useMutation({
-    ...trpc.kickoff.spinNextPlayer.mutationOptions(),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: trpc.kickoff.getDisplayState.queryKey(),
-      });
-    },
-    onError: (err) => {
-      haptics.error();
-      toast.error(err.message);
-    },
-  });
-
-  const [phase, setPhase] = useState<PagePhase>("idle");
-  const [target, setTarget] = useState<AnimTarget | null>(null);
-  const [fly, setFly] = useState<FlyState | null>(null);
-  const [highlightTeam, setHighlightTeam] = useState<string | null>(null);
-  const [frozenCands, setFrozenCands] = useState<Player[] | null>(null);
-  const [frozenTeams, setFrozenTeams] = useState<TeamData[] | null>(null);
-
-  const prevAssigned = useRef<Set<string>>(new Set());
-  const hasInitialized = useRef(false);
-  const previousActivityStatus = useRef<string | null>(null);
-  const wheelContainerRef = useRef<HTMLDivElement>(null);
-  const cardRefs = useRef(new Map<string, HTMLDivElement>());
-
-  // Keep target accessible in timeout callbacks without stale closures
-  const targetRef = useRef<AnimTarget | null>(null);
-  targetRef.current = target;
-
-  const registerCard = useCallback(
-    (id: string, el: HTMLDivElement | null) => {
-      if (el) cardRefs.current.set(id, el);
-      else cardRefs.current.delete(id);
-    },
-    [],
-  );
-
-  /* ────────────────────────────────────────────────────────────────── */
-  /*  1. Detect new assignment from polling                            */
-  /* ────────────────────────────────────────────────────────────────── */
 
   useEffect(() => {
-    if (!state.data || phase !== "idle") return;
-
-    const now = new Set<string>();
-    for (const t of state.data.teams)
-      for (const p of t.players) now.add(p.id);
-
-    // First load – just record current state, don't replay old assignments
-    if (!hasInitialized.current) {
-      hasInitialized.current = true;
-      prevAssigned.current = now;
+    const data = state.data;
+    if (!data || phase !== "idle") return;
+    if (seenBatch.current === undefined || !data.assignmentBatchId || seenBatch.current === data.assignmentBatchId) {
+      seenBatch.current = data.assignmentBatchId;
+      setDisplay(data);
       return;
     }
+    seenBatch.current = data.assignmentBatchId;
+    if (reduced) { setDisplay(data); return; }
+    // Keep the old positions mounted through the anticipation beat.
+    revealTarget.current = data;
+    setPhase("shuffling");
+  }, [state.data, phase, reduced]);
 
-    const fresh: AnimTarget[] = [];
-    for (const t of state.data.teams)
-      for (const p of t.players)
-        if (!prevAssigned.current.has(p.id))
-          fresh.push({ player: p, teamId: t.id, teamColor: t.color });
+  useEffect(() => {
+    if (phase === "idle") return;
+    const timer = setTimeout(() => {
+      if (phase === "shuffling") {
+        setDisplay(revealTarget.current);
+        setPhase("flying");
+      } else {
+        if (!reduced) confetti({ particleCount: 160, spread: 110, origin: { y: 0.6 }, disableForReducedMotion: true });
+        setPhase("idle");
+      }
+    }, phase === "shuffling" ? 900 : 1700);
+    return () => clearTimeout(timer);
+  }, [phase, reduced]);
 
-    if (fresh.length > 0) {
-      const tgt = fresh[0]!;
-      setTarget(tgt);
-
-      // Freeze data: keep target on wheel, hide from team card
-      setFrozenCands([...state.data.unassignedPlayers, tgt.player]);
-      setFrozenTeams(
-        state.data.teams.map((t) => ({
-          ...t,
-          players: t.players.filter((p) => p.id !== tgt.player.id),
-        })),
-      );
-      setPhase("spinning");
-    } else {
-      prevAssigned.current = now;
+  // An admin reset during a reveal cancels it rather than replaying stale names.
+  useEffect(() => {
+    if (state.data && state.data.assignmentBatchId === null && seenBatch.current) {
+      seenBatch.current = null; setPhase("idle"); setDisplay(state.data);
     }
-  }, [state.data, phase]);
+  }, [state.data]);
 
-  /* ────────────────────────────────────────────────────────────────── */
-  /*  2. Wheel spin complete → "selected"                              */
-  /* ────────────────────────────────────────────────────────────────── */
-
-  const onSpinDone = useCallback(() => {
-    haptics.select();
-    setPhase("selected");
-  }, [haptics.select]);
-
-  /* ────────────────────────────────────────────────────────────────── */
-  /*  3. Selected → flying (after dramatic pause)                      */
-  /* ────────────────────────────────────────────────────────────────── */
-
-  useEffect(() => {
-    if (phase !== "selected") return;
-
-    const timer = setTimeout(() => {
-      const tgt = targetRef.current;
-      if (!tgt) return;
-
-      // Measure positions
-      const wr = wheelContainerRef.current?.getBoundingClientRect();
-      const x0 = wr ? wr.left + wr.width / 2 : window.innerWidth / 2;
-      const y0 = wr ? wr.top + wr.height / 2 : 300;
-
-      const card = cardRefs.current.get(tgt.teamId);
-      const cr = card?.getBoundingClientRect();
-      const x1 = cr ? cr.left + cr.width / 2 : window.innerWidth / 2;
-      const y1 = cr ? cr.top + 30 : window.innerHeight - 150;
-
-      setFly({
-        x0,
-        y0,
-        x1,
-        y1,
-        name: tgt.player.name,
-        color: tgt.teamColor,
-      });
-      setPhase("flying");
-    }, 600);
-
-    return () => clearTimeout(timer);
-  }, [phase]);
-
-  /* ────────────────────────────────────────────────────────────────── */
-  /*  4. Flying → landed (name arrives at team card)                   */
-  /* ────────────────────────────────────────────────────────────────── */
-
-  useEffect(() => {
-    if (phase !== "flying") return;
-
-    const timer = setTimeout(() => {
-      // Remove overlay
-      setFly(null);
-
-      // Unfreeze data so the player appears in the team card list
-      setFrozenCands(null);
-      setFrozenTeams(null);
-
-      const tgt = targetRef.current;
-      if (tgt) {
-        haptics.impact();
-        // Impact highlight
-        setHighlightTeam(tgt.teamId);
-
-        // Confetti burst at the team card
-        const card = cardRefs.current.get(tgt.teamId);
-        if (card) {
-          const cr = card.getBoundingClientRect();
-          confetti({
-            particleCount: 140,
-            spread: 55,
-            origin: {
-              x: (cr.left + cr.width / 2) / window.innerWidth,
-              y: (cr.top + cr.height / 2) / window.innerHeight,
-            },
-            colors: tgt.teamColor
-              ? [tgt.teamColor, "#facc15", "#ffffff"]
-              : undefined,
-          });
-        } else {
-          confetti({
-            particleCount: 140,
-            spread: 70,
-            origin: { y: 0.6 },
-          });
-        }
-      }
-
-      setPhase("landed");
-    }, 900);
-
-    return () => clearTimeout(timer);
-  }, [phase, haptics]);
-
-  /* ────────────────────────────────────────────────────────────────── */
-  /*  5. Landed → idle (reset for next spin)                           */
-  /* ────────────────────────────────────────────────────────────────── */
-
-  useEffect(() => {
-    if (phase !== "landed") return;
-
-    const timer = setTimeout(() => {
-      setPhase("idle");
-      setTarget(null);
-      setHighlightTeam(null);
-
-      // Update tracked set so we don't re-trigger
-      if (state.data) {
-        const now = new Set<string>();
-        for (const tm of state.data.teams)
-          for (const p of tm.players) now.add(p.id);
-        prevAssigned.current = now;
-      }
-
-      queryClient.invalidateQueries({
-        queryKey: trpc.kickoff.getDisplayState.queryKey(),
-      });
-    }, 700);
-
-    return () => clearTimeout(timer);
-  }, [phase, state.data, queryClient]);
-
-  /* ────────────────────────────────────────────────────────────────── */
-  /*  Final celebration when activity goes ACTIVE                      */
-  /* ────────────────────────────────────────────────────────────────── */
-
-  useEffect(() => {
-    const previousStatus = previousActivityStatus.current;
-    previousActivityStatus.current = state.data?.status ?? null;
-
-    if (state.data?.status === "ACTIVE") {
-      if (previousStatus && previousStatus !== "ACTIVE") {
-        haptics.success();
-      }
-
-      const end = Date.now() + 3000;
-      const tick = () => {
-        confetti({
-          particleCount: 60,
-          spread: 100,
-          origin: { x: 0.1, y: 0.6 },
-        });
-        confetti({
-          particleCount: 60,
-          spread: 100,
-          origin: { x: 0.9, y: 0.6 },
-        });
-        if (Date.now() < end) requestAnimationFrame(tick);
-      };
-      tick();
-    }
-  }, [state.data?.status, haptics]);
-
-  /* ────────────────────────────────────────────────────────────────── */
-  /*  Render                                                           */
-  /* ────────────────────────────────────────────────────────────────── */
-
-  if (!state.data) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-900 to-slate-950 relative">
-        <StarfieldBackground />
-        <p className="text-2xl text-muted-foreground relative z-10">
-          Awaiting Mission Control...
-        </p>
-      </div>
-    );
-  }
-
-  const cands = frozenCands ?? state.data.unassignedPlayers;
-  const teams = frozenTeams ?? state.data.teams;
-  const wheelPhase: WheelPhase =
-    phase === "landed" ? "idle" : phase;
-  const canSpinNextPlayer =
-    state.data.status === "TEAM_ASSIGNMENT" &&
-    state.data.unassignedPlayers.length > 0 &&
-    phase === "idle" &&
-    !spinNextPlayer.isPending;
-
-  return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-slate-900 to-slate-950 text-white overflow-hidden relative">
-      <StarfieldBackground />
-
-      {/* Screen shake during spin */}
-      <motion.div
-        className="relative z-10 mx-auto max-w-7xl px-6 py-8 flex flex-col gap-6"
-        animate={
-          phase === "spinning"
-            ? {
-                x: [0, -3, 3, -2, 2, 0],
-                y: [0, 2, -2, 1, -1, 0],
-              }
-            : {}
-        }
-        transition={
-          phase === "spinning"
-            ? { duration: 0.15, repeat: Infinity }
-            : {}
-        }
-      >
-        {/* Header */}
-        <header className="text-center">
-          <h1 className="text-4xl md:text-6xl font-black tracking-tight">
-            Mission Crew Assignment
-          </h1>
-          <p className="text-muted-foreground mt-1 text-lg">
-            {state.data.assignedCount} / {state.data.totalPlayers} astronauts
-            deployed
-          </p>
-        </header>
-
-        <Button
-          className="mx-auto border-white/20 bg-white/10 text-white shadow-[0_0_24px_rgba(34,211,238,0.2)] backdrop-blur hover:bg-white/20"
-          disabled={!canSpinNextPlayer}
-          onClick={() => {
-            haptics.select();
-            spinNextPlayer.mutate();
-          }}
-          size="lg"
-        >
-          {spinNextPlayer.isPending ? (
-            <Loader2 className="animate-spin" />
-          ) : (
-            <Shuffle />
-          )}
-          Spin next player
-        </Button>
-
-        {/* Wheel */}
-        <section
-          ref={wheelContainerRef}
-          className="flex items-center justify-center py-2"
-        >
-          <NameWheel
-            candidates={cands}
-            phase={wheelPhase}
-            target={target?.player ?? null}
-            onSpinComplete={onSpinDone}
-          />
-        </section>
-
-        {/* Team cards */}
-        <section>
-          <TeamCards
-            teams={teams}
-            registerRef={registerCard}
-            highlightTeamId={highlightTeam}
-          />
-        </section>
-
-        {/* Post-launch message */}
-        {state.data.status === "ACTIVE" && (
-          <div className="text-center py-8">
-            <motion.p
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="text-3xl md:text-5xl font-bold"
-            >
-              All systems go. Launch successful.
-            </motion.p>
-          </div>
-        )}
-      </motion.div>
-
-      {/* ── Flying name overlay ── */}
-      <AnimatePresence>
-        {fly && (
-          <motion.div
-            key="flyname"
-            className="fixed inset-0 z-50 pointer-events-none"
-          >
-            {/* Trailing spark particles */}
-            {Array.from({ length: 6 }, (_, i) => {
-              const ox = (i % 2 === 0 ? 1 : -1) * (20 + i * 8);
-              const oy = 10 + i * 8;
-              return (
-                <motion.div
-                  key={i}
-                  className="absolute w-3 h-3 rounded-full"
-                  style={{
-                    left: 0,
-                    top: 0,
-                    background: fly.color ?? "#facc15",
-                    filter: `blur(${i * 2}px)`,
-                  }}
-                  initial={{ x: fly.x0, y: fly.y0, opacity: 0 }}
-                  animate={{
-                    x: [
-                      fly.x0,
-                      (fly.x0 + fly.x1) / 2 + ox,
-                      fly.x1,
-                    ],
-                    y: [
-                      fly.y0,
-                      Math.min(fly.y0, fly.y1) - 60 - oy,
-                      fly.y1,
-                    ],
-                    opacity: [0, 0.7 - i * 0.1, 0],
-                    scale: [0.5, 1.5 - i * 0.15, 0],
-                  }}
-                  transition={{
-                    duration: 0.85,
-                    delay: i * 0.04,
-                    ease: "easeInOut",
-                  }}
-                />
-              );
-            })}
-
-            {/* Main flying name */}
-            <motion.div
-              className="absolute"
-              style={{ left: 0, top: 0 }}
-              initial={{
-                x: fly.x0,
-                y: fly.y0,
-                scale: 2.5,
-                opacity: 1,
-              }}
-              animate={{
-                x: [fly.x0, (fly.x0 + fly.x1) / 2, fly.x1],
-                y: [
-                  fly.y0,
-                  Math.min(fly.y0, fly.y1) - 80,
-                  fly.y1,
-                ],
-                scale: [2.5, 1.8, 1],
-                rotate: [0, -180, -360],
-              }}
-              exit={{
-                opacity: 0,
-                scale: 0,
-                transition: { duration: 0.15 },
-              }}
-              transition={{ duration: 0.85, ease: "easeInOut" }}
-            >
-              <span
-                className="block text-3xl md:text-5xl font-black whitespace-nowrap"
-                style={{
-                  transform: "translate(-50%, -50%)",
-                  color: fly.color ?? "#facc15",
-                  textShadow: `0 0 20px ${fly.color ?? "#facc15"}, 0 0 40px ${fly.color ?? "#facc15"}80, 0 0 80px ${fly.color ?? "#facc15"}40`,
-                }}
-              >
-                {fly.name}
-              </span>
-            </motion.div>
+  if (state.error) return <p role="alert" className="p-10 text-center">{state.error.message}</p>;
+  if (!display) return <p role="status" className="p-10 text-center">Awaiting Mission Control…</p>;
+  return <main className="relative min-h-screen overflow-hidden bg-gradient-to-b from-slate-900 to-slate-950 text-white">
+    <StarfieldBackground />
+    <div className="relative z-10 mx-auto flex max-w-7xl flex-col gap-8 px-6 py-8">
+      <header className="text-center"><p className="mb-3 font-mono text-xs uppercase tracking-[0.25em] text-cyan-300">Luke &amp; Leo · One year around the sun</p><h1 className="text-4xl font-black md:text-6xl">Meet your birthday crew</h1><p aria-live="polite" className="mt-3 text-lg text-slate-400">{phase === "shuffling" ? "Mixing up the crews…" : phase === "flying" ? "Everyone, to your spaceships!" : `${display.assignedCount} / ${display.totalPlayers} astronauts deployed`}</p></header>
+      {me.data?.user.role === "ADMIN" ? <Button className="mx-auto" size="lg" disabled={state.data?.status !== "TEAM_ASSIGNMENT" || !state.data.unassignedPlayers.length || phase !== "idle" || assign.isPending} onClick={() => assign.mutate()}>{assign.isPending ? <Loader2 className="animate-spin" /> : <Shuffle />}Assign all teams</Button> : null}
+      <LayoutGroup id="birthday-crew">
+        <section aria-label="Unassigned crew" className="min-h-32 rounded-2xl border border-cyan-400/15 bg-slate-950/40 p-5">
+          <p className="mb-4 text-center text-xs uppercase tracking-widest text-cyan-300">{display.unassignedPlayers.length ? "Ready for launch" : "All crews aboard"}</p>
+          <motion.div className="flex flex-wrap justify-center gap-3" animate={phase === "shuffling" ? { x: [0, -7, 7, -4, 4, 0], y: [0, -5, 0] } : { x: 0, y: 0 }} transition={{ duration: 0.45, repeat: phase === "shuffling" ? Infinity : 0 }}>
+            {display.unassignedPlayers.map(player => <Name key={player.id} player={player} reduced={reduced} />)}
           </motion.div>
-        )}
-      </AnimatePresence>
+        </section>
+        <section aria-label="Mission teams" className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {display.teams.map(team => <div key={team.id} className="min-h-48 rounded-xl border bg-slate-950/75 p-4" style={{ borderColor: team.color ?? "#22d3ee44", boxShadow: phase === "flying" ? `0 0 30px ${team.color ?? "#22d3ee"}33` : undefined }}>
+            <div className="mb-4 flex items-center gap-2"><TeamIcon icon={team.icon} color={team.color} name={team.name} /><h2 className="font-bold">{team.name}</h2><span className="ml-auto text-xs text-slate-400">{team.players.length}</span></div>
+            <div className="flex flex-col gap-2">{team.players.map(player => <Name key={player.id} player={player} color={team.color} reduced={reduced} />)}</div>
+          </div>)}
+        </section>
+      </LayoutGroup>
+      {display.status === "ACTIVE" ? <p className="flex items-center justify-center gap-3 py-6 text-center text-3xl font-bold"><Sparkles className="text-yellow-300" />The birthday mission is a go!</p> : null}
     </div>
-  );
+  </main>;
 }

@@ -1166,7 +1166,7 @@ export default function AdminHintsPage() {
               onClick={() => setClearLedgerOpen(true)}
             >
               <Trash2 className="size-3.5" />
-              Clear ledger
+              Archive ledger
             </Button>
           </div>
           <div className="max-h-[520px] overflow-y-auto p-4">
@@ -1223,10 +1223,10 @@ export default function AdminHintsPage() {
       <AlertDialog open={clearLedgerOpen} onOpenChange={setClearLedgerOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Clear ledger history?</AlertDialogTitle>
+            <AlertDialogTitle>Archive ledger history?</AlertDialogTitle>
             <AlertDialogDescription>
-              This removes all Signal Boost ledger entries from the admin hints
-              page. Team balances and hint reveal progress will stay as-is.
+              This hides current entries from the admin hints page. The audit
+              history is retained so selfie rewards can still be reversed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1237,7 +1237,7 @@ export default function AdminHintsPage() {
               disabled={clearLedgerMutation.isPending}
               onClick={() => clearLedgerMutation.mutate()}
             >
-              {clearLedgerMutation.isPending ? "Clearing..." : "Clear ledger"}
+              {clearLedgerMutation.isPending ? "Archiving..." : "Archive ledger"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

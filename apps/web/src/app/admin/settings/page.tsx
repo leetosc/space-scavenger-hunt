@@ -6,7 +6,7 @@ import { Input } from "@space-scavenger-hunt/ui/components/input";
 import { Label } from "@space-scavenger-hunt/ui/components/label";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { RadioTower, Save, Settings2 } from "lucide-react";
+import { Save, Settings2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -22,12 +22,10 @@ export default function AdminSettingsPage() {
   const queryClient = useQueryClient();
   const settingsQuery = useQuery(trpc.activity.getSettings.queryOptions());
   const [maxTeams, setMaxTeams] = useState("4");
-  const [funFactGuessAttempts, setFunFactGuessAttempts] = useState("2");
 
   useEffect(() => {
     if (settingsQuery.data) {
       setMaxTeams(String(settingsQuery.data.maxTeams));
-      setFunFactGuessAttempts(String(settingsQuery.data.funFactGuessAttempts));
     }
   }, [settingsQuery.data]);
 
@@ -44,21 +42,14 @@ export default function AdminSettingsPage() {
       queryClient.invalidateQueries({
         queryKey: trpc.team.getConfig.queryKey(),
       });
-      queryClient.invalidateQueries({
-        queryKey: trpc.funFact.getTeamChallenge.queryKey(),
-      });
     },
     onError: (err) => toast.error(err.message),
   });
 
   const parsedMaxTeams = Number(maxTeams);
-  const parsedFunFactAttempts = Number(funFactGuessAttempts);
   const canSave =
     Number.isInteger(parsedMaxTeams) &&
-    parsedMaxTeams > 0 &&
-    Number.isInteger(parsedFunFactAttempts) &&
-    parsedFunFactAttempts >= 1 &&
-    parsedFunFactAttempts <= 10;
+    parsedMaxTeams > 0;
 
   return (
     <motion.div
@@ -109,7 +100,6 @@ export default function AdminSettingsPage() {
               if (!canSave) return;
               updateSettings.mutate({
                 maxTeams: parsedMaxTeams,
-                funFactGuessAttempts: parsedFunFactAttempts,
               });
             }}
           >
@@ -131,27 +121,6 @@ export default function AdminSettingsPage() {
                 onChange={(event) => setMaxTeams(event.target.value)}
                 className="mt-2 font-mono"
               />
-              </div>
-              <div className="border border-emerald-400/15 bg-slate-900/45 p-3 shadow-[inset_0_0_18px_rgba(15,23,42,0.8)]">
-                <Label
-                  htmlFor="fun-fact-attempts"
-                  className="font-mono text-[10px] uppercase tracking-[0.18em] text-emerald-300/75"
-                >
-                  Attempts per fun fact
-                </Label>
-                <Input
-                  id="fun-fact-attempts"
-                  type="number"
-                  inputMode="numeric"
-                  min={1}
-                  max={10}
-                  step={1}
-                  value={funFactGuessAttempts}
-                  onChange={(event) =>
-                    setFunFactGuessAttempts(event.target.value)
-                  }
-                  className="mt-2 font-mono"
-                />
               </div>
             </div>
             <motion.div {...buttonInteraction}>

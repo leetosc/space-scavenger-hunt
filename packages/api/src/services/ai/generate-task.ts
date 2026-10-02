@@ -3,12 +3,13 @@ import { generateText } from "ai";
 
 import { foundryModel } from "./client";
 
-const SYSTEM_PROMPT = `You generate office-appropriate team photo challenges for an office scavenger hunt. Output exactly one sentence describing the challenge.`;
+const SYSTEM_PROMPT = `You generate family-friendly team photo challenges for twin boys Luke and Leo's first birthday party, a space-themed scavenger hunt in and around their family's house. Output exactly one sentence describing the challenge.`;
 
 const FALLBACK_TASKS = [
   "Have at least two teammates pose as if you have just touched down on the Moon, with one planting an imaginary flag.",
-  "Two or more teammates float-walk like astronauts in low gravity past a single desk and capture the moment.",
-  "Build a quick rocket shape with office supplies and have at least two teammates point at it like proud mission controllers.",
+  "Pose together as a rocket crew celebrating your landing on Planet Birthday.",
+  "Form a pretend telescope with your hands and point excitedly at an imaginary birthday comet together.",
+  "Pose together as friendly aliens waving hello to Luke and Leo from the Moon.",
 ];
 
 type GenerateTaskPromptOptions = {
@@ -28,7 +29,7 @@ export async function getExistingAttemptTaskPrompts(): Promise<string[]> {
 }
 
 function buildUserPrompt(existingTaskPrompts: string[]): string {
-  const basePrompt = `Generate one safe, office-appropriate team photo challenge for a scavenger hunt.
+  const basePrompt = `Generate one safe, family-friendly team photo challenge for Luke and Leo's first birthday scavenger hunt at their family's house and yard.
 
 Rules:
 - It must be verifiable from a single uploaded image.
@@ -37,8 +38,12 @@ Rules:
 - It must be completable in under 3 minutes.
 - It must not require dangerous behavior.
 - It must not ask for sensitive information.
-- It must not require leaving the office.
+- It must be possible in a shared party area inside the house or in the yard without leaving the property.
+- Do not require private rooms, climbing, roads, pools, moving furniture, or handling household appliances.
+- Do not require the birthday babies to participate or be held; guests can complete these tasks themselves.
+- Use playful space, birthday, or exploration themes suitable for guests of different ages.
 - It should not require props.
+- Do not mention the number of people required in the output sentence.
 - Return only the task sentence.`;
 
   if (existingTaskPrompts.length === 0) {
@@ -54,7 +59,7 @@ Rules:
 These tasks have already been used in this hunt. Your new task must be clearly different from every one of them:
 ${taskList}
 
-Avoid repeating the same action, scene, or setup as any listed task. Vary the theme, pose, props, and group interaction — change the activity in a noticeable way, not just the wording.
+Avoid repeating the same action, scene, or setup as any listed task. Vary the theme, pose, and group interaction — change the activity in a noticeable way, not just the wording.
 
 
 Do not mention the number of people required to complete the task.`;

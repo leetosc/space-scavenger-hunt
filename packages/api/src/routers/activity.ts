@@ -103,7 +103,6 @@ export const activityRouter = router({
     const activity = await getOrCreateActivity();
     return {
       maxTeams: activity.maxTeams ?? DEFAULT_MAX_TEAMS,
-      funFactGuessAttempts: activity.funFactGuessAttempts ?? 2,
     };
   }),
 
@@ -111,7 +110,6 @@ export const activityRouter = router({
     .input(
       z.object({
         maxTeams: z.number().int().positive(),
-        funFactGuessAttempts: z.number().int().min(1).max(10),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -120,7 +118,6 @@ export const activityRouter = router({
         where: { id: activity.id },
         data: {
           maxTeams: input.maxTeams,
-          funFactGuessAttempts: input.funFactGuessAttempts,
         },
       });
     }),

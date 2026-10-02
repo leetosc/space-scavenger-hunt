@@ -1,6 +1,10 @@
 # Astronaut NFC Scavenger Hunt
 
-Team-based office scavenger hunt where players find hidden astronauts by scanning NFC tags. The app generates AI photo challenges, judges submissions with vision AI, and ranks teams on a live leaderboard.
+Space-themed scavenger hunt for Luke and Leo's first birthday party, in and around the family's house. Players find hidden astronauts by scanning NFC tags, complete AI-generated team photo challenges, and race on a live leaderboard.
+
+Guests check in without fun facts, then join balanced teams in one simultaneous kickoff reveal. Each player can earn one team Signal Boost for a selfie with Luke and one with Leo. AI checks for a baby and another person; passing photos are approved immediately and remain available for human review under **Admin → Birthday Selfies**. Rejection removes an unused boost or reverses the hint-reveal step it funded. Rejected photos can be replaced. Teams also receive two starting boosts and one per astronaut capture.
+
+After updating, run `bun run db:generate` and deploy the checked-in migrations with `bun run db:deploy`. The birthday migration preserves existing balances as traceable opening credits. Ledger archiving keeps the audit trail needed for reversals; manually overriding a hint starts a new reveal version so later rejections cannot undo that override.
 
 Built with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack): Next.js + Express + tRPC + Better Auth + Prisma (SQLite/libsql) + Bun + Turborepo.
 
@@ -140,6 +144,14 @@ space-scavenger-hunt/
 - `bun run db:local`: Start the local SQLite database
 
 ## End-to-end tests
+
+`bun run test:birthday` runs isolated SQLite tests for selfie approval/rejection,
+credit spending and reversal, migration backfill, and batch team assignment.
+It does not use the configured application database or live AI/storage services.
+
+The birthday browser tests cover real signup/check-in and use mocked responses
+for team-reveal and selfie-review UI scenarios. Live Azure upload and vision
+judging require the configured services.
 
 Playwright tests live in `e2e/`.
 

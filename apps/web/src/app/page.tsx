@@ -51,7 +51,7 @@ export default function Home() {
     enabled: !!session,
   });
   const onboarding = useQuery({
-    ...trpc.funFact.getOnboardingStatus.queryOptions(),
+    ...trpc.player.getOnboardingStatus.queryOptions(),
     enabled: !!session && !!me.data?.player,
   });
 
@@ -220,7 +220,7 @@ export default function Home() {
                   className="size-5 shrink-0 text-cyan-400 animate-spin"
                   style={{ animationDuration: "6s" }}
                 />
-                Save the Astronauts
+                Luke &amp; Leo turn one!
                 <Sparkles
                   className="size-5 shrink-0 text-cyan-400 animate-spin"
                   style={{ animationDuration: "6s" }}
@@ -234,9 +234,10 @@ export default function Home() {
               transition={{ delay: 0.5 }}
               className="mx-auto max-w-xl text-sm leading-relaxed text-slate-300 md:text-base lg:mx-0"
             >
-              The Starfarer-9 has suffered a critical hull failure. Its crew is
-              stranded across orbital coordinates. Enlist with your team, decrypt
-              sector logs, and rescue them before life support systems fail.
+              Our little astronauts have completed their first trip around the sun!
+              Join a birthday crew, find hidden astronauts around the house and yard,
+              and capture silly team photos. Take a selfie with Luke and with Leo
+              for extra Signal Boosts along the way.
             </motion.p>
           </div>
         </section>

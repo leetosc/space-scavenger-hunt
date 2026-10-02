@@ -4,23 +4,23 @@ import { z } from "zod";
 import { foundryModel } from "./client";
 import { logAiFallback } from "./log-ai-error";
 
-const SYSTEM_PROMPT = `You generate creative astronaut character profiles for a space-themed office scavenger hunt game. Each astronaut is a hidden character that teams must find by scanning NFC tags placed around the office.`;
+const SYSTEM_PROMPT = `You generate creative astronaut character profiles for twin boys Luke and Leo's first birthday party. Each astronaut is a hidden character in a family-friendly space scavenger hunt, found by scanning NFC tags around the family's house and yard.`;
 
 const USER_PROMPT = `Generate a unique astronaut character for a scavenger hunt game.
 
 Rules:
 - The name should be a fun, space-themed character name (e.g. "Cosmo McStardust", "Nebula Nightshade", "Buzz Lightyarn")
 - The description should be 1-2 sentences describing the character's personality or backstory
-- Keep it fun, office-appropriate, and space-themed
+- Keep it playful, family-friendly, birthday-appropriate, and space-themed
 - Be creative and varied — avoid generic names`;
 
 const FALLBACK_PROFILES = [
   { name: "Cosmo McStardust", description: "A veteran space explorer who insists on narrating every mission in dramatic movie-trailer voice." },
   { name: "Nebula Nightshade", description: "A mysterious astronaut who communicates only through interpretive space-walking gestures." },
   { name: "Captain Quasar", description: "The self-appointed captain of every mission, despite never actually being promoted." },
-  { name: "Luna Lightyear", description: "An overly enthusiastic rookie astronaut who treats every coffee break like a moon landing." },
+  { name: "Luna Lightyear", description: "An enthusiastic rookie astronaut who treats every birthday cupcake like a newly discovered moon." },
   { name: "Asteroid Andy", description: "Claims to have personally high-fived an asteroid. Nobody believes him, but nobody can disprove it either." },
-  { name: "Stella Supernova", description: "A dramatic astronaut whose farewell speeches before every 5-minute spacewalk bring colleagues to tears." },
+  { name: "Stella Supernova", description: "A dramatic astronaut who sings Happy Birthday to every star she discovers." },
   { name: "Comet Clipboard", description: "A mission planner who color-codes every orbit and refuses to launch without a perfectly labeled checklist." },
   { name: "Major Stardust", description: "An astronaut who got promoted to Major purely because of how much glitter gets stuck to their suit." },
 ];
@@ -67,7 +67,7 @@ function buildUserPrompt(existingProfiles: ExistingAstronautProfile[]): string {
 These astronauts already exist in this hunt. Your new astronaut must be clearly different from every one of them:
 ${profileList}
 
-Avoid repeating existing name patterns, titles, personality traits, backstories, jokes, or description structure. Vary the character archetype, comedic angle, and space-office theme in a noticeable way.`;
+Avoid repeating existing name patterns, titles, personality traits, backstories, jokes, or description structure. Vary the character archetype, comedic angle, and space-birthday theme in a noticeable way.`;
 }
 
 function isDuplicateProfile(

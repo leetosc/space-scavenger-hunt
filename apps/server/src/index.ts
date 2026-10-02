@@ -16,6 +16,7 @@ import {
 import { getAttemptPhoto } from "./routes/attempt-photo";
 import { getAstronautPhoto, uploadAstronautPhoto } from "./routes/astronaut-photo";
 import { uploadAttemptPhoto, uploadMiddleware } from "./routes/upload";
+import { getSelfiePhoto, uploadSelfie } from "./routes/selfie";
 
 const app = express();
 
@@ -55,6 +56,8 @@ app.post(
 );
 
 app.get("/api/attempts/:attemptId/photo/:token", getAttemptPhoto);
+app.post("/api/selfies/upload", uploadMiddleware.single("image"), uploadSelfie);
+app.get("/api/selfies/:id/photo", getSelfiePhoto);
 app.post(
   "/api/astronauts/:astronautId/upload",
   uploadMiddleware.single("image"),

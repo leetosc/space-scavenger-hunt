@@ -15,6 +15,7 @@ import { Rocket, Shield, User, UserCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSyncExternalStore } from "react";
 
 import { authClient } from "@/lib/auth-client";
 import { springTransition } from "@/lib/animations";
@@ -22,8 +23,13 @@ import { ICON_MAP } from "@/lib/icons";
 import { IMAGE_BLUR_DATA_URL } from "@/lib/image-placeholder";
 import { trpc } from "@/utils/trpc";
 
+const subscribeToHydration = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
+
 export default function UserMenu() {
   const router = useRouter();
+  const hydrated = useSyncExternalStore(subscribeToHydration, clientSnapshot, serverSnapshot);
   const { data: session, isPending } = authClient.useSession();
 
   const meQuery = useQuery({
@@ -36,7 +42,8 @@ export default function UserMenu() {
   const userImage = meQuery.data?.user?.image;
   const isAdmin = meQuery.data?.user?.role === "ADMIN";
 
-  if (isPending) {
+  // A cached auth response may resolve before hydration; match the SSR skeleton first.
+  if (!hydrated || isPending) {
     return <Skeleton className="size-9" />;
   }
 
