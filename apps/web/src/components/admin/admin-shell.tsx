@@ -14,6 +14,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { authClient } from "@/lib/auth-client";
+import { getLoginHref } from "@/lib/auth-redirect";
 import { trpc } from "@/utils/trpc";
 
 const NAV = [
@@ -40,7 +41,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   });
 
   useEffect(() => {
-    if (!isPending && !session) router.push("/login");
+    if (!isPending && !session) router.push(getLoginHref(window.location));
   }, [isPending, session, router]);
 
   // Close sidebar on route change (mobile)

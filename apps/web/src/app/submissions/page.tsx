@@ -21,6 +21,7 @@ import { useEffect, useState } from "react";
 
 import Loader from "@/components/loader";
 import { authClient } from "@/lib/auth-client";
+import { getLoginHref } from "@/lib/auth-redirect";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
 import { IMAGE_BLUR_DATA_URL } from "@/lib/image-placeholder";
 import { trpc } from "@/utils/trpc";
@@ -248,7 +249,7 @@ export default function SubmissionsPage() {
   });
 
   useEffect(() => {
-    if (!sessionPending && !session) router.push("/login");
+    if (!sessionPending && !session) router.push(getLoginHref(window.location));
   }, [router, session, sessionPending]);
 
   if (sessionPending || (session && submissions.isPending)) {

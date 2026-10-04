@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import z from "zod";
 
 import { authClient } from "@/lib/auth-client";
+import { getLoginHref } from "@/lib/auth-redirect";
 import {
   staggerContainer,
   staggerContainerSlow,
@@ -112,7 +113,7 @@ export default function ProfileForm() {
 
   useEffect(() => {
     if (sessionPending) return;
-    if (!session) router.push("/login");
+    if (!session) router.push(getLoginHref(window.location));
   }, [sessionPending, session, router]);
 
   useEffect(() => {

@@ -6,7 +6,7 @@ import {
 } from "../scripts/e2e/constants";
 import { readE2eState } from "../scripts/e2e/state";
 
-test("admin can sign in and reach mission control", async ({ page }) => {
+test("admin returns to the requested page after signing in", async ({ page }) => {
   const state = await readE2eState();
 
   test.skip(
@@ -14,7 +14,9 @@ test("admin can sign in and reach mission control", async ({ page }) => {
     "Admin credentials are only guaranteed for the managed E2E stack. Set E2E_ADMIN_USERNAME and E2E_ADMIN_PASSWORD to enable this against a reused dev stack.",
   );
 
-  await page.goto("/login?next=/admin");
+  await page.goto("/admin/players?view=all");
+  await expect(page).toHaveURL(/\/login\?next=/);
+  expect(new URL(page.url()).searchParams.get("next")).toBe("/admin/players?view=all");
   await page
     .getByLabel("Username")
     .fill(process.env.E2E_ADMIN_USERNAME ?? adminUsername);
@@ -23,8 +25,14 @@ test("admin can sign in and reach mission control", async ({ page }) => {
     .fill(process.env.E2E_ADMIN_PASSWORD ?? adminPassword);
   await page.locator("form").getByRole("button", { name: "Sign In" }).click();
 
-  await expect(page).toHaveURL(/\/admin/);
+  await expect(page).toHaveURL(/\/admin\/players\?view=all$/);
   await expect(
-    page.getByRole("heading", { name: "Mission Control" }),
+    page.getByRole("heading", { name: "Players" }),
   ).toBeVisible();
+});
+
+test("onboarding login preserves its destination", async ({ page }) => {
+  await page.goto("/onboarding?next=/waiting");
+  await expect(page).toHaveURL(/\/login\?next=/);
+  expect(new URL(page.url()).searchParams.get("next")).toBe("/onboarding?next=/waiting");
 });

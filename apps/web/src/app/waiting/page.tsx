@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 import { authClient } from "@/lib/auth-client";
+import { getLoginHref } from "@/lib/auth-redirect";
 import {
   staggerContainer,
   fadeInUp,
@@ -54,7 +55,7 @@ export default function WaitingPage() {
 
   useEffect(() => {
     if (isPending) return;
-    if (!session) router.push("/login");
+    if (!session) router.push(getLoginHref(window.location));
   }, [isPending, session, router]);
 
   useEffect(() => {

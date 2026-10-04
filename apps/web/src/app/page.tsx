@@ -28,6 +28,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 import { authClient } from "@/lib/auth-client";
+import { getLoginHref } from "@/lib/auth-redirect";
 import {
   staggerContainer,
   fadeInUp,
@@ -69,7 +70,7 @@ export default function Home() {
 
   const handleEnterMission = () => {
     if (!session) {
-      router.push("/login");
+      router.push(getLoginHref(window.location));
       return;
     }
     if (!activity.data || !me.data) return;

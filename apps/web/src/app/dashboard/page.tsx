@@ -22,6 +22,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { authClient } from "@/lib/auth-client";
+import { getLoginHref } from "@/lib/auth-redirect";
 import { IconPicker } from "@/components/icon-picker";
 import { MissionCountdown } from "@/components/mission-countdown";
 import { TeamIcon } from "@/components/team-icon";
@@ -89,7 +90,7 @@ export default function TeamPage() {
 
   useEffect(() => {
     if (isPending) return;
-    if (!session) router.push("/login");
+    if (!session) router.push(getLoginHref(window.location));
   }, [isPending, session, router]);
 
   useEffect(() => {

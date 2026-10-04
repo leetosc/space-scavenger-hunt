@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import BirthdaySelfies from "@/components/birthday-selfies";
 import Loader from "@/components/loader";
 import { authClient } from "@/lib/auth-client";
+import { getLoginHref } from "@/lib/auth-redirect";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
 import { getHintDistortion } from "@/lib/hint-distortion";
 import { useGameHaptics } from "@/hooks/use-game-haptics";
@@ -71,7 +72,7 @@ export default function HintsPage() {
       timer.current = setTimeout(() => setBoostingHintId(null), 3350);
     },
   });
-  useEffect(() => { if (!sessionPending && !session) router.replace("/login"); }, [router, session, sessionPending]);
+  useEffect(() => { if (!sessionPending && !session) router.replace(getLoginHref(window.location)); }, [router, session, sessionPending]);
   useEffect(() => { if (onboarding.data && !onboarding.data.isComplete) router.replace("/onboarding?next=/hints"); }, [onboarding.data, router]);
   if (sessionPending || onboarding.isPending || (onboarding.data?.isComplete && hints.isPending)) return <Loader />;
   if (!session) return null;

@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { useSyncExternalStore } from "react";
 
 import { authClient } from "@/lib/auth-client";
+import { getLoginHref } from "@/lib/auth-redirect";
 import { springTransition } from "@/lib/animations";
 import { ICON_MAP } from "@/lib/icons";
 import { IMAGE_BLUR_DATA_URL } from "@/lib/image-placeholder";
@@ -49,7 +50,7 @@ export default function UserMenu() {
 
   if (!session) {
     return (
-      <Link href="/login">
+      <Link href={getLoginHref(window.location)}>
         <motion.div
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}

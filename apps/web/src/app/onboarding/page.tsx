@@ -9,6 +9,7 @@ import { Suspense, useEffect } from "react";
 import { toast } from "sonner";
 import Loader from "@/components/loader";
 import { authClient } from "@/lib/auth-client";
+import { getLoginHref } from "@/lib/auth-redirect";
 import { trpc } from "@/utils/trpc";
 
 function OnboardingContent() {
@@ -19,7 +20,7 @@ function OnboardingContent() {
   const nextPath = next && /^\/(?![\/\\])/.test(next) && !next.startsWith("/onboarding") ? next : "/waiting";
   const { data: session, isPending } = authClient.useSession();
   const status = useQuery({ ...trpc.player.getOnboardingStatus.queryOptions(), enabled: !!session });
-  useEffect(() => { if (!isPending && !session) router.replace("/login"); }, [isPending, session, router]);
+  useEffect(() => { if (!isPending && !session) router.replace(getLoginHref(window.location)); }, [isPending, session, router]);
   useEffect(() => { if (status.data?.isComplete) router.replace(nextPath); }, [status.data?.isComplete, nextPath, router]);
   const complete = useMutation({
     ...trpc.player.completeOnboarding.mutationOptions(),
