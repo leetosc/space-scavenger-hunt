@@ -13,6 +13,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { useHydrated } from "@/hooks/use-hydrated";
 import { authClient } from "@/lib/auth-client";
 import { staggerContainer, fadeInUp, springTransition } from "@/lib/animations";
 import { IMAGE_BLUR_DATA_URL } from "@/lib/image-placeholder";
@@ -20,6 +21,7 @@ import { IMAGE_BLUR_DATA_URL } from "@/lib/image-placeholder";
 import UserMenu from "./user-menu";
 
 export default function Header() {
+  const hydrated = useHydrated();
   const { data: session } = authClient.useSession();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -38,7 +40,7 @@ export default function Header() {
     { to: "/dashboard" as const, label: "Dashboard" },
     { to: "/submissions" as const, label: "Submissions" },
   ];
-  const links = [...baseLinks, ...(session ? playerLinks : [])];
+  const links = [...baseLinks, ...(hydrated && session ? playerLinks : [])];
 
   return (
     <div className="backdrop-blur-md bg-background/25 border-b border-border/40 relative z-20">

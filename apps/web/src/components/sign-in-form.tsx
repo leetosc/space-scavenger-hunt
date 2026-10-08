@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import z from "zod";
 
+import { useHydrated } from "@/hooks/use-hydrated";
 import { authClient } from "@/lib/auth-client";
 import { staggerContainer, fadeInUp, scaleIn, buttonInteraction } from "@/lib/animations";
 
@@ -18,6 +19,7 @@ import Loader from "./loader";
 
 export default function SignInForm({ nextPath = "/" }: { nextPath?: string }) {
   const router = useRouter();
+  const hydrated = useHydrated();
   const { isPending } = authClient.useSession();
   const signUpHref = nextPath === "/" ? "/signup" : `/signup?next=${encodeURIComponent(nextPath)}`;
 
@@ -52,7 +54,7 @@ export default function SignInForm({ nextPath = "/" }: { nextPath?: string }) {
     },
   });
 
-  if (isPending) {
+  if (!hydrated || isPending) {
     return <Loader />;
   }
 

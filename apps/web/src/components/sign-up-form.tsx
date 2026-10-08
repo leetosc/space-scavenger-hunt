@@ -22,6 +22,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import z from "zod";
 
+import { useHydrated } from "@/hooks/use-hydrated";
 import { authClient } from "@/lib/auth-client";
 import { staggerContainer, fadeInUp, scaleIn, buttonInteraction } from "@/lib/animations";
 import { trpc } from "@/utils/trpc";
@@ -31,6 +32,7 @@ import Loader from "./loader";
 
 export default function SignUpForm({ nextPath = "/" }: { nextPath?: string }) {
   const router = useRouter();
+  const hydrated = useHydrated();
   const { isPending: sessionPending } = authClient.useSession();
   const loginHref = nextPath === "/" ? "/login" : `/login?next=${encodeURIComponent(nextPath)}`;
 
@@ -87,7 +89,7 @@ export default function SignUpForm({ nextPath = "/" }: { nextPath?: string }) {
     },
   });
 
-  if (sessionPending) {
+  if (!hydrated || sessionPending) {
     return <Loader />;
   }
 

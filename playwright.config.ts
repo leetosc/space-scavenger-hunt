@@ -8,6 +8,8 @@ export default defineConfig({
     timeout: 10_000,
   },
   fullyParallel: true,
+  // All tests share a dev server; CPU-based defaults can stall image optimization.
+  workers: 2,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
   use: {
