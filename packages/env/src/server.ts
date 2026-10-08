@@ -19,6 +19,7 @@ export const env = createEnv({
     AZURE_AI_FOUNDRY_ENDPOINT: z.url(),
     AZURE_AI_FOUNDRY_API_KEY: z.string().min(1),
     AZURE_AI_FOUNDRY_MODEL: z.string().min(1),
+    AZURE_AI_FOUNDRY_JUDGE_MODEL: z.string().min(1).default("gpt-6-luna"),
 
     AZURE_STORAGE_CONNECTION_STRING: z.string().min(1),
     AZURE_STORAGE_CONTAINER_NAME: z.string().min(1),

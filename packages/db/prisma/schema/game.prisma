@@ -162,6 +162,7 @@ model ClaimAttempt {
   imageSizeBytes    Int?
   aiPassed          Boolean?
   aiConfidence      Float?
+  aiRating          Int?
   aiFeedback        String?
   aiRawResponse     String?
   createdAt         DateTime   @default(now())

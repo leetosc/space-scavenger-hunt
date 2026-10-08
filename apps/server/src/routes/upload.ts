@@ -132,6 +132,7 @@ export async function uploadAttemptPhoto(req: Request, res: Response) {
       imageSizeBytes: file.size,
       submittedAt: new Date(),
       status: "SUBMITTED",
+      aiRating: null,
     },
   });
 
@@ -146,7 +147,8 @@ export async function uploadAttemptPhoto(req: Request, res: Response) {
       where: { id: attempt.id },
       data: {
         aiPassed: judgement.passed,
-        aiConfidence: judgement.confidence,
+        aiConfidence: null,
+        aiRating: judgement.rating,
         aiFeedback: judgement.feedback,
         aiRawResponse: judgement.rawResponse,
         reviewedAt: new Date(),
@@ -177,6 +179,7 @@ export async function uploadAttemptPhoto(req: Request, res: Response) {
     attemptId: attempt.id,
     status: final?.status,
     aiPassed: final?.aiPassed,
+    aiRating: final?.aiRating,
     aiFeedback: final?.aiFeedback,
     claimed: !!final?.claim,
   });

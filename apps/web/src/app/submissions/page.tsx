@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import Loader from "@/components/loader";
+import { StarRating } from "@/components/star-rating";
 import { authClient } from "@/lib/auth-client";
 import { getLoginHref } from "@/lib/auth-redirect";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
@@ -107,16 +108,21 @@ function SubmissionCard({
           </div>
           <div className="flex items-center justify-between gap-3 border-t border-cyan-400/10 pt-3 text-xs text-slate-400">
             <span className="min-w-0 truncate">{submission.astronaut.name}</span>
-            <Badge
-              variant="outline"
-              className={cn(
-                "shrink-0 rounded-sm px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em]",
-                meta.className,
-              )}
-            >
-              <StatusIcon className="mr-1 size-3" />
-              {meta.label}
-            </Badge>
+            <div className="flex shrink-0 items-center gap-2">
+              {submission.status === "APPROVED" ? (
+                <StarRating rating={submission.aiRating} starClassName="size-3" />
+              ) : null}
+              <Badge
+                variant="outline"
+                className={cn(
+                  "shrink-0 rounded-sm px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em]",
+                  meta.className,
+                )}
+              >
+                <StatusIcon className="mr-1 size-3" />
+                {meta.label}
+              </Badge>
+            </div>
           </div>
         </div>
       </Card>
@@ -193,6 +199,19 @@ function SubmissionDialog({
                   </h3>
                   <p className="mt-2 text-sm leading-6 text-slate-100">{submission.taskPrompt}</p>
                 </section>
+
+                {submission.status === "APPROVED" && submission.aiRating !== null ? (
+                  <section>
+                    <h3 className="font-mono text-[11px] uppercase tracking-[0.2em] text-slate-500">
+                      Mission rating
+                    </h3>
+                    <StarRating
+                      rating={submission.aiRating}
+                      className="mt-2"
+                      starClassName="size-5"
+                    />
+                  </section>
+                ) : null}
 
                 {submission.aiFeedback ? (
                   <section>

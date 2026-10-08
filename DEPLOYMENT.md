@@ -66,6 +66,7 @@ APP_BASE_URL=https://your-domain.com
 AZURE_AI_FOUNDRY_ENDPOINT=https://<resource>.cognitiveservices.azure.com/openai/v1/
 AZURE_AI_FOUNDRY_API_KEY=<your-foundry-key>
 AZURE_AI_FOUNDRY_MODEL=gpt-5.4
+AZURE_AI_FOUNDRY_JUDGE_MODEL=gpt-6-luna
 
 AZURE_STORAGE_CONNECTION_STRING=<azure-storage-connection-string>
 AZURE_STORAGE_CONTAINER_NAME=scavenger-hunt-uploads

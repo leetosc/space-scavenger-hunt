@@ -10,3 +10,7 @@ export const foundry = createOpenAI({
 export function foundryModel(): LanguageModel {
   return foundry(env.AZURE_AI_FOUNDRY_MODEL);
 }
+
+export function foundryJudgeModel(): LanguageModel {
+  return foundry(env.AZURE_AI_FOUNDRY_JUDGE_MODEL);
+}

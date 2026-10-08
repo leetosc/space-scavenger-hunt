@@ -32,6 +32,7 @@ export function getE2eEnv(): Record<string, string> {
       "https://example.openai.azure.com/openai/v1/",
     AZURE_AI_FOUNDRY_API_KEY: "e2e-placeholder",
     AZURE_AI_FOUNDRY_MODEL: "e2e-placeholder",
+    AZURE_AI_FOUNDRY_JUDGE_MODEL: "e2e-placeholder",
     AZURE_STORAGE_CONNECTION_STRING: "UseDevelopmentStorage=true",
     AZURE_STORAGE_CONTAINER_NAME: "e2e",
     MAX_UPLOAD_MB: "8",

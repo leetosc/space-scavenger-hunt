@@ -23,6 +23,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { MissionCountdown } from "@/components/mission-countdown";
+import { StarRating } from "@/components/star-rating";
 import { useGameHaptics } from "@/hooks/use-game-haptics";
 import {
   fadeInUp,
@@ -537,9 +538,11 @@ function getAiVerdict(
 
 function AiVerdictCard({
   approved,
+  rating,
   feedback,
 }: {
   approved: boolean;
+  rating: number | null;
   feedback: string;
 }) {
   const theme = approved
@@ -609,6 +612,8 @@ function AiVerdictCard({
           >
             {theme.verdict}
           </motion.p>
+
+          {approved ? <StarRating rating={rating} starClassName="size-5" /> : null}
 
           <p className="text-sm text-slate-300/90 leading-relaxed">{feedback}</p>
         </div>
@@ -937,7 +942,11 @@ export default function AttemptView({ attemptId }: { attemptId: string }) {
             transition={springTransition}
           >
             {aiVerdict !== null ? (
-              <AiVerdictCard approved={aiVerdict} feedback={attempt.aiFeedback} />
+              <AiVerdictCard
+                approved={aiVerdict}
+                rating={attempt.aiRating}
+                feedback={attempt.aiFeedback}
+              />
             ) : (
               <Card className="p-5 gap-2 border-indigo-500/20 bg-indigo-950/20">
                 <p className="font-mono text-xs tracking-widest text-indigo-300 uppercase font-bold">

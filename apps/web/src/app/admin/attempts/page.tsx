@@ -168,13 +168,20 @@ function AttemptToolbar({
   );
 }
 
+function getAiScoreText(attempt: Attempt) {
+  if (typeof attempt.aiRating === "number") return ` ★${attempt.aiRating}/5`;
+  // Attempts judged before star ratings only have a confidence score.
+  if (typeof attempt.aiConfidence === "number") {
+    return ` (${Math.round(attempt.aiConfidence * 100)}%)`;
+  }
+  return "";
+}
+
 function getAiText(attempt: Attempt) {
   return typeof attempt.aiPassed === "boolean"
-    ? `${attempt.aiPassed ? "passed" : "failed"}${
-        typeof attempt.aiConfidence === "number"
-          ? ` (${Math.round(attempt.aiConfidence * 100)}%)`
-          : ""
-      }${attempt.aiFeedback ? ` - ${attempt.aiFeedback}` : ""}`
+    ? `${attempt.aiPassed ? "passed" : "failed"}${getAiScoreText(attempt)}${
+        attempt.aiFeedback ? ` - ${attempt.aiFeedback}` : ""
+      }`
     : attempt.aiFeedback;
 }
 

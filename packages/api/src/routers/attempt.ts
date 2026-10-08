@@ -82,6 +82,7 @@ export const attemptRouter = router({
           imageSizeBytes: null,
           aiPassed: null,
           aiConfidence: null,
+          aiRating: null,
           aiFeedback: null,
           aiRawResponse: null,
           submittedAt: null,
