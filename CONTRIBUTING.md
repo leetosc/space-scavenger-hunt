@@ -22,13 +22,17 @@ The web app runs on `http://localhost:3001` and the server runs on
 
 ## Git hooks
 
-Husky installs a `pre-push` hook from `.husky/pre-push`. The hook runs
-`bun run test:e2e`.
+Tests do not run automatically on commit or push. Run them manually when needed:
+
+```bash
+bun run test:e2e
+bun run test:birthday
+```
 
 The E2E runner reuses healthy dev servers on `http://localhost:3000` and
 `http://localhost:3001`. If neither server is running, it starts its own
 isolated stack. If only one service is running, stop the partial stack or start
-both services before pushing.
+both services before running the E2E tests.
 
 ## Scope
 
