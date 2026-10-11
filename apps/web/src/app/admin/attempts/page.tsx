@@ -19,8 +19,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { inferRouterOutputs } from "@trpc/server";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -29,6 +30,7 @@ import {
   buttonInteraction,
 } from "@/lib/animations";
 import { IMAGE_BLUR_DATA_URL } from "@/lib/image-placeholder";
+import { StarRating } from "@/components/star-rating";
 import { trpc } from "@/utils/trpc";
 
 const STATUS_FILTERS = [
@@ -122,6 +124,7 @@ function AttemptToolbar({
               size="sm"
               variant={filter === f.id ? "default" : "outline"}
               className="h-7 px-2.5 text-xs"
+              aria-pressed={filter === f.id}
               onClick={() => onFilterChange(f.id)}
             >
               {f.label}
@@ -168,21 +171,45 @@ function AttemptToolbar({
   );
 }
 
-function getAiScoreText(attempt: Attempt) {
-  if (typeof attempt.aiRating === "number") return ` ★${attempt.aiRating}/5`;
-  // Attempts judged before star ratings only have a confidence score.
-  if (typeof attempt.aiConfidence === "number") {
-    return ` (${Math.round(attempt.aiConfidence * 100)}%)`;
-  }
-  return "";
-}
+function AttemptAiReview({ attempt, compact = false }: { attempt: Attempt; compact?: boolean }) {
+  const hasReview =
+    typeof attempt.aiPassed === "boolean" ||
+    typeof attempt.aiRating === "number" ||
+    typeof attempt.aiConfidence === "number" ||
+    !!attempt.aiFeedback;
 
-function getAiText(attempt: Attempt) {
-  return typeof attempt.aiPassed === "boolean"
-    ? `${attempt.aiPassed ? "passed" : "failed"}${getAiScoreText(attempt)}${
-        attempt.aiFeedback ? ` - ${attempt.aiFeedback}` : ""
-      }`
-    : attempt.aiFeedback;
+  return (
+    <div className="space-y-1.5">
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        AI review
+      </h3>
+      {hasReview ? (
+        <>
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <StarRating rating={attempt.aiRating} starClassName={compact ? "size-3.5" : "size-4"} />
+            {typeof attempt.aiPassed === "boolean" ? (
+              <span className={attempt.aiPassed ? "text-emerald-300" : "text-rose-300"}>
+                {attempt.aiPassed ? "Passed" : "Failed"}
+              </span>
+            ) : null}
+            {/* Attempts judged before star ratings only have a confidence score. */}
+            {typeof attempt.aiRating !== "number" && typeof attempt.aiConfidence === "number" ? (
+              <span className="text-muted-foreground">
+                Confidence: {Math.round(attempt.aiConfidence * 100)}%
+              </span>
+            ) : null}
+          </div>
+          {attempt.aiFeedback ? (
+            <p className={cn("whitespace-pre-line break-words leading-relaxed", compact ? "text-xs" : "text-sm")}>
+              {attempt.aiFeedback}
+            </p>
+          ) : null}
+        </>
+      ) : (
+        <p className="text-xs text-muted-foreground">Not reviewed yet</p>
+      )}
+    </div>
+  );
 }
 
 function AttemptPhoto({
@@ -296,6 +323,9 @@ function AttemptTile({
         <p className="line-clamp-3 min-h-[3.75rem] text-xs leading-snug text-muted-foreground">
           {attempt.taskPrompt}
         </p>
+        <div className="border-t border-border/70 pt-2">
+          <AttemptAiReview attempt={attempt} compact />
+        </div>
       </div>
     </Card>
   );
@@ -328,8 +358,6 @@ function AttemptReviewDialog({
   onDelete: () => void;
   onOpenChange: (open: boolean) => void;
 }) {
-  const aiText = attempt ? getAiText(attempt) : undefined;
-
   return (
     <Dialog open={attempt !== null} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
@@ -361,14 +389,7 @@ function AttemptReviewDialog({
                   <p className="text-sm leading-relaxed">{attempt.taskPrompt}</p>
                 </div>
 
-                {aiText ? (
-                  <div className="space-y-1.5">
-                    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      AI review
-                    </h3>
-                    <p className="text-sm leading-relaxed">{aiText}</p>
-                  </div>
-                ) : null}
+                <AttemptAiReview attempt={attempt} />
 
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
                   <div className="min-w-0">
@@ -527,9 +548,16 @@ function RejectAttemptDialog({
   );
 }
 
-export default function AdminAttemptsPage() {
+function AdminAttemptsContent() {
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<StatusFilterId>("all");
+  const searchParams = useSearchParams();
+  const filter = STATUS_FILTERS.find((status) => status.id === searchParams.get("tab"))?.id ?? "all";
+  const setFilter = (nextFilter: StatusFilterId) => {
+    if (nextFilter === filter) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", nextFilter);
+    window.history.pushState(null, "", url);
+  };
   const [statusDrafts, setStatusDrafts] = useState<Record<string, AttemptStatus>>({});
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [reviewingAttemptId, setReviewingAttemptId] = useState<string | null>(null);
@@ -855,5 +883,13 @@ export default function AdminAttemptsPage() {
         </DialogContent>
       </Dialog>
     </motion.div>
+  );
+}
+
+export default function AdminAttemptsPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-muted-foreground">Loading...</p>}>
+      <AdminAttemptsContent />
+    </Suspense>
   );
 }

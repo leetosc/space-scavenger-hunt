@@ -19,18 +19,19 @@ function attempt(overrides: Record<string, unknown> = {}) {
   };
 }
 
-async function mockSession(page: Page) {
+async function mockSession(page: Page, sessionUser = user) {
   await page.route("**/api/auth/get-session**", route => route.fulfill({ json: {
-    user,
-    session: { id: "session", userId: user.id, token: "test", expiresAt: new Date(Date.now() + 86400000).toISOString() },
+    user: sessionUser,
+    session: { id: "session", userId: sessionUser.id, token: "test", expiresAt: new Date(Date.now() + 86400000).toISOString() },
   } }));
 }
 
-async function mockRpc(page: Page, handler: (name: string) => unknown) {
+async function mockRpc(page: Page, handler: (name: string, input: { status?: string } | undefined) => unknown) {
   await page.route("**/trpc/**", async route => {
     const url = new URL(route.request().url());
     const names = decodeURIComponent(url.pathname.split("/trpc/")[1]!).split(",");
-    const results = names.map(name => ({ result: { data: handler(name) } }));
+    const input = JSON.parse(url.searchParams.get("input") || "{}");
+    const results = names.map((name, index) => ({ result: { data: handler(name, url.searchParams.get("batch") ? input[index] : input) } }));
     await route.fulfill({ json: url.searchParams.get("batch") ? results : results[0] });
   });
 }
@@ -49,6 +50,85 @@ test("approved attempt shows its star rating and friendly justification", async 
   await expect(page.getByRole("paragraph").filter({ hasText: /^Approved$/ })).toBeVisible();
   await expect(page.getByRole("img", { name: "Rated 4 out of 5 stars" })).toBeVisible();
   await expect(page.getByText(feedback)).toBeVisible();
+});
+
+async function mockAdminAttempts(page: Page, attempts = [attempt()]) {
+  const admin = { ...user, role: "ADMIN" };
+  await mockSession(page, admin);
+  await mockRpc(page, (name, input) => {
+    if (name === "player.me") return { ...me, user: admin };
+    if (name === "attempt.adminList") {
+      return attempts
+        .filter(item => !input?.status || item.status === input.status)
+        .map(item => ({ ...item, scannedByPlayer: me.player }));
+    }
+    return baseRpc(name);
+  });
+}
+
+test("admin attempt cards show ratings and reasoning, including older and unreviewed attempts", async ({ page }) => {
+  const rejection = "Gather your crew and try again!";
+  await mockAdminAttempts(page, [
+    attempt(),
+    attempt({ id: "rejected", astronaut: { id: "astronaut-rejected", name: "Rejected Astronaut" }, status: "REJECTED", aiPassed: false, aiRating: null, aiFeedback: rejection }),
+    attempt({ id: "legacy", astronaut: { id: "astronaut-legacy", name: "Legacy Astronaut" }, aiRating: null, aiConfidence: 0.92, aiFeedback: "Crew and astronaut are visible." }),
+    attempt({ id: "pending", astronaut: { id: "astronaut-pending", name: "Pending Astronaut" }, status: "PENDING_PHOTO", aiPassed: null, aiRating: null, aiFeedback: null }),
+  ]);
+  await page.goto("/admin/attempts");
+  const approved = page.getByRole("button", { name: /Cosmo McStardust/ });
+  await expect(approved.getByRole("img", { name: "Rated 4 out of 5 stars" })).toBeVisible();
+  await expect(approved.getByText(feedback)).toBeVisible();
+  const rejected = page.getByRole("button", { name: /Rejected Astronaut/ });
+  await expect(rejected.getByText("Failed", { exact: true })).toBeVisible();
+  await expect(rejected.getByText(rejection)).toBeVisible();
+  await expect(rejected.getByRole("img", { name: /out of 5 stars/ })).toHaveCount(0);
+  const legacy = page.getByRole("button", { name: /Legacy Astronaut/ });
+  await expect(legacy.getByText("Confidence: 92%")).toBeVisible();
+  await expect(legacy.getByText("Crew and astronaut are visible.")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Pending Astronaut/ }).getByText("Not reviewed yet")).toBeVisible();
+  await approved.click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("img", { name: "Rated 4 out of 5 stars" })).toBeVisible();
+  await expect(dialog.getByText(feedback)).toBeVisible();
+});
+
+test("admin attempt tab survives reload and browser history while preserving other URL state", async ({ page }) => {
+  await mockAdminAttempts(page, [
+    attempt(),
+    attempt({ id: "rejected", astronaut: { id: "astronaut-rejected", name: "Rejected Astronaut" }, status: "REJECTED", aiPassed: false, aiRating: null, aiFeedback: "Try again!" }),
+  ]);
+  await page.goto("/admin/attempts?tab=APPROVED&view=grid#review");
+  const approvedTab = page.getByRole("button", { name: "Approved", exact: true });
+  const rejectedTab = page.getByRole("button", { name: "Rejected", exact: true });
+  await expect(approvedTab).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: /Cosmo McStardust/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Rejected Astronaut/ })).toHaveCount(0);
+  await rejectedTab.click();
+  await expect(page).toHaveURL(/\?tab=REJECTED&view=grid#review$/);
+  await expect(rejectedTab).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: /Rejected Astronaut/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Cosmo McStardust/ })).toHaveCount(0);
+  await page.reload();
+  await expect(rejectedTab).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: /Rejected Astronaut/ })).toBeVisible();
+  await page.goBack();
+  await expect(approvedTab).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: /Cosmo McStardust/ })).toBeVisible();
+  await page.goForward();
+  await expect(rejectedTab).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "All", exact: true }).click();
+  await expect(page).toHaveURL(/\?tab=all&view=grid#review$/);
+  await expect(page.getByRole("button", { name: /Cosmo McStardust/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Rejected Astronaut/ })).toBeVisible();
+});
+
+test("admin attempt tabs default to All for a missing or invalid query value", async ({ page }) => {
+  await mockAdminAttempts(page);
+  for (const path of ["/admin/attempts", "/admin/attempts?tab=invalid"]) {
+    await page.goto(path);
+    await expect(page.getByRole("button", { name: "All", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: /Cosmo McStardust/ })).toBeVisible();
+  }
 });
 
 test("rejected attempt shows feedback without stars", async ({ page }) => {
