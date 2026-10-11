@@ -47,6 +47,7 @@ model Team {
   attempts              ClaimAttempt[]
   claims                TeamClaim[]
   hintReveals           TeamLocationHintReveal[]
+  locationHints         LocationHint[]
   signalBoostLedger     SignalBoostLedger[]
   boostCredits          SignalBoostCredit[]
   birthdaySelfies        BirthdaySelfie[]
@@ -206,6 +207,8 @@ model LocationHint {
   imageBlobName  String?
   imageMimeType  String?
   imageSizeBytes Int?
+  teamId         String?
+  team           Team?                    @relation(fields: [teamId], references: [id], onDelete: SetNull)
   reveals        TeamLocationHintReveal[]
   ledgerEntries  SignalBoostLedger[]
   boostCredits   SignalBoostCredit[]
@@ -214,6 +217,7 @@ model LocationHint {
 
   @@index([active])
   @@index([sortOrder])
+  @@index([teamId])
   @@map("location_hint")
 }
 

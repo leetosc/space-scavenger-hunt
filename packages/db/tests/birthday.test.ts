@@ -186,13 +186,38 @@ test("spending is capped at three reveal steps and keeps balances consistent", a
 test("migration preserves an existing balance and historical spends", () => {
   const sql = new Database(":memory:");
   const names = readdirSync(migrations).filter(name => name !== "migration_lock.toml").sort();
-  for (const name of names.slice(0, -1)) sql.exec(readFileSync(join(migrations, name, "migration.sql"), "utf8"));
+  const birthday = names.indexOf("20261002120000_birthday_selfies");
+  for (const name of names.slice(0, birthday)) sql.exec(readFileSync(join(migrations, name, "migration.sql"), "utf8"));
   sql.exec(`INSERT INTO team (id, name, joinCode, signalBoostBalance, updatedAt) VALUES ('old', 'Old crew', 'old', 3, CURRENT_TIMESTAMP)`);
   sql.exec(`INSERT INTO signal_boost_ledger (id, teamId, type, delta, balanceAfter) VALUES ('spent', 'old', 'HINT_SPEND', -1, 3)`);
-  sql.exec(readFileSync(join(migrations, names.at(-1)!, "migration.sql"), "utf8"));
+  sql.exec(readFileSync(join(migrations, names[birthday]!, "migration.sql"), "utf8"));
   expect(sql.query("SELECT signalBoostBalance FROM team").get()).toEqual({ signalBoostBalance: 3 });
   expect(sql.query("SELECT count(*) AS n FROM signal_boost_credit WHERE state = 'AVAILABLE'").get()).toEqual({ n: 3 });
   expect(sql.query("SELECT count(*) AS n FROM signal_boost_credit WHERE state = 'SPENT'").get()).toEqual({ n: 1 });
+  sql.close();
+});
+
+test("teams can only boost their own or shared location hints", async () => {
+  const { team, hint: shared } = await fixture();
+  const { team: other } = await fixture();
+  const own = await db.locationHint.create({ data: { title: "Own", teamId: team.id } });
+  const foreign = await db.locationHint.create({ data: { title: "Foreign", teamId: other.id } });
+  await db.$transaction(tx => grantBoosts(tx, team.id, 3, "INITIAL_GRANT", "Test"));
+  await expect(db.$transaction(tx => spendBoost(tx, team.id, foreign.id))).rejects.toThrow("Hint not found");
+  expect(await balance(team.id)).toBe(3);
+  expect((await db.$transaction(tx => spendBoost(tx, team.id, own.id))).revealLevel).toBe(1);
+  expect((await db.$transaction(tx => spendBoost(tx, team.id, shared.id))).revealLevel).toBe(1);
+  expect(await balance(team.id)).toBe(1);
+});
+
+test("location hint team migration keeps existing hints shared", () => {
+  const sql = new Database(":memory:");
+  const names = readdirSync(migrations).filter(name => name !== "migration_lock.toml").sort();
+  const hintTeam = names.indexOf("20261011120000_add_location_hint_team");
+  for (const name of names.slice(0, hintTeam)) sql.exec(readFileSync(join(migrations, name, "migration.sql"), "utf8"));
+  sql.exec(`INSERT INTO location_hint (id, title, updatedAt) VALUES ('old', 'Garden', CURRENT_TIMESTAMP)`);
+  sql.exec(readFileSync(join(migrations, names[hintTeam]!, "migration.sql"), "utf8"));
+  expect(sql.query("SELECT id, title, teamId FROM location_hint").get()).toEqual({ id: "old", title: "Garden", teamId: null });
   sql.close();
 });
 

@@ -161,7 +161,15 @@ export const teamRouter = router({
   delete: adminProcedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      await ctx.prisma.team.delete({ where: { id: input.id } });
+      // Deactivate the team's hints first; the FK would otherwise null their
+      // teamId and make them visible to every remaining team.
+      await ctx.prisma.$transaction([
+        ctx.prisma.locationHint.updateMany({
+          where: { teamId: input.id },
+          data: { active: false },
+        }),
+        ctx.prisma.team.delete({ where: { id: input.id } }),
+      ]);
       return { deleted: true };
     }),
 });

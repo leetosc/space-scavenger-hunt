@@ -67,12 +67,17 @@ export async function uploadLocationHintPhoto(req: Request, res: Response) {
   const title = getTextField(req.body?.title);
   const description = getTextField(req.body?.description);
   const sortOrderValue = Number(getTextField(req.body?.sortOrder));
+  const teamId = getTextField(req.body?.teamId) || null;
+  if (teamId && !(await prisma.team.findUnique({ where: { id: teamId }, select: { id: true } }))) {
+    return res.status(400).json({ code: "INVALID_TEAM", message: "Selected team does not exist." });
+  }
 
   const hint = await prisma.locationHint.create({
     data: {
       title,
       description: description || null,
       sortOrder: Number.isInteger(sortOrderValue) ? sortOrderValue : 0,
+      teamId,
     },
   });
 

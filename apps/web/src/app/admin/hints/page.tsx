@@ -38,12 +38,14 @@ import {
   Trash2,
   X,
   Upload,
+  Users,
   Zap,
 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { TeamIcon } from "@/components/team-icon";
 import {
   buttonInteraction,
   fadeInUp,
@@ -66,12 +68,106 @@ type PendingHintUpload = {
   title: string;
   description: string;
   sortOrder: string;
+  teamId: string | null;
 };
+type TeamOption = Pick<Team, "id" | "name" | "color" | "icon">;
+type HintFilter = "all" | "shared" | (string & {});
 
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const SELECT_CLASS =
+  "flex h-8 w-full items-center border border-input bg-transparent px-2.5 py-1.5 text-xs outline-none focus:border-ring focus:ring-1 focus:ring-ring/50 disabled:opacity-50 dark:bg-input/30";
 
 function formatDelta(delta: number) {
   return delta > 0 ? `+${delta}` : String(delta);
+}
+
+/** Teams that can see a hint: its owner, or every team when shared. */
+function teamsForHint(hint: Pick<Hint, "teamId">, teams: Team[]) {
+  return hint.teamId ? teams.filter((team) => team.id === hint.teamId) : teams;
+}
+
+/** Groups items by team id, in team order, with shared (null) last. */
+function groupByTeam<T extends { teamId: string | null }>(
+  items: T[],
+  teams: TeamOption[],
+) {
+  const groups = [...teams, null].map((team) => ({
+    team,
+    items: items.filter((item) => item.teamId === (team?.id ?? null)),
+  }));
+  return groups.filter((group) => group.items.length > 0);
+}
+
+function TeamSelect({
+  id,
+  teams,
+  value,
+  onChange,
+  disabled,
+  className,
+  "aria-label": ariaLabel,
+}: {
+  id?: string;
+  teams: TeamOption[];
+  value: string | null;
+  onChange: (teamId: string | null) => void;
+  disabled?: boolean;
+  className?: string;
+  "aria-label"?: string;
+}) {
+  return (
+    <select
+      id={id}
+      aria-label={ariaLabel}
+      value={value ?? ""}
+      disabled={disabled}
+      onChange={(event) => onChange(event.target.value || null)}
+      className={cn(SELECT_CLASS, className)}
+    >
+      <option value="">All teams (shared)</option>
+      {teams.map((team) => (
+        <option key={team.id} value={team.id}>
+          {team.name}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function TeamTag({
+  team,
+  count,
+  className,
+}: {
+  team: TeamOption | null | undefined;
+  count?: number;
+  className?: string;
+}) {
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "gap-1.5 rounded-sm font-mono text-[10px]",
+        team
+          ? "border-slate-400/25 bg-slate-900/70 text-slate-100"
+          : "border-violet-400/25 bg-violet-400/10 text-violet-200",
+        className,
+      )}
+    >
+      {team ? (
+        <TeamIcon
+          icon={team.icon}
+          color={team.color}
+          name={team.name}
+          className="size-3.5 text-[8px] font-bold [&_svg]:size-2.5"
+        />
+      ) : (
+        <Users className="size-3" />
+      )}
+      {team ? team.name : "Shared"}
+      {count !== undefined ? ` ×${count}` : null}
+    </Badge>
+  );
 }
 
 function HintPreview({ hint, level }: { hint: Hint; level: number }) {
@@ -241,6 +337,8 @@ function HintEditor({
   deleting,
   replacing,
   updatingReveal,
+  selected,
+  onToggleSelected,
   onSave,
   onDelete,
   onReplace,
@@ -253,12 +351,15 @@ function HintEditor({
   deleting: boolean;
   replacing: boolean;
   updatingReveal: boolean;
+  selected: boolean;
+  onToggleSelected: (id: string) => void;
   onSave: (input: {
     id: string;
     title: string | null;
     description: string | null;
     sortOrder: number;
     active: boolean;
+    teamId: string | null;
   }) => void;
   onDelete: (id: string) => void;
   onReplace: (id: string, file: File) => void;
@@ -272,16 +373,27 @@ function HintEditor({
   const [description, setDescription] = useState(hint.description ?? "");
   const [sortOrder, setSortOrder] = useState(String(hint.sortOrder));
   const [active, setActive] = useState(hint.active);
+  const [teamId, setTeamId] = useState(hint.teamId);
   const [previewLevel, setPreviewLevel] = useState(0);
   const [editOpen, setEditOpen] = useState(false);
   const [revealOpen, setRevealOpen] = useState(false);
+  const visibleTeams = useMemo(() => teamsForHint(hint, teams), [hint, teams]);
   const revealByTeamId = useMemo(
     () => new Map(hint.reveals.map((reveal) => [reveal.team.id, reveal])),
     [hint.reveals],
   );
-  const revealedTeamCount = hint.reveals.filter(
-    (reveal) => reveal.revealLevel > 0,
+  const revealedTeamCount = visibleTeams.filter(
+    (team) => (revealByTeamId.get(team.id)?.revealLevel ?? 0) > 0,
   ).length;
+
+  function openEdit() {
+    setTitle(hint.title ?? "");
+    setDescription(hint.description ?? "");
+    setSortOrder(String(hint.sortOrder));
+    setActive(hint.active);
+    setTeamId(hint.teamId);
+    setEditOpen(true);
+  }
 
   function saveDetails() {
     const nextSort = Number(sortOrder);
@@ -295,13 +407,31 @@ function HintEditor({
       description: description.trim() || null,
       sortOrder: nextSort,
       active,
+      teamId,
     });
   }
 
   return (
     <motion.article variants={fadeInUp}>
-      <Card className="overflow-hidden rounded-none border-cyan-400/20 bg-slate-950/65 p-0">
-        <HintPreview hint={hint} level={previewLevel} />
+      <Card
+        className={cn(
+          "overflow-hidden rounded-none border-cyan-400/20 bg-slate-950/65 p-0",
+          selected && "border-cyan-300 ring-1 ring-cyan-300/60",
+        )}
+      >
+        <div className="relative">
+          <HintPreview hint={hint} level={previewLevel} />
+          <label className="absolute right-2 top-2 inline-flex cursor-pointer items-center gap-1.5 rounded-sm border border-cyan-400/35 bg-slate-950/80 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-100 backdrop-blur">
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={() => onToggleSelected(hint.id)}
+              className="accent-cyan-400"
+              aria-label={`Select ${hint.title || "location photo"}`}
+            />
+            Select
+          </label>
+        </div>
         <div className="space-y-3 p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -309,6 +439,7 @@ function HintEditor({
                 {hint.title || ""}
               </p>
               <div className="mt-1 flex flex-wrap gap-1.5">
+                <TeamTag team={hint.team} />
                 <Badge
                   variant="outline"
                   className="rounded-sm border-cyan-400/25 bg-cyan-400/10 font-mono text-[10px] text-cyan-200"
@@ -330,7 +461,7 @@ function HintEditor({
                   variant="outline"
                   className="rounded-sm border-amber-400/25 bg-amber-400/10 font-mono text-[10px] text-amber-200"
                 >
-                  {revealedTeamCount}/{teams.length} teams
+                  {revealedTeamCount}/{visibleTeams.length} teams
                 </Badge>
               </div>
             </div>
@@ -339,7 +470,7 @@ function HintEditor({
               size="sm"
               variant="outline"
               className="shrink-0"
-              onClick={() => setEditOpen(true)}
+              onClick={openEdit}
             >
               <Pencil className="size-3.5" />
               Edit
@@ -373,7 +504,7 @@ function HintEditor({
           </div>
 
           <RevealLevelSummary
-            teams={teams}
+            teams={visibleTeams}
             revealByTeamId={revealByTeamId}
             maxRevealLevel={maxRevealLevel}
           />
@@ -414,10 +545,20 @@ function HintEditor({
             <DialogHeader>
               <DialogTitle>Edit location photo</DialogTitle>
               <DialogDescription className="sr-only">
-                Update the title, description, sort order, and active state.
+                Update the team, title, description, sort order, and active
+                state.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-3 sm:grid-cols-[1fr_96px]">
+              <div className="sm:col-span-2">
+                <Label htmlFor={`hint-team-${hint.id}`}>Team</Label>
+                <TeamSelect
+                  id={`hint-team-${hint.id}`}
+                  teams={teams}
+                  value={teamId}
+                  onChange={setTeamId}
+                />
+              </div>
               <div>
                 <Label htmlFor={`hint-title-${hint.id}`}>Title</Label>
                 <Input
@@ -480,7 +621,7 @@ function HintEditor({
               </DialogDescription>
             </DialogHeader>
             <ul className="max-h-[60vh] space-y-2 overflow-y-auto pr-1">
-              {teams.map((team) => {
+              {visibleTeams.map((team) => {
                 const reveal = revealByTeamId.get(team.id);
                 const currentRevealLevel = reveal?.revealLevel ?? 0;
                 return (
@@ -620,18 +761,24 @@ function TeamBoostControls({
 
 function PendingUploadCard({
   item,
+  teams,
   onChange,
   onRemove,
 }: {
   item: PendingHintUpload;
+  teams: TeamOption[];
   onChange: (
     id: string,
     patch: Partial<Omit<PendingHintUpload, "id" | "file" | "previewUrl">>,
   ) => void;
   onRemove: (id: string) => void;
 }) {
+  const team = teams.find((option) => option.id === item.teamId);
   return (
-    <li className="overflow-hidden border border-cyan-400/15 bg-slate-900/55">
+    <li
+      className="overflow-hidden border border-cyan-400/15 bg-slate-900/55"
+      style={team?.color ? { borderColor: team.color } : undefined}
+    >
       <div className="relative aspect-[4/3] bg-slate-950">
         <Image
           src={item.previewUrl}
@@ -655,6 +802,16 @@ function PendingUploadCard({
         </Button>
       </div>
       <div className="grid gap-3 p-3 sm:grid-cols-[1fr_88px]">
+        <div className="sm:col-span-2">
+          <Label htmlFor={`pending-team-${item.id}`}>Team</Label>
+          <TeamSelect
+            id={`pending-team-${item.id}`}
+            aria-label={`Team for ${item.file.name}`}
+            teams={teams}
+            value={item.teamId}
+            onChange={(teamId) => onChange(item.id, { teamId })}
+          />
+        </div>
         <div>
           <Label htmlFor={`pending-title-${item.id}`}>Title (optional)</Label>
           <Input
@@ -709,6 +866,10 @@ export default function AdminHintsPage() {
   const [uploading, setUploading] = useState(false);
   const [replacingId, setReplacingId] = useState<string | null>(null);
   const [clearLedgerOpen, setClearLedgerOpen] = useState(false);
+  const [batchTeamId, setBatchTeamId] = useState<string | null>(null);
+  const [hintFilter, setHintFilter] = useState<HintFilter>("all");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [assignTeamId, setAssignTeamId] = useState<string | null>(null);
 
   const hintsQuery = useQuery(trpc.hint.adminList.queryOptions());
   const ledgerQuery = useQuery(
@@ -776,6 +937,19 @@ export default function AdminHintsPage() {
     },
     onError: (error) => toast.error(error.message),
   });
+  const assignTeamMutation = useMutation({
+    ...trpc.hint.adminAssignTeam.mutationOptions(),
+    onSuccess: (data) => {
+      toast.success(
+        data.updatedCount === 1
+          ? "1 hint reassigned"
+          : `${data.updatedCount} hints reassigned`,
+      );
+      setSelectedIds(new Set());
+      invalidate();
+    },
+    onError: (error) => toast.error(error.message),
+  });
   const setRevealLevelMutation = useMutation({
     ...trpc.hint.adminSetTeamRevealLevel.mutationOptions(),
     onSuccess: () => {
@@ -791,6 +965,50 @@ export default function AdminHintsPage() {
       ? 0
       : Math.max(...hints.map((hint) => hint.sortOrder)) + 1;
   }, [hintsQuery.data?.hints]);
+
+  const teams = hintsQuery.data?.teams ?? [];
+  const hints = hintsQuery.data?.hints ?? [];
+  const filteredHints = hints.filter((hint) =>
+    hintFilter === "all"
+      ? true
+      : hintFilter === "shared"
+        ? hint.teamId === null
+        : hint.teamId === hintFilter,
+  );
+  const hintFilters: { value: HintFilter; label: string; count: number }[] = [
+    { value: "all", label: "All", count: hints.length },
+    {
+      value: "shared",
+      label: "Shared",
+      count: hints.filter((hint) => hint.teamId === null).length,
+    },
+    ...teams.map((team) => ({
+      value: team.id,
+      label: team.name,
+      count: hints.filter((hint) => hint.teamId === team.id).length,
+    })),
+  ];
+  const selectedHintIds = hints
+    .filter((hint) => selectedIds.has(hint.id))
+    .map((hint) => hint.id);
+  const pendingGroups = groupByTeam(pendingUploads, teams);
+
+  function toggleSelected(id: string) {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAllInView() {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      for (const hint of filteredHints) next.add(hint.id);
+      return next;
+    });
+  }
 
   useEffect(() => {
     pendingUploadsRef.current = pendingUploads;
@@ -829,6 +1047,7 @@ export default function AdminHintsPage() {
         title: "",
         description: "",
         sortOrder: String(baseSortOrder + index),
+        teamId: batchTeamId,
       }));
       return [...current, ...nextItems];
     });
@@ -881,6 +1100,7 @@ export default function AdminHintsPage() {
         form.append("title", item.title.trim());
         form.append("description", item.description);
         form.append("sortOrder", String(Number(item.sortOrder)));
+        form.append("teamId", item.teamId ?? "");
         const res = await fetch(
           `${env.NEXT_PUBLIC_SERVER_URL}/api/location-hints/upload`,
           {
@@ -967,7 +1187,8 @@ export default function AdminHintsPage() {
           </div>
           <h1 className="text-2xl font-bold tracking-tight">Hints</h1>
           <p className="text-sm text-muted-foreground">
-            Manage shared location photos and team Signal Boost balances.
+            Upload location photos for each team (or share them with every
+            team) and manage Signal Boost balances.
           </p>
         </div>
       </motion.header>
@@ -980,6 +1201,38 @@ export default function AdminHintsPage() {
             </h2>
           </div>
           <div className="space-y-4 p-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <div className="sm:w-72">
+                <Label htmlFor="batch-team" className="mb-1.5 block">
+                  Team for this batch
+                </Label>
+                <TeamSelect
+                  id="batch-team"
+                  teams={teams}
+                  value={batchTeamId}
+                  onChange={setBatchTeamId}
+                  disabled={uploading}
+                />
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={uploading || pendingUploads.length === 0}
+                onClick={() =>
+                  setPendingUploads((current) =>
+                    current.map((item) => ({ ...item, teamId: batchTeamId })),
+                  )
+                }
+              >
+                Apply to all pending
+              </Button>
+              <p className="text-xs text-muted-foreground sm:ml-2 sm:pb-1.5">
+                New photos get this team. Pick a team, drop its photos, then
+                switch teams and drop more.
+              </p>
+            </div>
+
             <div
               role="button"
               tabIndex={0}
@@ -1040,6 +1293,11 @@ export default function AdminHintsPage() {
                     Drag multiple JPG, PNG, or WebP files here, or click to
                     select.
                   </p>
+                  <div className="mt-2 flex justify-center">
+                    <TeamTag
+                      team={teams.find((team) => team.id === batchTeamId)}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -1047,10 +1305,19 @@ export default function AdminHintsPage() {
             {pendingUploads.length > 0 ? (
               <div className="space-y-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="font-mono text-xs uppercase tracking-[0.18em] text-cyan-300">
-                    {pendingUploads.length} pending transmission
-                    {pendingUploads.length === 1 ? "" : "s"}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-mono text-xs uppercase tracking-[0.18em] text-cyan-300">
+                      {pendingUploads.length} pending transmission
+                      {pendingUploads.length === 1 ? "" : "s"}
+                    </p>
+                    {pendingGroups.map((group) => (
+                      <TeamTag
+                        key={group.team?.id ?? "shared"}
+                        team={group.team}
+                        count={group.items.length}
+                      />
+                    ))}
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"
@@ -1074,16 +1341,29 @@ export default function AdminHintsPage() {
                     </motion.div>
                   </div>
                 </div>
-                <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {pendingUploads.map((item) => (
-                    <PendingUploadCard
-                      key={item.id}
-                      item={item}
-                      onChange={updatePendingUpload}
-                      onRemove={removePendingUpload}
-                    />
-                  ))}
-                </ul>
+                {pendingGroups.map((group) => (
+                  <section
+                    key={group.team?.id ?? "shared"}
+                    className="space-y-2"
+                  >
+                    <h3 className="flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-slate-300">
+                      <TeamTag team={group.team} />
+                      {group.items.length} photo
+                      {group.items.length === 1 ? "" : "s"}
+                    </h3>
+                    <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      {group.items.map((item) => (
+                        <PendingUploadCard
+                          key={item.id}
+                          item={item}
+                          teams={teams}
+                          onChange={updatePendingUpload}
+                          onRemove={removePendingUpload}
+                        />
+                      ))}
+                    </ul>
+                  </section>
+                ))}
               </div>
             ) : null}
           </div>
@@ -1094,25 +1374,58 @@ export default function AdminHintsPage() {
         <h2 className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-cyan-300">
           Location photos
         </h2>
+        {hints.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {hintFilters.map((filter) => (
+              <Button
+                key={filter.value}
+                type="button"
+                size="sm"
+                variant={hintFilter === filter.value ? "default" : "outline"}
+                className="h-7 px-2.5 text-xs"
+                onClick={() => setHintFilter(filter.value)}
+              >
+                {filter.label}
+                <span className="font-mono opacity-70">{filter.count}</span>
+              </Button>
+            ))}
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="ml-auto h-7 px-2.5 text-xs"
+              disabled={filteredHints.length === 0}
+              onClick={selectAllInView}
+            >
+              Select all in view
+            </Button>
+          </div>
+        ) : null}
         {!hintsQuery.data ? (
           <p className="text-sm text-muted-foreground">Loading hints...</p>
-        ) : hintsQuery.data.hints.length === 0 ? (
+        ) : hints.length === 0 ? (
           <Card className="rounded-none border-cyan-400/20 bg-slate-950/55 p-6 text-center text-sm text-muted-foreground">
             No location hint photos yet.
+          </Card>
+        ) : filteredHints.length === 0 ? (
+          <Card className="rounded-none border-cyan-400/20 bg-slate-950/55 p-6 text-center text-sm text-muted-foreground">
+            No location photos match this filter.
           </Card>
         ) : (
           <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
             <AnimatePresence>
-              {hintsQuery.data.hints.map((hint) => (
+              {filteredHints.map((hint) => (
                 <HintEditor
                   key={hint.id}
                   hint={hint}
-                  teams={hintsQuery.data.teams}
+                  teams={teams}
                   maxRevealLevel={hintsQuery.data.maxRevealLevel}
                   saving={updateMutation.isPending}
                   deleting={deleteMutation.isPending}
                   replacing={replacingId === hint.id}
                   updatingReveal={setRevealLevelMutation.isPending}
+                  selected={selectedIds.has(hint.id)}
+                  onToggleSelected={toggleSelected}
                   onSave={(input) => updateMutation.mutate(input)}
                   onDelete={(id) => deleteMutation.mutate({ id })}
                   onReplace={replaceHintPhoto}
@@ -1124,6 +1437,46 @@ export default function AdminHintsPage() {
             </AnimatePresence>
           </div>
         )}
+        {selectedHintIds.length > 0 ? (
+          <div className="sticky bottom-4 z-30 flex flex-col gap-2 border border-cyan-300/40 bg-slate-950/95 p-3 shadow-[0_0_28px_rgba(6,182,212,0.18)] backdrop-blur sm:flex-row sm:items-center">
+            <p className="font-mono text-xs uppercase tracking-[0.16em] text-cyan-200">
+              {selectedHintIds.length} selected
+            </p>
+            <TeamSelect
+              aria-label="Assign selected hints to team"
+              teams={teams}
+              value={assignTeamId}
+              onChange={setAssignTeamId}
+              disabled={assignTeamMutation.isPending}
+              className="sm:ml-auto sm:w-64"
+            />
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                disabled={assignTeamMutation.isPending}
+                onClick={() =>
+                  assignTeamMutation.mutate({
+                    ids: selectedHintIds,
+                    teamId: assignTeamId,
+                  })
+                }
+              >
+                <Users className="size-3.5" />
+                {assignTeamMutation.isPending ? "Assigning..." : "Assign"}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={assignTeamMutation.isPending}
+                onClick={() => setSelectedIds(new Set())}
+              >
+                Clear
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,0.8fr)]">
@@ -1134,7 +1487,7 @@ export default function AdminHintsPage() {
             </h2>
           </div>
           <ul className="grid gap-3 p-4">
-            {(hintsQuery.data?.teams ?? []).map((team) => (
+            {teams.map((team) => (
               <TeamBoostControls
                 key={team.id}
                 team={team}

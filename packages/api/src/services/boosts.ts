@@ -79,7 +79,7 @@ export async function removeAvailableBoosts(
 
 export async function spendBoost(tx: Tx, teamId: string, locationHintId: string) {
   const hint = await tx.locationHint.findUnique({ where: { id: locationHintId } });
-  if (!hint?.active) {
+  if (!hint?.active || (hint.teamId && hint.teamId !== teamId)) {
     throw new TRPCError({ code: "NOT_FOUND", message: "Hint not found." });
   }
   const key = { teamId_locationHintId: { teamId, locationHintId } };

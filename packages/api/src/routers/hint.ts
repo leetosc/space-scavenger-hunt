@@ -29,7 +29,7 @@ export const hintRouter = router({
     const [team, hints, reveals] = await Promise.all([
       ctx.prisma.team.findUniqueOrThrow({ where: { id: teamId } }),
       ctx.prisma.locationHint.findMany({
-        where: { active: true },
+        where: { active: true, OR: [{ teamId }, { teamId: null }] },
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
       }),
       ctx.prisma.teamLocationHintReveal.findMany({ where: { teamId } }),
@@ -61,6 +61,7 @@ export const hintRouter = router({
       ctx.prisma.locationHint.findMany({
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
         include: {
+          team: { select: { id: true, name: true, color: true, icon: true } },
           reveals: {
             include: { team: { select: { id: true, name: true, color: true, icon: true } } },
             orderBy: { updatedAt: "desc" },
@@ -105,6 +106,11 @@ export const hintRouter = router({
     }))
     .mutation(({ ctx, input }) => {
       return ctx.prisma.$transaction(async (tx) => {
+        const hint = await tx.locationHint.findUnique({ where: { id: input.locationHintId } });
+        if (!hint) throw new TRPCError({ code: "NOT_FOUND", message: "Hint not found." });
+        if (hint.teamId && hint.teamId !== input.teamId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "This hint belongs to another team." });
+        }
         const reveal = await tx.teamLocationHintReveal.upsert({
           where: {
             teamId_locationHintId: {
@@ -139,12 +145,18 @@ export const hintRouter = router({
       title: z.string().trim().max(100).nullable().optional(),
       description: z.string().trim().max(500).optional(),
       sortOrder: z.number().int().optional(),
+      teamId: z.string().min(1).nullable().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const sortOrder = input.sortOrder ??
         ((await ctx.prisma.locationHint.aggregate({ _max: { sortOrder: true } }))._max.sortOrder ?? 0) + 1;
       return ctx.prisma.locationHint.create({
-        data: { title: input.title || null, description: input.description || null, sortOrder },
+        data: {
+          title: input.title || null,
+          description: input.description || null,
+          sortOrder,
+          teamId: input.teamId ?? null,
+        },
       });
     }),
 
@@ -155,10 +167,28 @@ export const hintRouter = router({
       description: z.string().trim().max(500).nullable().optional(),
       active: z.boolean().optional(),
       sortOrder: z.number().int().optional(),
+      teamId: z.string().min(1).nullable().optional(),
     }))
     .mutation(({ ctx, input }) => {
       const { id, ...data } = input;
       return ctx.prisma.locationHint.update({ where: { id }, data });
+    }),
+
+  adminAssignTeam: adminProcedure
+    .input(z.object({
+      ids: z.array(z.string().min(1)).min(1).max(200),
+      teamId: z.string().min(1).nullable(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (input.teamId) {
+        const team = await ctx.prisma.team.findUnique({ where: { id: input.teamId } });
+        if (!team) throw new TRPCError({ code: "NOT_FOUND", message: "Team not found." });
+      }
+      const result = await ctx.prisma.locationHint.updateMany({
+        where: { id: { in: input.ids } },
+        data: { teamId: input.teamId },
+      });
+      return { updatedCount: result.count };
     }),
 
   adminDelete: adminProcedure
