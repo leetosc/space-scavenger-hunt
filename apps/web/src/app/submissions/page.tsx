@@ -15,7 +15,9 @@ import { useQuery } from "@tanstack/react-query";
 import type { inferRouterOutputs } from "@trpc/server";
 import { motion } from "framer-motion";
 import { Camera, ImageOff, Radar, ShieldCheck, ShieldX } from "lucide-react";
+import type { Route } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -29,6 +31,7 @@ import { trpc } from "@/utils/trpc";
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type Submission = RouterOutputs["attempt"]["listCompleted"][number];
+type SubmissionSort = "newest" | "team-asc" | "team-desc" | "rating-desc" | "rating-asc";
 
 function statusMeta(status: string) {
   if (status === "APPROVED") {
@@ -185,7 +188,12 @@ function SubmissionDialog({
                   </span>
                 </div>
                 <DialogTitle className="text-left text-xl font-black tracking-tight text-slate-50">
-                  {submission.astronaut.name}
+                  <Link
+                    href={`/astronaut/${encodeURIComponent(submission.astronaut.code)}` as Route}
+                    className="transition-colors hover:text-cyan-300 hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/70"
+                  >
+                    {submission.astronaut.name}
+                  </Link>
                 </DialogTitle>
                 <DialogDescription className="text-left text-sm leading-6 text-slate-400">
                   Completed attempt details from the mission feed.
@@ -238,7 +246,12 @@ function SubmissionDialog({
                       Astronaut
                     </dt>
                     <dd className="text-right font-semibold text-slate-100">
-                      {submission.astronaut.name}
+                      <Link
+                        href={`/astronaut/${encodeURIComponent(submission.astronaut.code)}` as Route}
+                        className="text-cyan-300 underline underline-offset-4 transition-colors hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/70"
+                      >
+                        {submission.astronaut.name}
+                      </Link>
                     </dd>
                   </div>
                   <div className="flex items-center justify-between gap-4">
@@ -261,6 +274,7 @@ export default function SubmissionsPage() {
   const router = useRouter();
   const { data: session, isPending: sessionPending } = authClient.useSession();
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+  const [sortBy, setSortBy] = useState<SubmissionSort>("newest");
   const submissions = useQuery({
     ...trpc.attempt.listCompleted.queryOptions(),
     enabled: !!session,
@@ -294,7 +308,24 @@ export default function SubmissionsPage() {
     );
   }
 
-  const completed = submissions.data ?? [];
+  const completed = [...(submissions.data ?? [])];
+  if (sortBy === "team-asc" || sortBy === "team-desc") {
+    completed.sort((a, b) => {
+      const comparison = a.team.name.localeCompare(b.team.name, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      });
+      return sortBy === "team-asc" ? comparison : -comparison;
+    });
+  } else if (sortBy === "rating-desc" || sortBy === "rating-asc") {
+    completed.sort((a, b) => {
+      const aRating = a.status === "APPROVED" ? a.aiRating : null;
+      const bRating = b.status === "APPROVED" ? b.aiRating : null;
+      if (aRating === null) return bRating === null ? 0 : 1;
+      if (bRating === null) return -1;
+      return sortBy === "rating-desc" ? bRating - aRating : aRating - bRating;
+    });
+  }
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:py-10">
@@ -317,6 +348,27 @@ export default function SubmissionsPage() {
           </div>
         </div>
       </header>
+
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <label
+          htmlFor="submission-sort"
+          className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-400"
+        >
+          Sort by
+        </label>
+        <select
+          id="submission-sort"
+          value={sortBy}
+          onChange={(event) => setSortBy(event.target.value as SubmissionSort)}
+          className="min-w-48 border border-cyan-400/20 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/70"
+        >
+          <option value="newest">Newest first</option>
+          <option value="team-asc">Team: A–Z</option>
+          <option value="team-desc">Team: Z–A</option>
+          <option value="rating-desc">Rating: high to low</option>
+          <option value="rating-asc">Rating: low to high</option>
+        </select>
+      </div>
 
       {completed.length === 0 ? (
         <Card className="flex min-h-56 flex-col items-center justify-center gap-3 rounded-none border-cyan-400/20 bg-slate-950/60 p-8 text-center shadow-[0_0_40px_rgba(6,182,212,0.06)] backdrop-blur-md">

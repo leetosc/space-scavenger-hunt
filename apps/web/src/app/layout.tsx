@@ -5,6 +5,7 @@ import "../index.css";
 import Header from "@/components/header";
 import Providers from "@/components/providers";
 import StarfieldBackground from "@/components/starfield-background";
+import { createPageMetadata, SITE_DESCRIPTION, SITE_NAME } from "@/lib/page-metadata";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,9 +17,6 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const siteDescription =
-  "The Starfarer-9 has suffered a critical hull failure. Enlist with your team, decrypt sector logs, and rescue stranded astronauts before life support systems fail.";
-
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
   (process.env.NODE_ENV === "production"
@@ -26,34 +24,18 @@ const siteUrl =
     : "http://localhost:3001");
 
 export const metadata: Metadata = {
+  ...createPageMetadata({
+    title: "Luke & Leo's First Birthday",
+    description: SITE_DESCRIPTION,
+    path: "/",
+  }),
   metadataBase: siteUrl ? new URL(siteUrl) : undefined,
   title: {
-    default: "Space Scavenger Hunt",
-    template: "%s | Space Scavenger Hunt",
+    default: `Luke & Leo's First Birthday | ${SITE_NAME}`,
+    template: `%s | ${SITE_NAME}`,
   },
-  description: siteDescription,
   icons: {
     icon: "/favicon.ico",
-  },
-  openGraph: {
-    title: "Space Scavenger Hunt",
-    description: siteDescription,
-    siteName: "Space Scavenger Hunt",
-    url: "/",
-    locale: "en_US",
-    type: "website",
-    images: [
-      {
-        url: "/astronauts2.png",
-        alt: "Space Scavenger Hunt astronauts",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Space Scavenger Hunt",
-    description: siteDescription,
-    images: ["/astronauts2.png"],
   },
 };
 

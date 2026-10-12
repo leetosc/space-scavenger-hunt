@@ -12,7 +12,7 @@ function attempt(overrides: Record<string, unknown> = {}) {
     imageUrl: null, imageBlobName: null, imageMimeType: null, imageSizeBytes: null,
     aiPassed: true, aiConfidence: null, aiRating: 4, aiFeedback: feedback, aiRawResponse: null,
     createdAt: now, submittedAt: now, reviewedAt: now, expiresAt: null,
-    astronaut: { id: "astronaut", name: "Cosmo McStardust" },
+    astronaut: { id: "astronaut", name: "Cosmo McStardust", code: "cosmo" },
     team: { id: "team", name: "Moon Crew" },
     claim: null,
     ...overrides,
@@ -90,6 +90,44 @@ test("admin attempt cards show ratings and reasoning, including older and unrevi
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("img", { name: "Rated 4 out of 5 stars" })).toBeVisible();
   await expect(dialog.getByText(feedback)).toBeVisible();
+});
+
+test("submissions modal links astronaut names to their astronaut page", async ({ page }) => {
+  await mockSession(page);
+  await mockRpc(page, name => name === "attempt.listCompleted" ? [attempt()] : baseRpc(name));
+  await page.goto("/submissions");
+  await page.getByRole("button", { name: /Cosmo McStardust/ }).click();
+  const links = page.getByRole("dialog").getByRole("link", { name: "Cosmo McStardust" });
+  await expect(links).toHaveCount(2);
+  for (const link of await links.all()) {
+    await expect(link).toHaveAttribute("href", "/astronaut/cosmo");
+  }
+});
+
+test("submissions sort by team and rating while keeping unrated attempts last", async ({ page }) => {
+  const attempts = [
+    attempt({ id: "unrated", taskPrompt: "Unrated mission", team: { id: "alpha", name: "Alpha Crew" }, aiRating: null }),
+    attempt({ id: "low", taskPrompt: "Low-rated mission", team: { id: "zulu", name: "Zulu Crew" }, aiRating: 2 }),
+    attempt({ id: "high", taskPrompt: "High-rated mission", team: { id: "alpha", name: "Alpha Crew" }, aiRating: 5 }),
+    attempt({ id: "rejected", taskPrompt: "Rejected mission", team: { id: "moon", name: "Moon Crew" }, status: "REJECTED", aiRating: 5 }),
+  ];
+  await mockSession(page);
+  await mockRpc(page, name => name === "attempt.listCompleted" ? attempts : baseRpc(name));
+  await page.goto("/submissions");
+  const prompts = page.getByRole("heading", { level: 2 });
+  const newest = ["Unrated mission", "Low-rated mission", "High-rated mission", "Rejected mission"];
+  await expect(prompts).toHaveText(newest);
+  const sort = page.getByRole("combobox", { name: "Sort by" });
+  await sort.selectOption("team-asc");
+  await expect(prompts).toHaveText(["Unrated mission", "High-rated mission", "Rejected mission", "Low-rated mission"]);
+  await sort.selectOption("team-desc");
+  await expect(prompts).toHaveText(["Low-rated mission", "Rejected mission", "Unrated mission", "High-rated mission"]);
+  await sort.selectOption("rating-desc");
+  await expect(prompts).toHaveText(["High-rated mission", "Low-rated mission", "Unrated mission", "Rejected mission"]);
+  await sort.selectOption("rating-asc");
+  await expect(prompts).toHaveText(["Low-rated mission", "High-rated mission", "Unrated mission", "Rejected mission"]);
+  await sort.selectOption("newest");
+  await expect(prompts).toHaveText(newest);
 });
 
 test("admin attempt tab survives reload and browser history while preserving other URL state", async ({ page }) => {

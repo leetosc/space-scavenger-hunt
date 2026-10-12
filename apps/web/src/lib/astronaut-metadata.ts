@@ -3,6 +3,8 @@ import { env } from "@space-scavenger-hunt/env/web";
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import type { Metadata } from "next";
 
+import { createPageMetadata } from "@/lib/page-metadata";
+
 export const DEFAULT_ASTRONAUT_OG_IMAGE = "/astronautIcon.png";
 
 function createServerTrpcClient() {
@@ -29,26 +31,15 @@ export async function getAstronautPageMetadata(
       astronaut.description?.trim() ||
       `Rescue ${astronaut.name} in Space Scavenger Hunt.`;
 
-    return {
+    return createPageMetadata({
       title: astronaut.name,
       description,
-      openGraph: {
-        title: astronaut.name,
-        description,
-        images: [
-          {
-            url: ogImagePath,
-            alt: `${astronaut.name} portrait`,
-          },
-        ],
+      path: `/astronaut/${encodeURIComponent(code)}`,
+      image: {
+        url: ogImagePath,
+        alt: `${astronaut.name} portrait`,
       },
-      twitter: {
-        card: "summary_large_image",
-        title: astronaut.name,
-        description,
-        images: [ogImagePath],
-      },
-    };
+    });
   } catch {
     return null;
   }
