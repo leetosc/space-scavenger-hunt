@@ -14,7 +14,7 @@ import { cn } from "@space-scavenger-hunt/ui/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import type { inferRouterOutputs } from "@trpc/server";
 import { motion } from "framer-motion";
-import { Camera, ImageOff, Radar, ShieldCheck, ShieldX } from "lucide-react";
+import { ArrowUpRight, Camera, ImageOff, Radar, ShieldCheck, ShieldX, Trophy } from "lucide-react";
 import type { Route } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -27,6 +27,7 @@ import { authClient } from "@/lib/auth-client";
 import { getLoginHref } from "@/lib/auth-redirect";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
 import { IMAGE_BLUR_DATA_URL } from "@/lib/image-placeholder";
+import { ICON_MAP } from "@/lib/icons";
 import { trpc } from "@/utils/trpc";
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
@@ -280,6 +281,11 @@ export default function SubmissionsPage() {
     enabled: !!session,
     refetchInterval: 10000,
   });
+  const board = useQuery({
+    ...trpc.leaderboard.getCurrent.queryOptions(),
+    enabled: !!session,
+    refetchInterval: 5000,
+  });
 
   useEffect(() => {
     if (!sessionPending && !session) router.push(getLoginHref(window.location));
@@ -333,19 +339,89 @@ export default function SubmissionsPage() {
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/70 to-transparent" />
         <div className="absolute -right-16 -top-24 h-56 w-56 rounded-full border border-cyan-300/10" />
         <div className="absolute -right-5 top-8 h-28 w-28 rounded-full border border-indigo-300/10" />
-        <div className="relative space-y-3">
-          <div className="inline-flex items-center gap-2 border border-cyan-400/25 bg-cyan-400/10 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.24em] text-cyan-200">
-            <Radar className="size-3.5" />
-            Completed transmissions
+        <div className="relative grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-8">
+          <div className="min-w-0 space-y-3">
+            <div className="inline-flex items-center gap-2 border border-cyan-400/25 bg-cyan-400/10 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.24em] text-cyan-200">
+              <Radar className="size-3.5" />
+              Completed transmissions
+            </div>
+            <div>
+              <h1 className="bg-gradient-to-r from-white via-cyan-100 to-indigo-200 bg-clip-text text-3xl font-black tracking-tight text-transparent sm:text-5xl">
+                Submission Gallery
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+                Review every completed photo challenge signal from the mission feed.
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="bg-gradient-to-r from-white via-cyan-100 to-indigo-200 bg-clip-text text-3xl font-black tracking-tight text-transparent sm:text-5xl">
-              Submission Gallery
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-              Review every completed photo challenge signal from the mission feed.
-            </p>
-          </div>
+
+          <section
+            aria-labelledby="submission-leaderboard-title"
+            className="min-w-0 border border-cyan-400/20 bg-slate-950/70 px-4 py-3"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <h2
+                id="submission-leaderboard-title"
+                className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-cyan-200"
+              >
+                <Trophy className="size-3.5 text-amber-300" aria-hidden="true" />
+                Leaderboard
+              </h2>
+              <Link
+                href="/leaderboard"
+                aria-label="View full leaderboard"
+                className="inline-flex items-center gap-1 text-xs text-slate-400 transition-colors hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/70"
+              >
+                View all
+                <ArrowUpRight className="size-3" aria-hidden="true" />
+              </Link>
+            </div>
+            {board.isPending ? (
+              <p className="py-4 text-xs text-slate-400" role="status">Loading rankings...</p>
+            ) : board.isError ? (
+              <p className="py-4 text-xs text-slate-400">Rankings are temporarily unavailable.</p>
+            ) : board.data?.length ? (
+              <>
+                <p className="mt-3 text-right font-mono text-[9px] uppercase tracking-[0.16em] text-slate-500">
+                  Rescued
+                </p>
+                <ol className="mt-1 divide-y divide-cyan-400/10">
+                  {board.data.slice(0, 3).map((row, index) => {
+                    const Icon = row.icon ? ICON_MAP[row.icon] : null;
+                    return (
+                      <li key={row.teamId} className="flex items-center gap-2 py-2">
+                        <span
+                          className={cn(
+                            "w-4 shrink-0 font-mono text-xs font-bold",
+                            index === 0 ? "text-amber-300" : "text-slate-400",
+                          )}
+                        >
+                          {index + 1}
+                        </span>
+                        <span
+                          aria-hidden="true"
+                          className="flex size-6 shrink-0 items-center justify-center border border-white/10 text-white"
+                          style={{ backgroundColor: row.color ?? "#888" }}
+                        >
+                          {Icon ? <Icon className="size-3.5" /> : (
+                            <span className="text-[10px] font-bold">{row.teamName.slice(0, 1)}</span>
+                          )}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-100" title={row.teamName}>
+                          {row.teamName}
+                        </span>
+                        <span className="shrink-0 font-mono text-xs font-bold tabular-nums text-cyan-100">
+                          {row.claimedCount}<span className="font-normal text-slate-500"> / {row.assignedCount}</span>
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </>
+            ) : (
+              <p className="py-4 text-xs text-slate-400">No teams have launched yet.</p>
+            )}
+          </section>
         </div>
       </header>
 

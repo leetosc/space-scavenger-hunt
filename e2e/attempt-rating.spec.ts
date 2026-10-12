@@ -37,6 +37,7 @@ async function mockRpc(page: Page, handler: (name: string, input: { status?: str
 }
 
 function baseRpc(name: string) {
+  if (name === "leaderboard.getCurrent") return [];
   if (name === "player.me") return me;
   if (name === "player.getOnboardingStatus") return { isComplete: true };
   if (name.startsWith("activity.")) return { status: "ACTIVE" };
@@ -114,7 +115,7 @@ test("submissions sort by team and rating while keeping unrated attempts last", 
   await mockSession(page);
   await mockRpc(page, name => name === "attempt.listCompleted" ? attempts : baseRpc(name));
   await page.goto("/submissions");
-  const prompts = page.getByRole("heading", { level: 2 });
+  const prompts = page.getByRole("article").getByRole("heading", { level: 2 });
   const newest = ["Unrated mission", "Low-rated mission", "High-rated mission", "Rejected mission"];
   await expect(prompts).toHaveText(newest);
   const sort = page.getByRole("combobox", { name: "Sort by" });
