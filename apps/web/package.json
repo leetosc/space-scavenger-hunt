@@ -23,7 +23,7 @@
     "dotenv": "catalog:",
     "framer-motion": "^12.39.0",
     "lucide-react": "catalog:",
-    "next": "^16.2.0",
+    "next": "^16.4.3",
     "next-themes": "catalog:",
     "qrcode.react": "^4.2.0",
     "react": "catalog:",
